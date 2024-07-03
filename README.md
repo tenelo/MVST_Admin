@@ -1,2 +1,2 @@
 # MVST_Admin
-Application des administrateur de l'application MVST
+Application des administrateurs de l'application MVST
