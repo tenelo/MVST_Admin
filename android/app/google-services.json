@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "507287568722",
+    "firebase_url": "https://application-mobile-mvst-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "application-mobile-mvst",
+    "storage_bucket": "application-mobile-mvst.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:507287568722:android:cefbacb2b43725383dfa8b",
+        "android_client_info": {
+          "package_name": "com.app.mvst"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTtjEN24HL0wIFHL0-zHtPPNssb8two6Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:507287568722:android:9258f9d0e0ca52ff3dfa8b",
+        "android_client_info": {
+          "package_name": "com.example.mvst_admin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTtjEN24HL0wIFHL0-zHtPPNssb8two6Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
