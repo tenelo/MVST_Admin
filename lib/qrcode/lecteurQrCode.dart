@@ -9,7 +9,9 @@ List<String> validate = [
   "valide",
   "001",
   "ok",
+  "7XQzur9d158OQFOfWVfB",
   "yes",
+  "VcJliO5AMQJoZ1Tiv7jJ",
 ];
 
 List<String> lecture = [];
@@ -64,9 +66,9 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
       body: Column(
         children: [
           SizedBox(
-            height: MediaQuery.of(context).size.height * .6,
+            height: MediaQuery.of(context).size.height * .5,
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(30.0),
               child: _buildQrView(context),
             ),
           ),
@@ -80,6 +82,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
                 : const SizedBox(),
           ),
           Container(
+            width: MediaQuery.of(context).size.width * .5,
             margin: const EdgeInsets.all(8),
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -108,6 +111,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
             ),
           ),
           Container(
+            width: MediaQuery.of(context).size.width * .5,
             margin: const EdgeInsets.all(8),
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -127,7 +131,8 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
                 ),
               ),
             ),
-          )
+          ),
+          Expanded(child: SizedBox()),
         ],
       ),
     );
@@ -136,8 +141,8 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
   Widget _buildQrView(BuildContext context) {
     var scanArea = (MediaQuery.of(context).size.width < 400 ||
             MediaQuery.of(context).size.height < 400)
-        ? 150.0
-        : 300.0;
+        ? 200.0
+        : 250.0;
     return QRView(
       key: qrKey,
       onQRViewCreated: (controller) {
@@ -148,19 +153,21 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
             setState(() {
               qrRead = true; // Un QR code a été lu
             });
-            if (validate.contains(scanData.code)) {
+            final ticketData = TicketData.fromQrCode(scanData.code!);
+            //if (validate.contains(scanData.code)) {
+            if (validate.contains(ticketData.idTicket)) {
               lecture.add(scanData.code!);
               showDialog(
                 context: context,
                 builder: (context) {
-                  return valide(context, scanData.code!);
+                  return valide(context, ticketData);
                 },
               );
             } else {
               showDialog(
                 context: context,
                 builder: (context) {
-                  return inValide(context, scanData.code!);
+                  return inValide(context, ticketData);
                 },
               );
             }
@@ -192,7 +199,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
     super.dispose();
   }
 
-  Widget valide(BuildContext context, String donnees) {
+  Widget valide(BuildContext context, TicketData ticketData) {
     return AlertDialog(
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -203,14 +210,70 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
           const SizedBox(
             height: 40,
           ),
-          const Text(
-            'TICKET VALIDE',
-            style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+          Center(
+            child: const Text(
+              'TICKET VALIDE',
+              style:
+                  TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
-      content: Text(
-          "Départ du: $donnees!\nA: $donnees\nSiège: $donnees\nPassager: $donnees"),
+      content: RichText(
+        text: TextSpan(
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 16.0,
+          ),
+          children: <TextSpan>[
+            TextSpan(
+                text: 'N° de Ticket : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.idTicket}\n\n',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            TextSpan(
+                text: 'Départ du : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.date}\n\n',
+            ),
+            TextSpan(
+                text: 'heure de départ : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.heure} h\n\n',
+            ),
+            TextSpan(
+                text: 'Passager : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.nom}\n\n',
+            ),
+            TextSpan(
+                text: 'Siège : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.place}\n\n',
+            ),
+            TextSpan(
+                text: 'Téléphone : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.contact}',
+            ),
+          ],
+        ),
+      ),
+      /* Text(
+          "N° de Ticket : ${ticketData.idTicket}\nDépart du : ${ticketData.date}\nà : ${ticketData.heure} h\nPassager: ${ticketData.nom}\nTéléphone: ${ticketData.contact}\nSiège: ${ticketData.place}"), */
       actions: [
         TextButton(
           onPressed: () {
@@ -223,7 +286,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
     );
   }
 
-  Widget dejaValide(BuildContext context, String donnees) {
+  Widget dejaValide(BuildContext context, TicketData ticketData) {
     return AlertDialog(
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -235,7 +298,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
             height: 40,
           ),
           const Text(
-            'VALIDE DEJA SACANNER',
+            'VALIDE DEJA SCANNE',
             style: TextStyle(
                 color: Color.fromARGB(255, 2, 41, 125),
                 fontWeight: FontWeight.bold),
@@ -243,7 +306,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
         ],
       ),
       content: Text(
-          "Départ du: $donnees!\nA: $donnees\nSiège: $donnees\nPassager: $donnees"),
+          "N° de Ticket : ${ticketData.idTicket}\nDépart du: ${ticketData.date}\nA: ${ticketData.heure}\nPassager: ${ticketData.nom}\Téléphone: ${ticketData.contact}\nSiège: ${ticketData.place}"),
       actions: [
         TextButton(
           onPressed: () {
@@ -256,7 +319,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
     );
   }
 
-  Widget inValide(BuildContext context, String donnees) {
+  Widget inValide(BuildContext context, TicketData ticketData) {
     return AlertDialog(
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,16 +330,17 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
           const SizedBox(
             height: 40,
           ),
-          const Text(
-            'TICKET INVALIDE',
-            style: TextStyle(
-                color: Color.fromARGB(255, 193, 27, 15),
-                fontWeight: FontWeight.bold),
+          Center(
+            child: const Text(
+              'TICKET INVALIDE',
+              style: TextStyle(
+                  color: Color.fromARGB(255, 193, 27, 15),
+                  fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
-      content: Text(
-          "Départ du: $donnees!\nA: $donnees\nSiège: $donnees\nPassager: $donnees"),
+      content: Text(" "),
       actions: [
         TextButton(
           onPressed: () {
@@ -289,3 +353,130 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
     );
   }
 }
+
+class TicketData {
+  final String idUtilisateur;
+  final String idTicket;
+  final int place;
+  final String nom;
+  final String contact;
+  final String date;
+  final String heure;
+  final String depart;
+  final String destination;
+  final String etatScann;
+
+  TicketData({
+    required this.idUtilisateur,
+    required this.idTicket,
+    required this.place,
+    required this.nom,
+    required this.contact,
+    required this.date,
+    required this.heure,
+    required this.depart,
+    required this.destination,
+    required this.etatScann,
+  });
+
+  factory TicketData.fromQrCode(String qrCodeData) {
+    final data = qrCodeData.split('\n');
+
+    return TicketData(
+      idUtilisateur: data[0].trim(),
+      idTicket: data[1].trim(),
+      place: int.tryParse(data[6].trim()) ?? -1,
+      nom: data[2].trim(),
+      contact: data[3].trim(),
+      date: data[4].trim(),
+      heure: data[5].trim(),
+      depart: data[7].split('->')[0].trim(),
+      destination: data[7].split('->')[1].trim(),
+      etatScann: data[8].trim(),
+    );
+  }
+}
+
+
+// CREATION QR CODE
+
+/*
+
+import 'dart:async';
+import 'dart:ui' as ui;
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:mvst/config/config.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+
+Color? couleurA;
+Color? couleurB;
+
+class CreationQrCode {
+  static Widget buildQrCode(
+    final String idUtilisateur,
+    final String idTicket,
+    final int place,
+    final String nom,
+    final String contact,
+    final String date,
+    final String heure,
+    final String depart,
+    final String destination,
+    final String etatScann,
+  ) {
+    final String message =
+        "$idUtilisateur \n$idTicket \n$nom \n$contact \n$date \n$heure \n$place \n$depart->$destination \n$etatScann";
+
+    final FutureBuilder<ui.Image> qrFutureBuilder = FutureBuilder<ui.Image>(
+      future: _loadOverlayImage(),
+      builder: (BuildContext ctx, AsyncSnapshot<ui.Image> snapshot) {
+        const double size = 280.0;
+        if (snapshot.hasData) {
+          //return const SizedBox(width: size, height: size);
+          if (etatScann == "scanne") {
+            couleurA = Config.colors.bleuA;
+            couleurB = Config.colors.bleuB;
+          } else {
+            couleurA = Config.colors.vertA;
+            couleurB = Config.colors.vertB;
+          }
+        }
+
+        return CustomPaint(
+          size: const Size.square(size),
+          painter: QrPainter(
+            data: message,
+            version: QrVersions.auto,
+            eyeStyle: QrEyeStyle(
+              eyeShape: QrEyeShape.square,
+              color: couleurA,
+            ),
+            dataModuleStyle: QrDataModuleStyle(
+              dataModuleShape: QrDataModuleShape.square,
+              color: couleurB,
+            ),
+            embeddedImage: snapshot.data,
+            // taille de l'image dans le qrcode
+            embeddedImageStyle: const QrEmbeddedImageStyle(
+              size: Size.square(75),
+            ),
+          ),
+        );
+      },
+    );
+
+    return qrFutureBuilder;
+  }
+
+  static Future<ui.Image> _loadOverlayImage() async {
+    final Completer<ui.Image> completer = Completer<ui.Image>();
+    final ByteData byteData = await rootBundle.load('assets/images/Qr_rd3.png');
+    ui.decodeImageFromList(byteData.buffer.asUint8List(), completer.complete);
+    return completer.future;
+  }
+}
+
+
+*/
