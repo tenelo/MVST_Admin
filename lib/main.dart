@@ -2,10 +2,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mvst_admin/authentification/authentification.dart';
 import 'package:mvst_admin/authentification/connection.dart';
+import 'package:mvst_admin/bloc/bolc.dart';
+import 'package:mvst_admin/bloc/event.dart';
+import 'package:mvst_admin/bloc/exempleAffichage2.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/firebase_options.dart';
+import 'package:mvst_admin/models/models.dart';
 import 'package:mvst_admin/qrcode/lecteurQrCode.dart';
 import 'package:mvst_admin/screens/parametres.dart';
 import 'package:mvst_admin/screens/profil.dart';
@@ -17,21 +22,23 @@ void main() async {
   );
 
   runApp(const MyApp());
+  listenForTicketChanges();
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Config.colors.bleuFonce),
-        useMaterial3: true,
+    return BlocProvider(
+      create: (context) => BlocListePlaces()..add(ChargerLaList()),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Config.colors.bleuFonce),
+          useMaterial3: true,
+        ),
+        home: const Accueil(),
       ),
-      home: const Accueil(),
     );
   }
 }
@@ -352,9 +359,26 @@ Widget achatDeTicket(BuildContext ctx) {
 Widget tableauDeBord(BuildContext ctx) {
   return GestureDetector(
     onTap: () {
+      FonctionListeDesPlaces.recup();
+      //ClasseListeDesPlaces.getTicketsStream();
+      BlocProvider.of<BlocListePlaces>(ctx).add(ChargerLaList());
+      Navigator.push(
+        ctx,
+        MaterialPageRoute(
+          builder: (context) => SecondPage(),
+        ),
+      );
+      /*
       if (FirebaseAuth.instance.currentUser != null) {
         String userId = FirebaseAuth.instance.currentUser!.uid;
         String? userProfil = FirebaseAuth.instance.currentUser!.displayName;
+
+        Navigator.push(
+          ctx,
+          MaterialPageRoute(
+            builder: (context) => IntegerListPage1(),
+          ),
+        );
       } else {
         Navigator.pushReplacement(
           ctx,
@@ -362,7 +386,7 @@ Widget tableauDeBord(BuildContext ctx) {
             builder: (context) => const PageDAuthentification(),
           ),
         );
-      }
+      }*/
     },
     child: Card(
       shadowColor: Colors.blue,
@@ -395,6 +419,13 @@ Widget impression(BuildContext ctx) {
       if (FirebaseAuth.instance.currentUser != null) {
         String userId = FirebaseAuth.instance.currentUser!.uid;
         String? userProfil = FirebaseAuth.instance.currentUser!.displayName;
+
+        Navigator.push(
+          ctx,
+          MaterialPageRoute(
+            builder: (context) => SecondPage(),
+          ),
+        );
       } else {
         Navigator.pushReplacement(
           ctx,
@@ -451,7 +482,6 @@ void deconnexion(BuildContext context) async {
     (route) => false,
   );
 }
-
 
 /*
 
