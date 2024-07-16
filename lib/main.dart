@@ -10,7 +10,7 @@ import 'package:mvst_admin/bloc/event.dart';
 import 'package:mvst_admin/bloc/exempleAffichage2.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/firebase_options.dart';
-import 'package:mvst_admin/models/models.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/qrcode/lecteurQrCode.dart';
 import 'package:mvst_admin/screens/parametres.dart';
 import 'package:mvst_admin/screens/profil.dart';
@@ -136,31 +136,11 @@ class _AccueilState extends State<Accueil> {
                   ),
                   ListTile(
                     leading: Icon(
-                      Icons.notification_add_outlined,
+                      Icons.settings_outlined,
                       color: Config.colors.bleuClaire,
                     ),
                     title: Text(
-                      'Notification',
-                      style: TextStyle(
-                        color: Config.colors.bleuClaire,
-                        fontFamily: 'Lobster',
-                      ),
-                    ),
-                    onTap: () {
-                      if (FirebaseAuth.instance.currentUser != null) {
-                      } else {
-                        Navigator.pop(context);
-                        showIncompleteFieldsSnackBar(context);
-                      }
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.admin_panel_settings_outlined,
-                      color: Config.colors.bleuClaire,
-                    ),
-                    title: Text(
-                      'Admin',
+                      'Parametres',
                       style: TextStyle(
                         color: Config.colors.bleuClaire,
                         fontFamily: 'Lobster',

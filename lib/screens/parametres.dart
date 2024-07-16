@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/screens/ajoutDimages.dart';
 import 'package:mvst_admin/screens/heuresDeparts.dart';
 import 'package:mvst_admin/screens/infosGare.dart';
 import 'package:mvst_admin/screens/prixTickets.dart';
@@ -14,7 +15,7 @@ class Parametres extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         iconTheme: IconThemeData(
-          color: Config.colors.jauneBlanc,
+          color: Config.colors.bleuFonce2,
         ),
         centerTitle: true,
       ),
@@ -128,9 +129,16 @@ class Parametres extends StatelessWidget {
                       borderRadius: BorderRadius.circular(32.0),
                     ),
                   ),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ListeImages(),
+                      ),
+                    );
+                  },
                   child: Text(
-                    "ADMIN",
+                    "LES IMAGES",
                     style: TextStyle(
                       fontSize: 16,
                       color: Config.colors.bleuClaire,
@@ -138,6 +146,29 @@ class Parametres extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(
+                height: 8,
+              ),
+              SizedBox(
+                width: MediaQuery.of(context).size.width * .85,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(32.0),
+                    ),
+                  ),
+                  onPressed: () {},
+                  child: Text(
+                    "LES NOTIFICATIONS",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Config.colors.bleuClaire,
+                    ),
+                  ),
+                ),
+              )
             ],
           )
         ]),
