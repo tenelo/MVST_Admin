@@ -3,32 +3,45 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 import 'package:mvst_admin/authentification/authentification.dart';
 import 'package:mvst_admin/authentification/connection.dart';
 import 'package:mvst_admin/bloc/bolc.dart';
 import 'package:mvst_admin/bloc/event.dart';
-import 'package:mvst_admin/bloc/exempleAffichage2.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/firebase_options.dart';
+import 'package:mvst_admin/graphiques/diagrammeABarres.dart';
 import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/qrcode/lecteurQrCode.dart';
+import 'package:mvst_admin/screens/listeTicketsScannes.dart';
 import 'package:mvst_admin/screens/parametres.dart';
 import 'package:mvst_admin/screens/profil.dart';
+
+DateTime? dateActuelle = DateTime.now();
+DateTime? aujourdhui =
+    DateTime.utc(dateActuelle!.year, dateActuelle!.month, dateActuelle!.day);
+var idDate = DateFormat('EEEE_d_MMMM_y', 'fr_FR').format(aujourdhui!);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
+  // Initialiser les données de localisation pour 'fr_FR'
+  await initializeDateFormatting('fr_FR', null);
   runApp(const MyApp());
+  ListeDesId.getTicketsAScanner(idDate);
   listenForTicketChanges();
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
+    ListeDesId.getTicketsAScanner(idDate);
     return BlocProvider(
       create: (context) => BlocListePlaces()..add(ChargerLaList()),
       child: MaterialApp(
@@ -37,6 +50,14 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: Config.colors.bleuFonce),
           useMaterial3: true,
         ),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('fr', ''),
+        ],
         home: const Accueil(),
       ),
     );
@@ -50,7 +71,36 @@ class Accueil extends StatefulWidget {
   State<Accueil> createState() => _AccueilState();
 }
 
-class _AccueilState extends State<Accueil> {
+class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    ListeDesId.getTicketsAScanner(idDate);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      // Vider la liste lorsque l'application est en arrière-plan ou fermée
+      monTicket.clear();
+    }
+  }
+
+  bool isLoading = false;
+  void setLoadingState(bool state) {
+    setState(() {
+      isLoading = state;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -74,26 +124,31 @@ class _AccueilState extends State<Accueil> {
                       color: Config.colors.bleuFonce2,
                     ),
                     child: Center(
-                      child: Container(
-                        width: 120.0,
-                        height: 120.0,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Config.colors.jauneBlanc,
-                            width: 2.0,
-                          ),
-                        ),
-                        child: Center(
-                          child: Text(
-                            'MVST',
-                            style: TextStyle(
-                              color: Config.colors.bleuClaire,
-                              fontSize: 24,
-                              fontFamily: 'Lobster',
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 120.0,
+                            height: 120.0,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Config.colors.jauneBlanc,
+                                width: 2.0,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'MVST',
+                                style: TextStyle(
+                                  color: Config.colors.bleuClaire,
+                                  fontSize: 24,
+                                  fontFamily: 'Lobster',
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ),
@@ -214,10 +269,10 @@ class _AccueilState extends State<Accueil> {
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
                 children: [
-                  scannQrCode(context),
-                  achatDeTicket(context),
-                  tableauDeBord(context),
-                  impression(context),
+                  scannQrCode(context, setLoadingState),
+                  ticketsScannes(context, setLoadingState),
+                  tableauDeBord(context, setLoadingState),
+                  impression(context, setLoadingState),
                 ],
               ),
             ),
@@ -246,9 +301,11 @@ class _AccueilState extends State<Accueil> {
   }
 }
 
-Widget scannQrCode(BuildContext ctx) {
+Widget scannQrCode(BuildContext ctx, Function setLoadingState) {
   return GestureDetector(
-    onTap: () {
+    onTap: () async {
+      setLoadingState(true);
+      await ListeDesId.getTicketsAScanner(idDate);
       if (FirebaseAuth.instance.currentUser != null) {
         String userId = FirebaseAuth.instance.currentUser!.uid;
         String? userProfil = FirebaseAuth.instance.currentUser!.displayName;
@@ -264,6 +321,7 @@ Widget scannQrCode(BuildContext ctx) {
           ),
         );
       }
+      setLoadingState(false);
     },
     child: Card(
       shadowColor: Colors.blue,
@@ -290,12 +348,20 @@ Widget scannQrCode(BuildContext ctx) {
   );
 }
 
-Widget achatDeTicket(BuildContext ctx) {
+Widget ticketsScannes(BuildContext ctx, Function setLoadingState) {
   return GestureDetector(
-    onTap: () {
+    onTap: () async {
+      setLoadingState(true);
       if (FirebaseAuth.instance.currentUser != null) {
         String userId = FirebaseAuth.instance.currentUser!.uid;
         String? userProfil = FirebaseAuth.instance.currentUser!.displayName;
+        Navigator.push(
+            ctx,
+            MaterialPageRoute(
+                builder: (BuildContext context) => MesTickets(
+                      date: idDate,
+                      idUtilisateur: userId,
+                    )));
       } else {
         Navigator.pushReplacement(
           ctx,
@@ -304,12 +370,7 @@ Widget achatDeTicket(BuildContext ctx) {
           ),
         );
       }
-      /*
-      Navigator.push(
-          ctx,
-          MaterialPageRoute(
-              builder: (BuildContext context) => const HomeAdmin()));
-    */
+      setLoadingState(false);
     },
     child: Card(
       shadowColor: Colors.blue,
@@ -328,7 +389,7 @@ Widget achatDeTicket(BuildContext ctx) {
                 size: 60,
               ),
             ),
-            Text("ACHAT DE TICKETS")
+            Text("TICKETS SCANNES")
           ],
         ),
       ),
@@ -336,37 +397,30 @@ Widget achatDeTicket(BuildContext ctx) {
   );
 }
 
-Widget tableauDeBord(BuildContext ctx) {
+Widget tableauDeBord(BuildContext ctx, Function setLoadingState) {
   return GestureDetector(
-    onTap: () {
-      FonctionListeDesPlaces.recup();
-      //ClasseListeDesPlaces.getTicketsStream();
-      BlocProvider.of<BlocListePlaces>(ctx).add(ChargerLaList());
-      Navigator.push(
-        ctx,
-        MaterialPageRoute(
-          builder: (context) => SecondPage(),
-        ),
-      );
-      /*
+    onTap: () async {
+      setLoadingState(true);
       if (FirebaseAuth.instance.currentUser != null) {
         String userId = FirebaseAuth.instance.currentUser!.uid;
         String? userProfil = FirebaseAuth.instance.currentUser!.displayName;
-
         Navigator.push(
           ctx,
           MaterialPageRoute(
-            builder: (context) => IntegerListPage1(),
+            builder: (BuildContext context) => GraphiquesABarres(
+              date: idDate,
+            ),
           ),
         );
       } else {
         Navigator.pushReplacement(
           ctx,
           MaterialPageRoute(
-            builder: (context) => const PageDAuthentification(),
+            builder: (context) => const Login(),
           ),
         );
-      }*/
+      }
+      setLoadingState(false);
     },
     child: Card(
       shadowColor: Colors.blue,
@@ -393,9 +447,10 @@ Widget tableauDeBord(BuildContext ctx) {
   );
 }
 
-Widget impression(BuildContext ctx) {
+Widget impression(BuildContext ctx, Function setLoadingState) {
   return GestureDetector(
-    onTap: () {
+    onTap: () async {
+      setLoadingState(true);
       if (FirebaseAuth.instance.currentUser != null) {
         String userId = FirebaseAuth.instance.currentUser!.uid;
         String? userProfil = FirebaseAuth.instance.currentUser!.displayName;
@@ -403,7 +458,9 @@ Widget impression(BuildContext ctx) {
         Navigator.push(
           ctx,
           MaterialPageRoute(
-            builder: (context) => SecondPage(),
+            builder: (context) => GraphiquesABarres(
+              date: idDate,
+            ),
           ),
         );
       } else {
@@ -414,6 +471,7 @@ Widget impression(BuildContext ctx) {
           ),
         );
       }
+      setLoadingState(false);
     },
     child: Card(
       shadowColor: Colors.blue,
@@ -432,7 +490,10 @@ Widget impression(BuildContext ctx) {
                 size: 60,
               ),
             ),
-            Text("IMPRIMER RECUS")
+            Text(
+              "TOUS LES TICKETS DU JOUR",
+              style: TextStyle(fontSize: 12),
+            )
           ],
         ),
       ),
@@ -462,52 +523,3 @@ void deconnexion(BuildContext context) async {
     (route) => false,
   );
 }
-
-/*
-
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-  @override
-  Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider<BlocCompteur>(
-          create: (context) => BlocCompteur(),
-        ),
-        BlocProvider<BlocAjoutListe>(
-          create: (context) => BlocAjoutListe(),
-        ),
-      ],
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Config.colors.bleuFonce),
-          useMaterial3: true,
-        ),
-        // Mettre la date en Français
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [
-          Locale('fr', ''),
-        ],
-
-        home: Accueil(),
-      ),
-    );
-  }
-}
-
-
-*/

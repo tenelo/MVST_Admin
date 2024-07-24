@@ -38,7 +38,12 @@ class _ListeImagesState extends State<ListeImages> {
             return Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('Erreur: ${snapshot.error}'));
+            return Center(
+                child: Text(
+              'Erreur: ${snapshot.error}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ));
           }
 
           final List<ImageModel> images = snapshot.data!.docs
@@ -132,7 +137,8 @@ class _ListeImagesState extends State<ListeImages> {
                                               descriptionController.text,
                                         });
                                       } catch (e) {
-                                        print('Error updating image: $e');
+                                        print(
+                                            'Erreur de chargement de l\'image: $e');
                                       } finally {
                                         setState(() {
                                           isLoading = false;

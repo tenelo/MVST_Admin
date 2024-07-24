@@ -36,6 +36,8 @@ dependencies:
   cupertino_icons: ^1.0.6
   firebase_auth: ^5.1.1
   cloud_firestore: ^5.0.2
+  flutter_localizations:
+    sdk: flutter
   qr_code_scanner: ^1.0.1
   qr_flutter: ^4.1.0
   flutter_spinkit: ^5.2.1
@@ -43,6 +45,11 @@ dependencies:
   equatable: ^2.0.5
   image_picker: ^1.1.2
   firebase_storage: ^12.1.1
+  intl: ^0.19.0
+  ticket_widget: ^1.0.2
+  ticket_material: ^0.3.1
+  syncfusion_flutter_charts: ^26.1.42
+  syncfusion_flutter_datepicker: ^26.2.4
 
 dev_dependencies:
   flutter_test:

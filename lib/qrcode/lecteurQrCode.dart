@@ -1,18 +1,11 @@
 import 'dart:developer';
 import 'dart:io';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
-
-List<String> validate = [
-  "valide",
-  "001",
-  "ok",
-  "7XQzur9d158OQFOfWVfB",
-  "yes",
-  "VcJliO5AMQJoZ1Tiv7jJ",
-];
 
 List<String> lecture = [];
 
@@ -147,22 +140,36 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
       key: qrKey,
       onQRViewCreated: (controller) {
         this.controller = controller;
-        controller.scannedDataStream.listen((scanData) {
+        controller.scannedDataStream.listen((scanData) async {
           if (isScanning && !qrRead) {
             // Vérifier si le scanner est en cours et si aucun QR code n'a été lu
             setState(() {
               qrRead = true; // Un QR code a été lu
             });
             final ticketData = TicketData.fromQrCode(scanData.code!);
-            //if (validate.contains(scanData.code)) {
-            if (validate.contains(ticketData.idTicket)) {
-              lecture.add(scanData.code!);
-              showDialog(
-                context: context,
-                builder: (context) {
-                  return valide(context, ticketData);
-                },
-              );
+
+            // Chercher le ticket correspondant
+            final ticket = monTicket.firstWhereOrNull(
+              (ticket) => ticket.idDoc == ticketData.idTicket,
+            );
+            if (ticket != null) {
+              if (ticket.etatScanne == 'non') {
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    return valide(context, ticketData);
+                  },
+                );
+                await misAjourEtatScanne(
+                    ticket.idDocParent, ticket.idDoc, "scanné");
+              } else {
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    return dejaValide(context, ticketData);
+                  },
+                );
+              }
             } else {
               showDialog(
                 context: context,
@@ -242,11 +249,18 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
               text: '${ticketData.date}\n\n',
             ),
             TextSpan(
-                text: 'heure de départ : ',
+                text: 'Heure de départ : ',
                 style:
                     TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
             TextSpan(
               text: '${ticketData.heure} h\n\n',
+            ),
+            TextSpan(
+                text: 'Destination : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.destination} \n\n',
             ),
             TextSpan(
                 text: 'Passager : ',
@@ -272,12 +286,11 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
           ],
         ),
       ),
-      /* Text(
-          "N° de Ticket : ${ticketData.idTicket}\nDépart du : ${ticketData.date}\nà : ${ticketData.heure} h\nPassager: ${ticketData.nom}\nTéléphone: ${ticketData.contact}\nSiège: ${ticketData.place}"), */
       actions: [
         TextButton(
           onPressed: () {
             stopScann();
+            setState(() {});
             Navigator.pop(context);
           },
           child: const Text('OK'),
@@ -292,7 +305,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Center(
-            child: Image.asset('assets/images/valide.png'),
+            child: Image.asset('assets/images/dejaValide.png'),
           ),
           const SizedBox(
             height: 40,
@@ -300,17 +313,76 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
           const Text(
             'VALIDE DEJA SCANNE',
             style: TextStyle(
-                color: Color.fromARGB(255, 2, 41, 125),
+                color: Color.fromARGB(255, 21, 162, 244),
                 fontWeight: FontWeight.bold),
           ),
         ],
       ),
-      content: Text(
-          "N° de Ticket : ${ticketData.idTicket}\nDépart du: ${ticketData.date}\nA: ${ticketData.heure}\nPassager: ${ticketData.nom}\Téléphone: ${ticketData.contact}\nSiège: ${ticketData.place}"),
+      content: RichText(
+        text: TextSpan(
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 16.0,
+          ),
+          children: <TextSpan>[
+            TextSpan(
+                text: 'N° de Ticket : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.idTicket}\n\n',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            TextSpan(
+                text: 'Départ du : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.date}\n\n',
+            ),
+            TextSpan(
+                text: 'Heure de départ : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.heure} h\n\n',
+            ),
+            TextSpan(
+                text: 'Destination : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.destination} \n\n',
+            ),
+            TextSpan(
+                text: 'Passager : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.nom}\n\n',
+            ),
+            TextSpan(
+                text: 'Siège : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.place}\n\n',
+            ),
+            TextSpan(
+                text: 'Téléphone : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.contact}',
+            ),
+          ],
+        ),
+      ),
       actions: [
         TextButton(
           onPressed: () {
             stopScann();
+            setState(() {});
             Navigator.pop(context);
           },
           child: const Text('OK'),
@@ -345,6 +417,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
         TextButton(
           onPressed: () {
             stopScann();
+            setState(() {});
             Navigator.pop(context);
           },
           child: const Text('OK'),
@@ -396,87 +469,3 @@ class TicketData {
     );
   }
 }
-
-
-// CREATION QR CODE
-
-/*
-
-import 'dart:async';
-import 'dart:ui' as ui;
-
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:mvst/config/config.dart';
-import 'package:qr_flutter/qr_flutter.dart';
-
-Color? couleurA;
-Color? couleurB;
-
-class CreationQrCode {
-  static Widget buildQrCode(
-    final String idUtilisateur,
-    final String idTicket,
-    final int place,
-    final String nom,
-    final String contact,
-    final String date,
-    final String heure,
-    final String depart,
-    final String destination,
-    final String etatScann,
-  ) {
-    final String message =
-        "$idUtilisateur \n$idTicket \n$nom \n$contact \n$date \n$heure \n$place \n$depart->$destination \n$etatScann";
-
-    final FutureBuilder<ui.Image> qrFutureBuilder = FutureBuilder<ui.Image>(
-      future: _loadOverlayImage(),
-      builder: (BuildContext ctx, AsyncSnapshot<ui.Image> snapshot) {
-        const double size = 280.0;
-        if (snapshot.hasData) {
-          //return const SizedBox(width: size, height: size);
-          if (etatScann == "scanne") {
-            couleurA = Config.colors.bleuA;
-            couleurB = Config.colors.bleuB;
-          } else {
-            couleurA = Config.colors.vertA;
-            couleurB = Config.colors.vertB;
-          }
-        }
-
-        return CustomPaint(
-          size: const Size.square(size),
-          painter: QrPainter(
-            data: message,
-            version: QrVersions.auto,
-            eyeStyle: QrEyeStyle(
-              eyeShape: QrEyeShape.square,
-              color: couleurA,
-            ),
-            dataModuleStyle: QrDataModuleStyle(
-              dataModuleShape: QrDataModuleShape.square,
-              color: couleurB,
-            ),
-            embeddedImage: snapshot.data,
-            // taille de l'image dans le qrcode
-            embeddedImageStyle: const QrEmbeddedImageStyle(
-              size: Size.square(75),
-            ),
-          ),
-        );
-      },
-    );
-
-    return qrFutureBuilder;
-  }
-
-  static Future<ui.Image> _loadOverlayImage() async {
-    final Completer<ui.Image> completer = Completer<ui.Image>();
-    final ByteData byteData = await rootBundle.load('assets/images/Qr_rd3.png');
-    ui.decodeImageFromList(byteData.buffer.asUint8List(), completer.complete);
-    return completer.future;
-  }
-}
-
-
-*/
