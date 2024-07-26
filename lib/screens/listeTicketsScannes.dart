@@ -46,7 +46,7 @@ class _MesTicketsState extends State<MesTickets> {
       recuperationDeMesTickets() {
     return FirebaseFirestore.instance
         .collection('tickets')
-        .where('dateDeDepart', isEqualTo: widget.date)
+        .where('moisAnnee', isEqualTo: widget.date)
         .orderBy('createdAt', descending: true)
         .snapshots()
         .asyncMap((ticketsSnapshot) async {
@@ -88,6 +88,9 @@ class _MesTicketsState extends State<MesTickets> {
     tailleEcran = calculeTailleEcran(context).round();
     return Scaffold(
       appBar: AppBar(
+        iconTheme: IconThemeData(
+          color: Config.colors.bleuFonce2,
+        ),
         centerTitle: true,
         title: TextField(
           controller: _searchController,

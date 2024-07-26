@@ -7,9 +7,14 @@ import 'package:mvst_admin/graphiques/graphiqueAnnee.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
 class GraphiquesABarresMoisAnnee extends StatefulWidget {
-  const GraphiquesABarresMoisAnnee({super.key, required this.date});
+  const GraphiquesABarresMoisAnnee(
+      {super.key,
+      required this.date,
+      required this.moisAnnee,
+      required this.annee});
   final String date;
-
+  final String moisAnnee;
+  final String annee;
   @override
   State<GraphiquesABarresMoisAnnee> createState() =>
       _GraphiquesABarresMoisAnneeState();
@@ -34,16 +39,21 @@ class _GraphiquesABarresMoisAnneeState
   void initState() {
     super.initState();
     recuperationDesTickets();
+    _dateController.text = widget.date;
+    _monthYearController.text = widget.moisAnnee;
+    _yearController.text = widget.annee;
   }
 
   List<Color> listeDesCouleurs = [
     Color.fromARGB(192, 6, 90, 132),
-    Color.fromARGB(218, 248, 211, 62),
+    Color.fromARGB(255, 255, 192, 0),
     Color.fromARGB(225, 85, 144, 80),
     Color.fromARGB(255, 144, 173, 255),
-    Color.fromARGB(255, 172, 248, 50),
-    Color.fromARGB(255, 50, 245, 235),
+    Color.fromARGB(255, 192, 0, 0),
+    Color.fromARGB(255, 0, 205, 153),
     Color.fromARGB(255, 129, 56, 247),
+    Color.fromARGB(255, 204, 236, 255),
+    Color.fromARGB(255, 241, 167, 138),
     Color.fromARGB(213, 57, 103, 255),
     Color.fromARGB(255, 236, 141, 255),
     Color.fromARGB(255, 244, 80, 68),
@@ -53,7 +63,7 @@ class _GraphiquesABarresMoisAnneeState
       recuperationDesTickets() {
     return FirebaseFirestore.instance
         .collection('tickets')
-        .where('moisAnnee', isEqualTo: widget.date)
+        .where('moisAnnee', isEqualTo: widget.moisAnnee)
         .snapshots()
         .asyncMap((ticketsSnapshot) async {
       List<DocumentSnapshot<Map<String, dynamic>>> allDocuments = [];
@@ -115,6 +125,9 @@ class _GraphiquesABarresMoisAnneeState
         _selectedDate = picked;
         _dateController.text =
             DateFormat('EEEE_d_MMMM_y', 'fr_FR').format(_selectedDate);
+        _monthYearController.text =
+            DateFormat('MMMM_y', 'fr_FR').format(_selectedDate);
+        _yearController.text = DateFormat('y', 'fr_FR').format(_selectedDate);
       });
     }
     Navigator.pushReplacement(
@@ -122,6 +135,8 @@ class _GraphiquesABarresMoisAnneeState
       MaterialPageRoute(
         builder: (context) => GraphiquesABarres(
           date: _dateController.text,
+          moisAnnee: _monthYearController.text,
+          annee: _yearController.text,
         ),
       ),
     );
@@ -138,15 +153,21 @@ class _GraphiquesABarresMoisAnneeState
     if (picked != null && picked != _selectedMonthYear) {
       setState(() {
         _selectedMonthYear = DateTime(picked.year, picked.month);
+        _dateController.text =
+            DateFormat('EEEE_d_MMMM_y', 'fr_FR').format(_selectedMonthYear);
         _monthYearController.text =
             DateFormat('MMMM_y', 'fr_FR').format(_selectedMonthYear);
+        _yearController.text =
+            DateFormat('y', 'fr_FR').format(_selectedMonthYear);
       });
     }
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (context) => GraphiquesABarresMoisAnnee(
-          date: _monthYearController.text,
+          date: _dateController.text,
+          moisAnnee: _monthYearController.text,
+          annee: _yearController.text,
         ),
       ),
     );
@@ -163,15 +184,20 @@ class _GraphiquesABarresMoisAnneeState
     if (picked != null && picked != _selectedYear) {
       setState(() {
         _selectedYear = DateTime(picked.year);
+        _dateController.text =
+            DateFormat('EEEE_d_MMMM_y', 'fr_FR').format(_selectedYear);
+        _monthYearController.text =
+            DateFormat('MMMM_y', 'fr_FR').format(_selectedYear);
         _yearController.text = DateFormat('y', 'fr_FR').format(_selectedYear);
-        GraphiquesABarresAnnee(date: _yearController.text);
       });
     }
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (context) => GraphiquesABarresAnnee(
-          date: _yearController.text,
+          date: _dateController.text,
+          moisAnnee: _monthYearController.text,
+          annee: _yearController.text,
         ),
       ),
     );
@@ -181,6 +207,9 @@ class _GraphiquesABarresMoisAnneeState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        iconTheme: IconThemeData(
+          color: Config.colors.bleuFonce2,
+        ),
         title: TextField(
           controller: _searchController,
           decoration: InputDecoration(
@@ -220,148 +249,143 @@ class _GraphiquesABarresMoisAnneeState
             return Center(child: CircularProgressIndicator());
           }
 
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(
-              child: Text(
-                "Vous n'avez aucun ticket",
-                style: TextStyle(
-                    color: Config.colors.bleuFonce2,
-                    fontWeight: FontWeight.bold),
-              ),
-            );
-          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {}
 
           final filteredTickets = getFilteredTickets();
 
-          return Column(
-            children: [
-              Container(
-                height: MediaQuery.of(context).size.height * 0.6,
-                child: SfCartesianChart(
-                  primaryXAxis: CategoryAxis(
-                    labelStyle: TextStyle(
-                      fontWeight: FontWeight.bold,
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                Container(
+                  height: MediaQuery.of(context).size.height * 0.6,
+                  child: SfCartesianChart(
+                    primaryXAxis: CategoryAxis(
+                      labelStyle: TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  primaryYAxis: NumericAxis(
-                    title: AxisTitle(text: 'Nombre de Passagers'),
-                    majorGridLines: MajorGridLines(width: 0),
-                    labelStyle: TextStyle(fontSize: 0),
-                  ),
-                  title: ChartTitle(
-                      text: 'Répartition des Passagers par Destination',
-                      textStyle: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Config.colors.bleuA)),
-                  legend: Legend(isVisible: true),
-                  tooltipBehavior: TooltipBehavior(enable: true),
-                  series: <CartesianSeries<MesDonneesTickets, String>>[
-                    BarSeries<MesDonneesTickets, String>(
-                      borderRadius: BorderRadius.circular(10),
-                      sortingOrder: SortingOrder.descending,
-                      color: Colors.orange,
-                      name: 'Total Passagers ${getTotalPassagers()}',
-                      dataSource: filteredTickets,
-                      xValueMapper: (MesDonneesTickets data, _) =>
-                          data.destinations,
-                      yValueMapper: (MesDonneesTickets data, _) =>
-                          data.nombrePassagers,
-                      pointColorMapper: (MesDonneesTickets data, int index) =>
-                          listeDesCouleurs[index % listeDesCouleurs.length],
-                      dataLabelSettings: DataLabelSettings(
-                        isVisible: true,
+                    primaryYAxis: NumericAxis(
+                      title: AxisTitle(
+                          //text: 'Nombre de Passagers',
+                          ),
+                      majorGridLines: MajorGridLines(width: 0),
+                      labelStyle: TextStyle(fontSize: 0),
+                    ),
+                    title: ChartTitle(
+                        text: 'Répartition des Passagers par Destination',
                         textStyle: TextStyle(
-                          fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.bold,
+                            color: Config.colors.bleuA)),
+                    legend: Legend(isVisible: true),
+                    tooltipBehavior: TooltipBehavior(enable: true),
+                    series: <CartesianSeries<MesDonneesTickets, String>>[
+                      BarSeries<MesDonneesTickets, String>(
+                        borderRadius: BorderRadius.circular(10),
+                        sortingOrder: SortingOrder.descending,
+                        color: Colors.orange,
+                        name: 'Total Passagers ${getTotalPassagers()}',
+                        dataSource: filteredTickets,
+                        xValueMapper: (MesDonneesTickets data, _) =>
+                            data.destinations,
+                        yValueMapper: (MesDonneesTickets data, _) =>
+                            data.nombrePassagers,
+                        pointColorMapper: (MesDonneesTickets data, int index) =>
+                            listeDesCouleurs[index % listeDesCouleurs.length],
+                        dataLabelSettings: DataLabelSettings(
+                          isVisible: true,
+                          textStyle: TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(10.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Choisissez une date:',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.grey),
-                    ),
-                    SizedBox(height: 4),
-                    GestureDetector(
-                      onTap: () => _selectDate(context),
-                      child: AbsorbPointer(
-                        child: TextField(
-                          controller: _dateController,
-                          style: TextStyle(color: Colors.grey),
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(),
-                            contentPadding:
-                                EdgeInsets.symmetric(horizontal: 16),
-                            suffixIcon: Icon(
-                              Icons.calendar_month_sharp,
-                              color: Colors.grey,
+                Padding(
+                  padding: const EdgeInsets.all(10.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Choisissez une date:',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.grey),
+                      ),
+                      SizedBox(height: 4),
+                      GestureDetector(
+                        onTap: () => _selectDate(context),
+                        child: AbsorbPointer(
+                          child: TextField(
+                            controller: _dateController,
+                            style: TextStyle(color: Colors.grey),
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(),
+                              contentPadding:
+                                  EdgeInsets.symmetric(horizontal: 16),
+                              suffixIcon: Icon(
+                                Icons.calendar_month_sharp,
+                                color: Colors.grey,
+                              ),
                             ),
+                            readOnly: true,
                           ),
-                          readOnly: true,
                         ),
                       ),
-                    ),
-                    Text(
-                      'Choisissez mois et année:',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.grey),
-                    ),
-                    SizedBox(height: 4),
-                    GestureDetector(
-                      onTap: () => _selectMoisEtAnnee(context),
-                      child: AbsorbPointer(
-                        child: TextField(
-                          controller: _monthYearController,
-                          style: TextStyle(color: Colors.grey),
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(),
-                            contentPadding:
-                                EdgeInsets.symmetric(horizontal: 16),
-                            suffixIcon: Icon(
-                              Icons.calendar_month_sharp,
-                              color: Colors.grey,
+                      Text(
+                        'Choisissez mois et année:',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.grey),
+                      ),
+                      SizedBox(height: 4),
+                      GestureDetector(
+                        onTap: () => _selectMoisEtAnnee(context),
+                        child: AbsorbPointer(
+                          child: TextField(
+                            controller: _monthYearController,
+                            style: TextStyle(color: Colors.grey),
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(),
+                              contentPadding:
+                                  EdgeInsets.symmetric(horizontal: 16),
+                              suffixIcon: Icon(
+                                Icons.calendar_month_sharp,
+                                color: Colors.grey,
+                              ),
                             ),
+                            readOnly: true,
                           ),
-                          readOnly: true,
                         ),
                       ),
-                    ),
-                    Text(
-                      'Choisissez l\'année:',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.grey),
-                    ),
-                    SizedBox(height: 4),
-                    GestureDetector(
-                      onTap: () => _selectAnnee(context),
-                      child: AbsorbPointer(
-                        child: TextField(
-                          controller: _yearController,
-                          style: TextStyle(color: Colors.grey),
-                          decoration: InputDecoration(
-                            border: OutlineInputBorder(),
-                            contentPadding:
-                                EdgeInsets.symmetric(horizontal: 16),
-                            suffixIcon: Icon(
-                              Icons.calendar_month_sharp,
-                              color: Colors.grey,
+                      Text(
+                        'Choisissez l\'année:',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.grey),
+                      ),
+                      SizedBox(height: 4),
+                      GestureDetector(
+                        onTap: () => _selectAnnee(context),
+                        child: AbsorbPointer(
+                          child: TextField(
+                            controller: _yearController,
+                            style: TextStyle(color: Colors.grey),
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(),
+                              contentPadding:
+                                  EdgeInsets.symmetric(horizontal: 16),
+                              suffixIcon: Icon(
+                                Icons.calendar_month_sharp,
+                                color: Colors.grey,
+                              ),
                             ),
+                            readOnly: true,
                           ),
-                          readOnly: true,
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),

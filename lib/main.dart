@@ -2,14 +2,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/authentification/authentification.dart';
 import 'package:mvst_admin/authentification/connection.dart';
-import 'package:mvst_admin/bloc/bolc.dart';
-import 'package:mvst_admin/bloc/event.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/firebase_options.dart';
 import 'package:mvst_admin/graphiques/diagrammeABarres.dart';
@@ -18,11 +15,15 @@ import 'package:mvst_admin/qrcode/lecteurQrCode.dart';
 import 'package:mvst_admin/screens/listeTicketsScannes.dart';
 import 'package:mvst_admin/screens/parametres.dart';
 import 'package:mvst_admin/screens/profil.dart';
+import 'package:mvst_admin/screens/tableaudestickets.dart';
+import 'package:mvst_admin/verifTickets/verifierticket.dart';
 
 DateTime? dateActuelle = DateTime.now();
 DateTime? aujourdhui =
     DateTime.utc(dateActuelle!.year, dateActuelle!.month, dateActuelle!.day);
 var idDate = DateFormat('EEEE_d_MMMM_y', 'fr_FR').format(aujourdhui!);
+var idMoisAnnee = DateFormat('MMMM_y', 'fr_FR').format(aujourdhui!);
+var idAnnee = DateFormat('y', 'fr_FR').format(aujourdhui!);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,24 +43,21 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     ListeDesId.getTicketsAScanner(idDate);
-    return BlocProvider(
-      create: (context) => BlocListePlaces()..add(ChargerLaList()),
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Config.colors.bleuFonce),
-          useMaterial3: true,
-        ),
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [
-          Locale('fr', ''),
-        ],
-        home: const Accueil(),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Config.colors.bleuFonce),
+        useMaterial3: true,
       ),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('fr', ''),
+      ],
+      home: const Accueil(),
     );
   }
 }
@@ -107,7 +105,7 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
       appBar: AppBar(
         backgroundColor: Config.colors.jauneBlanc,
         title: const Text(
-          'ADMINISTRATEURS MVST',
+          'CONTROLEURS MVST',
           style: TextStyle(color: Colors.black),
         ),
         centerTitle: true,
@@ -217,6 +215,32 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                   ),
                   ListTile(
                     leading: Icon(
+                      Icons.search,
+                      color: Config.colors.bleuClaire,
+                    ),
+                    title: Text(
+                      'Vérifications de tickets',
+                      style: TextStyle(
+                        color: Config.colors.bleuClaire,
+                        fontFamily: 'Lobster',
+                      ),
+                    ),
+                    onTap: () {
+                      if (FirebaseAuth.instance.currentUser != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ParametresVerification(),
+                          ),
+                        );
+                      } else {
+                        Navigator.pop(context);
+                        showIncompleteFieldsSnackBar(context);
+                      }
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(
                       Icons.power_settings_new,
                       color: Config.colors.bleuClaire,
                     ),
@@ -271,31 +295,13 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                 children: [
                   scannQrCode(context, setLoadingState),
                   ticketsScannes(context, setLoadingState),
-                  tableauDeBord(context, setLoadingState),
-                  impression(context, setLoadingState),
+                  graphiques(context, setLoadingState),
+                  tableau(context, setLoadingState),
                 ],
               ),
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Color.fromARGB(255, 119, 156, 172),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Accueil',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_outlined),
-            label: 'Mes Tickets',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.info_outline),
-            label: 'Infos',
-          ),
-        ],
       ),
     );
   }
@@ -397,7 +403,7 @@ Widget ticketsScannes(BuildContext ctx, Function setLoadingState) {
   );
 }
 
-Widget tableauDeBord(BuildContext ctx, Function setLoadingState) {
+Widget graphiques(BuildContext ctx, Function setLoadingState) {
   return GestureDetector(
     onTap: () async {
       setLoadingState(true);
@@ -409,6 +415,8 @@ Widget tableauDeBord(BuildContext ctx, Function setLoadingState) {
           MaterialPageRoute(
             builder: (BuildContext context) => GraphiquesABarres(
               date: idDate,
+              moisAnnee: idMoisAnnee,
+              annee: idAnnee,
             ),
           ),
         );
@@ -439,7 +447,7 @@ Widget tableauDeBord(BuildContext ctx, Function setLoadingState) {
                 size: 60,
               ),
             ),
-            Text("TABLEAU DE BORD")
+            Text("GRAPHIQUES")
           ],
         ),
       ),
@@ -447,7 +455,7 @@ Widget tableauDeBord(BuildContext ctx, Function setLoadingState) {
   );
 }
 
-Widget impression(BuildContext ctx, Function setLoadingState) {
+Widget tableau(BuildContext ctx, Function setLoadingState) {
   return GestureDetector(
     onTap: () async {
       setLoadingState(true);
@@ -458,8 +466,8 @@ Widget impression(BuildContext ctx, Function setLoadingState) {
         Navigator.push(
           ctx,
           MaterialPageRoute(
-            builder: (context) => GraphiquesABarres(
-              date: idDate,
+            builder: (context) => TableauDeTickets(
+              date: idAnnee,
             ),
           ),
         );
@@ -486,14 +494,13 @@ Widget impression(BuildContext ctx, Function setLoadingState) {
               width: 70,
               height: 70,
               child: Icon(
-                Icons.file_copy_outlined,
+                Icons.table_rows_outlined,
                 size: 60,
               ),
             ),
             Text(
-              "TOUS LES TICKETS DU JOUR",
-              style: TextStyle(fontSize: 12),
-            )
+              "TABLEAU DE TICKETS",
+            ),
           ],
         ),
       ),
@@ -523,3 +530,37 @@ void deconnexion(BuildContext context) async {
     (route) => false,
   );
 }
+
+// MAIN AVEC BLOC 
+/*
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    ListeDesId.getTicketsAScanner(idDate);
+    return BlocProvider(
+      create: (context) => BlocListePlaces()..add(ChargerLaList()),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Config.colors.bleuFonce),
+          useMaterial3: true,
+        ),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('fr', ''),
+        ],
+        home: const Accueil(),
+      ),
+    );
+  }
+}
+
+
+*/

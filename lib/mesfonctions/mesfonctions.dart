@@ -33,34 +33,6 @@ class ListeDesId {
   }
 }
 
-/*
-  Stream<List<DocumentSnapshot<Map<String, dynamic>>>>
-      recuperationDeMesTickets() {
-    return FirebaseFirestore.instance
-        .collection('tickets')
-        .orderBy('createdAt', descending: true)
-        .limit(5)
-        .snapshots()
-        .asyncMap((ticketsSnapshot) async {
-      List<DocumentSnapshot<Map<String, dynamic>>> allDocuments = [];
-      for (var ticketDoc in ticketsSnapshot.docs) {
-        try {
-          var subcollectionSnapshot = await ticketDoc.reference
-              .collection('sousCollectionTickets')
-              .where('idUtilisateur', isEqualTo: widget.idUtilisateur)
-              .orderBy('dateDeCreation', descending: true)
-              .get();
-          allDocuments.addAll(subcollectionSnapshot.docs);
-        } catch (e) {
-          print('Erreur de chargement du ticket ${ticketDoc.id}: $e');
-        }
-      }
-      return allDocuments;
-    });
-  }
-
-*/
-
 class MonTicket {
   String idDocParent;
   String idDoc;
