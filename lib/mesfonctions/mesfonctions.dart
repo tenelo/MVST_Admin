@@ -49,6 +49,7 @@ void listenForTicketChanges() {
   final collectionRef = FirebaseFirestore.instance.collection('tickets');
 
   // Écoute tous les changements dans la collection 'tickets'
+  // ignore: unused_local_variable
   final subscription = collectionRef.snapshots().listen((snapshot) {
     snapshot.docChanges.forEach((change) {
       // Réagir à n'importe quel changement ici
