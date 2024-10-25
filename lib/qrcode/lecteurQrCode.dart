@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
@@ -10,8 +11,14 @@ import 'package:qr_code_scanner/qr_code_scanner.dart';
 List<String> lecture = [];
 
 class LecteurQrCode extends StatefulWidget {
-  const LecteurQrCode({super.key});
-
+  const LecteurQrCode(
+      {super.key,
+      required this.dateAujourdhui,
+      required this.dateApresDemain,
+      required this.dateNormale});
+  final String dateAujourdhui;
+  final String dateApresDemain;
+  final String dateNormale;
   @override
   State<StatefulWidget> createState() => _LecteurQrCodeState();
 }
@@ -131,6 +138,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
     );
   }
 
+// Le lecteur de QRCode
   Widget _buildQrView(BuildContext context) {
     var scanArea = (MediaQuery.of(context).size.width < 400 ||
             MediaQuery.of(context).size.height < 400)
@@ -140,37 +148,71 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
       key: qrKey,
       onQRViewCreated: (controller) {
         this.controller = controller;
+
         controller.scannedDataStream.listen((scanData) async {
           if (isScanning && !qrRead) {
-            // Vérifier si le scanner est en cours et si aucun QR code n'a été lu
             setState(() {
               qrRead = true; // Un QR code a été lu
             });
+
+            // Extrait les informations du code QR scanné
             final ticketData = TicketData.fromQrCode(scanData.code!);
 
-            // Chercher le ticket correspondant
-            final ticket = monTicket.firstWhereOrNull(
-              (ticket) => ticket.idDoc == ticketData.idTicket,
-            );
+            // Chercher et récupérer le ticket correspondant dans la liste "listeDesTicketsScannes"
+            final ticket = listeDesTicketsScannes.firstWhereOrNull((ticket) =>
+                ticket['documentId'] == ticketData.idTicket &&
+                ticket['idUtilisateur'] == ticketData.idUtilisateur &&
+                ticket['place'] == ticketData.place);
+
+            // Vérification de la présence du ticket
             if (ticket != null) {
-              if (ticket.etatScanne == 'non') {
+              // Récupération de la date actuelle
+              String dateDuJour =
+                  DateFormat('yyyy-MM-dd').format(DateTime.now());
+              DateTime dateDuJourFormate = DateTime.parse(dateDuJour).toUtc();
+              // Si la date du ticket est égale à aujourd'hui
+              if (ticketData.dateCalcule.isAtSameMomentAs(dateDuJourFormate)) {
+                // Vérifier l'état du ticket (non scanné)
+                if (ticketData.etatScann == 'nonScanné') {
+                  // Si le ticket n'est pas encore scanné, le valider et mettre à jour
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      return valide(context, ticketData);
+                    },
+                  );
+                  await misAjourEtatScanne(ticketData.idTicket,
+                      ticketData.idUtilisateur, ticketData.place);
+                } else {
+                  // Si le ticket a déjà été scanné
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      return dejaValide(context, ticketData);
+                    },
+                  );
+                }
+              }
+              // Si la date du ticket est supérieure à aujourd'hui
+              else if (ticketData.dateCalcule.isAfter(dateDuJourFormate)) {
                 showDialog(
                   context: context,
                   builder: (context) {
-                    return valide(context, ticketData);
+                    return enCoursDeValidite(context, ticketData);
                   },
                 );
-                await misAjourEtatScanne(
-                    ticket.idDocParent, ticket.idDoc, "scanné");
-              } else {
+              }
+              // Si la date du ticket est inférieure à aujourd'hui
+              else {
                 showDialog(
                   context: context,
                   builder: (context) {
-                    return dejaValide(context, ticketData);
+                    return inValide(context, ticketData);
                   },
                 );
               }
             } else {
+              // Si le ticket scanné n'est pas dans la liste des tickets scannés
               showDialog(
                 context: context,
                 builder: (context) {
@@ -212,10 +254,13 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Center(
-            child: Image.asset('assets/images/valide.png'),
+            child: SizedBox(
+                height: 180,
+                width: 180,
+                child: Image.asset('assets/images/valide.png')),
           ),
           const SizedBox(
-            height: 40,
+            height: 20,
           ),
           Center(
             child: const Text(
@@ -234,12 +279,14 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
           ),
           children: <TextSpan>[
             TextSpan(
-                text: 'N° de Ticket : ',
-                style:
-                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                text: 'Ref Ticket : ',
+                style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold)),
             TextSpan(
               text: '${ticketData.idTicket}\n\n',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(fontSize: 8, color: Colors.grey),
             ),
             TextSpan(
                 text: 'Départ du : ',
@@ -247,6 +294,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
                     TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
             TextSpan(
               text: '${ticketData.date}\n\n',
+              style: TextStyle(fontFamily: 'Lobster'),
             ),
             TextSpan(
                 text: 'Heure de départ : ',
@@ -254,6 +302,15 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
                     TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
             TextSpan(
               text: '${ticketData.heure} h\n\n',
+              style: TextStyle(fontFamily: 'Lobster'),
+            ),
+            TextSpan(
+                text: 'Départ : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.depart} \n\n',
+              style: TextStyle(fontFamily: 'Lobster'),
             ),
             TextSpan(
                 text: 'Destination : ',
@@ -261,6 +318,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
                     TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
             TextSpan(
               text: '${ticketData.destination} \n\n',
+              style: TextStyle(fontFamily: 'Lobster'),
             ),
             TextSpan(
                 text: 'Passager : ',
@@ -268,20 +326,24 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
                     TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
             TextSpan(
               text: '${ticketData.nom}\n\n',
-            ),
-            TextSpan(
-                text: 'Siège : ',
-                style:
-                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-            TextSpan(
-              text: '${ticketData.place}\n\n',
+              style: TextStyle(fontFamily: 'Lobster'),
             ),
             TextSpan(
                 text: 'Téléphone : ',
                 style:
                     TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
             TextSpan(
-              text: '${ticketData.contact}',
+              text: '${ticketData.contact}\n\n',
+              style: TextStyle(fontFamily: 'Lobster'),
+            ),
+            TextSpan(
+                text: 'Siège : \t\t\t\t',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.place}',
+              style: TextStyle(
+                  color: Colors.green, fontFamily: 'Lobster', fontSize: 42),
             ),
           ],
         ),
@@ -291,9 +353,13 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
           onPressed: () {
             stopScann();
             setState(() {});
+            ListesDesTickets.ticketsAscanner();
             Navigator.pop(context);
           },
-          child: const Text('OK'),
+          child: const Text(
+            'OK',
+            style: TextStyle(color: Colors.green),
+          ),
         ),
       ],
     );
@@ -305,15 +371,132 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Center(
-            child: Image.asset('assets/images/dejaValide.png'),
+            child: SizedBox(
+                height: 180,
+                width: 180,
+                child: Image.asset('assets/images/dejaValide.png')),
           ),
           const SizedBox(
-            height: 40,
+            height: 20,
           ),
           const Text(
             'VALIDE DEJA SCANNE',
+            style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+      content: RichText(
+        text: TextSpan(
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 16.0,
+          ),
+          children: <TextSpan>[
+            TextSpan(
+                text: 'Ref Ticket : ',
+                style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.idTicket}\n\n',
+              style: TextStyle(fontSize: 8, color: Colors.grey),
+            ),
+            TextSpan(
+                text: 'Départ du : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.date}\n\n',
+              style: TextStyle(fontFamily: 'Lobster'),
+            ),
+            TextSpan(
+                text: 'Heure de départ : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.heure} h\n\n',
+              style: TextStyle(fontFamily: 'Lobster'),
+            ),
+            TextSpan(
+                text: 'Départ : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.depart} \n\n',
+              style: TextStyle(fontFamily: 'Lobster'),
+            ),
+            TextSpan(
+                text: 'Destination : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.destination} \n\n',
+              style: TextStyle(fontFamily: 'Lobster'),
+            ),
+            TextSpan(
+                text: 'Passager : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.nom}\n\n',
+              style: TextStyle(fontFamily: 'Lobster'),
+            ),
+            TextSpan(
+                text: 'Téléphone : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.contact}\n\n',
+              style: TextStyle(fontFamily: 'Lobster'),
+            ),
+            TextSpan(
+                text: 'Siège : \t\t\t\t',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.place}',
+              style: TextStyle(
+                  color: Colors.blue, fontFamily: 'Lobster', fontSize: 42),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            stopScann();
+            setState(() {});
+            ListesDesTickets.ticketsAscanner();
+            Navigator.pop(context);
+          },
+          child: const Text(
+            'OK',
+            style: TextStyle(color: Colors.blue),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget enCoursDeValidite(BuildContext context, TicketData ticketData) {
+    return AlertDialog(
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: SizedBox(
+                height: 180,
+                width: 180,
+                child: Image.asset('assets/images/sablier.png')),
+          ),
+          const SizedBox(
+            height: 20,
+          ),
+          const Text(
+            'TICKET VALIDE POUR UNE DATE ULTERIEURE',
             style: TextStyle(
-                color: Color.fromARGB(255, 21, 162, 244),
+                color: Color.fromARGB(255, 134, 76, 17),
                 fontWeight: FontWeight.bold),
           ),
         ],
@@ -326,12 +509,14 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
           ),
           children: <TextSpan>[
             TextSpan(
-                text: 'N° de Ticket : ',
-                style:
-                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+                text: 'Ref Ticket : ',
+                style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold)),
             TextSpan(
               text: '${ticketData.idTicket}\n\n',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: TextStyle(fontSize: 8, color: Colors.grey),
             ),
             TextSpan(
                 text: 'Départ du : ',
@@ -339,6 +524,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
                     TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
             TextSpan(
               text: '${ticketData.date}\n\n',
+              style: TextStyle(fontFamily: 'Lobster'),
             ),
             TextSpan(
                 text: 'Heure de départ : ',
@@ -346,6 +532,15 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
                     TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
             TextSpan(
               text: '${ticketData.heure} h\n\n',
+              style: TextStyle(fontFamily: 'Lobster'),
+            ),
+            TextSpan(
+                text: 'Départ : ',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.depart} \n\n',
+              style: TextStyle(fontFamily: 'Lobster'),
             ),
             TextSpan(
                 text: 'Destination : ',
@@ -353,6 +548,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
                     TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
             TextSpan(
               text: '${ticketData.destination} \n\n',
+              style: TextStyle(fontFamily: 'Lobster'),
             ),
             TextSpan(
                 text: 'Passager : ',
@@ -360,20 +556,26 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
                     TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
             TextSpan(
               text: '${ticketData.nom}\n\n',
-            ),
-            TextSpan(
-                text: 'Siège : ',
-                style:
-                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-            TextSpan(
-              text: '${ticketData.place}\n\n',
+              style: TextStyle(fontFamily: 'Lobster'),
             ),
             TextSpan(
                 text: 'Téléphone : ',
                 style:
                     TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
             TextSpan(
-              text: '${ticketData.contact}',
+              text: '${ticketData.contact}\n\n',
+              style: TextStyle(fontFamily: 'Lobster'),
+            ),
+            TextSpan(
+                text: 'Siège : \t\t\t\t',
+                style:
+                    TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+            TextSpan(
+              text: '${ticketData.place}',
+              style: TextStyle(
+                  color: Color.fromARGB(255, 134, 76, 17),
+                  fontFamily: 'Lobster',
+                  fontSize: 42),
             ),
           ],
         ),
@@ -383,9 +585,15 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
           onPressed: () {
             stopScann();
             setState(() {});
+            ListesDesTickets.ticketsAscanner();
             Navigator.pop(context);
           },
-          child: const Text('OK'),
+          child: const Text(
+            'OK',
+            style: TextStyle(
+              color: Color.fromARGB(255, 134, 76, 17),
+            ),
+          ),
         ),
       ],
     );
@@ -397,10 +605,13 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Center(
-            child: Image.asset('assets/images/invalide2.png'),
+            child: SizedBox(
+                height: 180,
+                width: 180,
+                child: Image.asset('assets/images/invalide2.png')),
           ),
           const SizedBox(
-            height: 40,
+            height: 20,
           ),
           Center(
             child: const Text(
@@ -418,9 +629,13 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
           onPressed: () {
             stopScann();
             setState(() {});
+            ListesDesTickets.ticketsAscanner();
             Navigator.pop(context);
           },
-          child: const Text('OK'),
+          child: const Text(
+            'OK',
+            style: TextStyle(color: Colors.red),
+          ),
         ),
       ],
     );
@@ -437,7 +652,9 @@ class TicketData {
   final String heure;
   final String depart;
   final String destination;
+  final String prix;
   final String etatScann;
+  final DateTime dateCalcule;
 
   TicketData({
     required this.idUtilisateur,
@@ -449,9 +666,10 @@ class TicketData {
     required this.heure,
     required this.depart,
     required this.destination,
+    required this.prix,
     required this.etatScann,
+    required this.dateCalcule,
   });
-
   factory TicketData.fromQrCode(String qrCodeData) {
     final data = qrCodeData.split('\n');
 
@@ -465,7 +683,9 @@ class TicketData {
       heure: data[5].trim(),
       depart: data[7].split('->')[0].trim(),
       destination: data[7].split('->')[1].trim(),
-      etatScann: data[8].trim(),
+      prix: data[8].trim(),
+      etatScann: data[9].trim(),
+      dateCalcule: DateTime.parse(data[10].trim()),
     );
   }
 }

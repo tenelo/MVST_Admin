@@ -20,18 +20,19 @@ class CreationQrCode {
     final String heure,
     final String depart,
     final String destination,
+    final String prix,
     final String etatScann,
+    final DateTime datePourCalcule,
   ) {
     final String message =
-        "$idUtilisateur \n$idTicket \n$nom \n$contact \n$date \n$heure \n$place \n$depart->$destination \n$etatScann";
+        "$idUtilisateur \n$idTicket \n$nom \n$contact \n$date \n$heure \n$place \n$depart->$destination \n$prix \n$etatScann \n$datePourCalcule";
 
     final FutureBuilder<ui.Image> qrFutureBuilder = FutureBuilder<ui.Image>(
       future: _loadOverlayImage(),
       builder: (BuildContext ctx, AsyncSnapshot<ui.Image> snapshot) {
-        const double size = 280.0;
+        const double size = 250.0;
         if (snapshot.hasData) {
-          //return const SizedBox(width: size, height: size);
-          if (etatScann == "scanne") {
+          if (etatScann == "scanné") {
             couleurA = Config.colors.bleuA;
             couleurB = Config.colors.bleuB;
           } else {
@@ -56,7 +57,7 @@ class CreationQrCode {
             embeddedImage: snapshot.data,
             // taille de l'image dans le qrcode
             embeddedImageStyle: const QrEmbeddedImageStyle(
-              size: Size.square(75),
+              size: Size.square(72),
             ),
           ),
         );

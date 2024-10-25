@@ -4,18 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mysql1/mysql1.dart';
 
-class PrixTickets extends StatefulWidget {
-  const PrixTickets({super.key});
+class GareDorigine extends StatefulWidget {
+  const GareDorigine({super.key});
 
   @override
-  _PrixTicketsState createState() => _PrixTicketsState();
+  _GareDorigineState createState() => _GareDorigineState();
 }
 
-class _PrixTicketsState extends State<PrixTickets> {
+class _GareDorigineState extends State<GareDorigine> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _axeController = TextEditingController();
-  final TextEditingController _prixController = TextEditingController();
-  List<Map<String, dynamic>> _ticketsList = [];
+  final TextEditingController _gareController = TextEditingController();
+  List<Map<String, dynamic>> __gareDatasList = [];
   MySqlConnection? _connection;
   final StreamController<List<Map<String, dynamic>>> _streamController =
       StreamController();
@@ -39,43 +38,40 @@ class _PrixTicketsState extends State<PrixTickets> {
     _connection = await Connexion.connexionDB();
   }
 
-  // Vérifie si la table existe et la crée si nécessaire
+// Vérifie si la table existe et la crée si nécessaire
   Future<void> verifEtCreationDeTable() async {
     await _verifierEtOuvrirConnexion();
     if (_connection != null) {
-      var result =
-          await _connection!.query("SHOW TABLES LIKE 'PrixDesTickets'");
+      var result = await _connection!.query("SHOW TABLES LIKE 'GareDorigine'");
 
       // Si la table n'existe pas, la créer
       if (result.isEmpty) {
-        await _connection!.query('''CREATE TABLE PrixDesTickets (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          axe VARCHAR(50),
-          prix INT
-        )''');
+        await _connection!.query('''CREATE TABLE GareDorigine (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        gare VARCHAR(50)
+      )''');
       }
     }
   }
 
-  // Récupère les données de la table PrixDesTickets
+  // Récupère les données de la table GareDorigine
   Future<void> rafraichirDonnees() async {
     setState(() {
       _isLoading = true; // Commencer le chargement
     });
     await _verifierEtOuvrirConnexion();
     if (_connection != null) {
-      var results = await _connection!.query('SELECT * FROM PrixDesTickets');
-      _ticketsList = results
+      var results = await _connection!.query('SELECT * FROM GareDorigine');
+      __gareDatasList = results
           .map((row) => {
                 'id': row['id'],
-                'axe': row['axe'],
-                'prix': row['prix'],
+                'gare': row['gare'],
               })
           .toList();
-      _streamController.add(_ticketsList); // Envoie les données dans le stream
+      _streamController.add(__gareDatasList);
     }
     setState(() {
-      _isLoading = false; // Fin du chargement
+      _isLoading = false;
     });
   }
 
@@ -89,7 +85,7 @@ class _PrixTicketsState extends State<PrixTickets> {
         ),
         centerTitle: true,
         title: const Text(
-          'Prix des Tickets',
+          'Gare d\'origine ',
           style: TextStyle(color: Colors.white),
         ),
       ),
@@ -98,7 +94,7 @@ class _PrixTicketsState extends State<PrixTickets> {
         builder: (context, snapshot) {
           if (_isLoading) {
             return Center(
-              child: CircularProgressIndicator(), // Indicateur de chargement
+              child: CircularProgressIndicator(),
             );
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -116,7 +112,7 @@ class _PrixTicketsState extends State<PrixTickets> {
           return ListView.builder(
             itemCount: snapshot.data!.length,
             itemBuilder: (context, index) {
-              final ticket = snapshot.data![index];
+              final _gareData = snapshot.data![index];
               return Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -130,8 +126,7 @@ class _PrixTicketsState extends State<PrixTickets> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(ticket['axe']),
-                            Text(ticket['prix'].toString()),
+                            Text(_gareData['gare']),
                           ],
                         ),
                         Row(
@@ -139,7 +134,7 @@ class _PrixTicketsState extends State<PrixTickets> {
                             IconButton(
                               icon: const Icon(Icons.edit),
                               onPressed: () =>
-                                  _modifierPrixDesTickets(context, ticket),
+                                  _modifierGareDorigine(context, _gareData),
                             ),
                             IconButton(
                               icon: Icon(Icons.delete),
@@ -170,7 +165,7 @@ class _PrixTicketsState extends State<PrixTickets> {
                                 );
 
                                 if (confirm == true) {
-                                  await _supprimerPrixDesTickets(ticket['id']);
+                                  await _supprimerGareDorigine(_gareData['id']);
                                 }
                               },
                             ),
@@ -186,14 +181,14 @@ class _PrixTicketsState extends State<PrixTickets> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _ajouterPrixDesTickets(context),
+        onPressed: () => _ajouterGareDorigine(context),
         child: const Icon(Icons.add),
       ),
     );
   }
 
-  // Ajout de prix des tickets
-  void _ajouterPrixDesTickets(BuildContext context) async {
+  // Ajout de prix des _gareDatas
+  void _ajouterGareDorigine(BuildContext context) async {
     await _verifierEtOuvrirConnexion();
     showModalBottomSheet(
       isScrollControlled: true,
@@ -215,43 +210,26 @@ class _PrixTicketsState extends State<PrixTickets> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TextFormField(
-                      controller: _axeController,
-                      decoration: const InputDecoration(labelText: 'Axe'),
+                      controller: _gareController,
+                      decoration: const InputDecoration(labelText: 'gare'),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Veuillez entrer un axe.';
+                          return 'Veuillez entrer un gare.';
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _prixController,
-                      decoration: const InputDecoration(labelText: 'Prix'),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Veuillez entrer un prix.';
-                        }
-                        if (int.tryParse(value) == null) {
-                          return 'Veuillez entrer un nombre valide.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () async {
                         if (_formKey.currentState!.validate()) {
-                          final axe = _axeController.text.trim();
-                          final prix = int.parse(_prixController.text.trim());
+                          final gare = _gareController.text.trim();
                           await _verifierEtOuvrirConnexion();
                           await _connection!.query(
-                              'INSERT INTO PrixDesTickets (axe, prix) VALUES (?, ?)',
-                              [axe, prix]);
+                              'INSERT INTO GareDorigine (gare) VALUES (?)',
+                              [gare]);
 
-                          _axeController.clear();
-                          _prixController.clear();
+                          _gareController.clear();
                           Navigator.of(context).pop();
                           rafraichirDonnees(); // Rafraîchir les données
                         }
@@ -268,12 +246,11 @@ class _PrixTicketsState extends State<PrixTickets> {
     );
   }
 
-  // Modification du prix des tickets
-  void _modifierPrixDesTickets(
-      BuildContext context, Map<String, dynamic> ticket) async {
+  // Modification du prix des _gareDatas
+  void _modifierGareDorigine(
+      BuildContext context, Map<String, dynamic> _gareData) async {
     await _verifierEtOuvrirConnexion();
-    _axeController.text = ticket['axe'];
-    _prixController.text = ticket['prix'].toString();
+    _gareController.text = _gareData['gare'];
 
     showModalBottomSheet(
       isScrollControlled: true,
@@ -295,43 +272,26 @@ class _PrixTicketsState extends State<PrixTickets> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TextFormField(
-                      controller: _axeController,
-                      decoration: const InputDecoration(labelText: 'Axe'),
+                      controller: _gareController,
+                      decoration: const InputDecoration(labelText: 'gare'),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Veuillez entrer un axe.';
+                          return 'Veuillez entrer un gare.';
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _prixController,
-                      decoration: const InputDecoration(labelText: 'Prix'),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Veuillez entrer un prix.';
-                        }
-                        if (int.tryParse(value) == null) {
-                          return 'Veuillez entrer un nombre valide.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () async {
                         if (_formKey.currentState!.validate()) {
-                          final axe = _axeController.text.trim();
-                          final prix = int.parse(_prixController.text.trim());
+                          final gare = _gareController.text.trim();
                           await _verifierEtOuvrirConnexion();
                           await _connection!.query(
-                              'UPDATE PrixDesTickets SET axe = ?, prix = ? WHERE id = ?',
-                              [axe, prix, ticket['id']]);
+                              'UPDATE GareDorigine SET gare = ? = ? WHERE id = ?',
+                              [gare, _gareData['id']]);
 
-                          _axeController.clear();
-                          _prixController.clear();
+                          _gareController.clear();
                           Navigator.of(context).pop();
                           rafraichirDonnees(); // Rafraîchir les données
                         }
@@ -348,18 +308,17 @@ class _PrixTicketsState extends State<PrixTickets> {
     );
   }
 
-  // Suppression du prix des tickets
-  Future<void> _supprimerPrixDesTickets(int id) async {
+  // Suppression du prix des _gareDatas
+  Future<void> _supprimerGareDorigine(int id) async {
     await _verifierEtOuvrirConnexion();
-    await _connection!.query('DELETE FROM PrixDesTickets WHERE id = ?', [id]);
+    await _connection!.query('DELETE FROM GareDorigine WHERE id = ?', [id]);
     rafraichirDonnees(); // Rafraîchir les données
   }
 
   @override
   void dispose() {
     _streamController.close();
-    _axeController.dispose();
-    _prixController.dispose();
+    _gareController.dispose();
     super.dispose();
   }
 }

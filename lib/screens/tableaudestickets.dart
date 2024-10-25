@@ -1,8 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/screens/detailsTickets.dart';
+import 'package:mysql1/mysql1.dart';
 
 class TableauDeTickets extends StatefulWidget {
   const TableauDeTickets({Key? key, required this.date}) : super(key: key);
@@ -12,15 +12,16 @@ class TableauDeTickets extends StatefulWidget {
 }
 
 class _TableauDeTicketsState extends State<TableauDeTickets> {
-  int _rowsPerPage = 10;
+  int _rowsPerPage = 20;
   bool _isLoading = true;
-  List<DocumentSnapshot> donnees = [];
-  List<DocumentSnapshot> _filtre = [];
+  List<Map<String, dynamic>> donnees = [];
+  List<Map<String, dynamic>> _filtre = [];
   final TextEditingController _rechercheParDate = TextEditingController();
   final TextEditingController _rechercheParDestination =
       TextEditingController();
-  final TextEditingController _rechercheParNom =
-      TextEditingController(); // Nouveau contrôleur
+  final TextEditingController _rechercheParNom = TextEditingController();
+
+  MySqlConnection? _connection;
 
   @override
   void initState() {
@@ -34,34 +35,36 @@ class _TableauDeTicketsState extends State<TableauDeTickets> {
     });
 
     try {
-      // Récupérer les documents de la collection 'tickets' avec filtrage et tri
-      QuerySnapshot<Map<String, dynamic>> ticketsSnapshot =
-          await FirebaseFirestore.instance
-              .collection('tickets')
-              .where('annee', isEqualTo: widget.date)
-              .orderBy('createdAt', descending: true)
-              .get();
+      // Connexion à la base de données MySQL
+      _connection = await Connexion.connexionDB();
+      String sql = '''
+      SELECT t.*
+      FROM Tickets t
+      JOIN (
+        SELECT d.documentId
+        FROM Departs d
+        WHERE d.annee = ?
+      ) AS selectedDeparts
+      ON t.documentId = selectedDeparts.documentId
+      ORDER BY dateDeCreation DESC;
+    ''';
 
-      // Récupérer les sous-collections pour chaque document
-      List<DocumentSnapshot<Map<String, dynamic>>> allDocuments = [];
-      for (var ticketDoc in ticketsSnapshot.docs) {
-        var subcollectionSnapshot = await ticketDoc.reference
-            .collection('sousCollectionTickets')
-            .orderBy('dateDeCreation', descending: true)
-            .get();
-        allDocuments.addAll(subcollectionSnapshot.docs);
-      }
+      // Exécuter la requête en utilisant l'année passée via `widget.date`
+      Results result = await _connection!.query(sql, [widget.date]);
+
+      // Transformation du résultat en liste de maps
+      List<Map<String, dynamic>> tickets =
+          result.map((row) => row.fields).toList();
 
       setState(() {
-        donnees = allDocuments;
-        _filtre = allDocuments;
+        donnees = tickets;
+        _filtre = tickets;
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      print("Erreur lors de la récupération des tickets : $e");
     }
   }
 
@@ -88,6 +91,11 @@ class _TableauDeTicketsState extends State<TableauDeTickets> {
       appBar: AppBar(
         iconTheme: IconThemeData(
           color: Config.colors.bleuFonce2,
+        ),
+        title: Text(
+          "Tous les tickets",
+          style: TextStyle(
+              color: Config.colors.bleuFonce2, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
@@ -227,7 +235,7 @@ class _TableauDeTicketsState extends State<TableauDeTickets> {
                               ),
                             ],
                             rowsPerPage: _rowsPerPage,
-                            availableRowsPerPage: const [8, 10, 20],
+                            availableRowsPerPage: const [10, 20, 50],
                             onRowsPerPageChanged: (int? value) {
                               if (value != null) {
                                 setState(() {
@@ -249,23 +257,25 @@ class _TableauDeTicketsState extends State<TableauDeTickets> {
 }
 
 class TicketDataSource extends DataTableSource {
-  final List<DocumentSnapshot> tickets;
+  List<Map<String, dynamic>> tickets;
   final BuildContext context;
 
   TicketDataSource(this.tickets, this.context);
 
   DateTime parseDate(String dateStr) {
-    DateFormat format = DateFormat('EEEE d MMMM yyyy', 'fr_FR');
-    return format.parse(dateStr);
+    DateFormat dateFormatFr = DateFormat('EEEE d MMMM yyyy', 'fr_FR');
+    DateTime dateTime = dateFormatFr.parse(dateStr);
+    return dateTime;
   }
 
   @override
   DataRow? getRow(int index) {
     if (index >= tickets.length) return null;
     final ticketSnapshot = tickets[index];
-    final ticket = tickets[index].data() as Map<String, dynamic>;
-    final String idDuTicket = ticketSnapshot.id;
-    DateTime date = parseDate(ticket['date']);
+    final ticket = ticketSnapshot;
+    var idDuTicket = ticket['documentId'];
+    DateTime date = parseDate(ticket['date'].toString());
+
     String formattedDate = DateFormat('dd MMMM yyyy', 'fr_FR').format(date);
 
     return DataRow.byIndex(
@@ -309,6 +319,7 @@ class TicketDataSource extends DataTableSource {
           etatScann: ticket['etatScanne'],
           statut: ticket['statut'],
           prixTicket: ticket['prixDuTicket'].toString(),
+          datePourCalcule: ticket['datePourCalcule'],
         ),
       ),
     );

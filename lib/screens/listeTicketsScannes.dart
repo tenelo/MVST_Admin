@@ -1,30 +1,32 @@
 import 'dart:async';
-import 'dart:math';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/screens/detailsTickets.dart';
 import 'package:mvst_admin/screens/petitsEcrans/detailsTickets2.dart';
+import 'package:mysql1/mysql1.dart';
 import 'package:ticket_material/ticket_material.dart';
 
 int? tailleEcran;
 
-class MesTickets extends StatefulWidget {
-  const MesTickets({
+class MesTicketsScannes extends StatefulWidget {
+  const MesTicketsScannes({
     super.key,
-    required this.date,
-    required this.idUtilisateur,
+    required this.documentId,
   });
-  final String date;
-  final String idUtilisateur;
+
+  final String documentId;
+
   @override
-  State<MesTickets> createState() => _MesTicketsState();
+  State<MesTicketsScannes> createState() => _MesTicketsScannesState();
 }
 
-class _MesTicketsState extends State<MesTickets> {
+class _MesTicketsScannesState extends State<MesTicketsScannes> {
   final TextEditingController _searchController = TextEditingController();
   String _searchText = "";
+  MySqlConnection? _connection;
 
   @override
   void initState() {
@@ -34,58 +36,47 @@ class _MesTicketsState extends State<MesTickets> {
         _searchText = _searchController.text.toLowerCase();
       });
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) {});
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _connection?.close();
     super.dispose();
   }
 
-  Stream<List<DocumentSnapshot<Map<String, dynamic>>>>
-      recuperationDeMesTickets() {
-    return FirebaseFirestore.instance
-        .collection('tickets')
-        .where('moisAnnee', isEqualTo: widget.date)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .asyncMap((ticketsSnapshot) async {
-      List<DocumentSnapshot<Map<String, dynamic>>> allDocuments = [];
-      for (var ticketDoc in ticketsSnapshot.docs) {
-        try {
-          var subcollectionSnapshot = await ticketDoc.reference
-              .collection('sousCollectionTickets')
-              .where('etatScanne', isEqualTo: 'scanné')
-              .orderBy('heureDeScanne', descending: true)
-              .get();
-          allDocuments.addAll(subcollectionSnapshot.docs);
-        } catch (e) {
-          print('Erreur de chargement du ticket ${ticketDoc.id}: $e');
-        }
-      }
-      return allDocuments;
-    });
+  Stream<List<Map<String, dynamic>>> recupererLesTicketsScannes() async* {
+    _connection = await Connexion.connexionDB();
+    try {
+      var result = await _connection!.query(
+          'SELECT * FROM Tickets WHERE documentId = ? AND etatScanne = ? ',
+          [widget.documentId, 'scanné']);
+      // Transformation du résultat en liste de maps
+      List<Map<String, dynamic>> tickets =
+          result.map((row) => row.fields).toList();
+      // Émission des résultats dans le Stream
+      yield tickets;
+    } catch (e) {
+      yield [];
+    }
   }
 
-  List<DocumentSnapshot<Map<String, dynamic>>> _filterTickets(
-      List<DocumentSnapshot<Map<String, dynamic>>> tickets) {
+  List<Map<String, dynamic>> _filterTickets(
+      List<Map<String, dynamic>> tickets) {
     if (_searchText.isEmpty) return tickets;
-
     return tickets.where((ticket) {
-      final data = ticket.data();
-      if (data == null) return false;
-      final searchText = _searchText;
-      return data['nom'].toString().toLowerCase().contains(searchText) ||
-          data['telephone'].toString().toLowerCase().contains(searchText) ||
-          data['date'].toString().toLowerCase().contains(searchText) ||
-          data['depart'].toString().toLowerCase().contains(searchText) ||
-          data['destination'].toString().toLowerCase().contains(searchText);
+      return ticket['nom'].toString().toLowerCase().contains(_searchText) ||
+          ticket['telephone'].toString().toLowerCase().contains(_searchText) ||
+          ticket['date'].toString().toLowerCase().contains(_searchText) ||
+          ticket['depart'].toString().toLowerCase().contains(_searchText) ||
+          ticket['destination'].toString().toLowerCase().contains(_searchText);
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    tailleEcran = calculeTailleEcran(context).round();
+    tailleEcran = Calcule.tailleEcran(context).round();
     return Scaffold(
       appBar: AppBar(
         iconTheme: IconThemeData(
@@ -96,69 +87,62 @@ class _MesTicketsState extends State<MesTickets> {
           controller: _searchController,
           decoration: InputDecoration(
             hintText: 'Rechercher...',
-            hintStyle: TextStyle(
-                color: Colors.grey[600]), // Couleur du texte de l'indice
+            hintStyle: TextStyle(color: Colors.grey[600]),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30.0), // Bordure arrondie
+              borderRadius: BorderRadius.circular(30.0),
               borderSide: BorderSide.none,
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30.0), // Bordure arrondie
-              borderSide: BorderSide(
-                  color: Colors.blueAccent,
-                  width: 2.0), // Couleur et épaisseur de la bordure
+              borderRadius: BorderRadius.circular(30.0),
+              borderSide: BorderSide(color: Colors.blueAccent, width: 2.0),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30.0), // Bordure arrondie
-              borderSide: BorderSide(
-                  color: Colors.blue,
-                  width:
-                      2.0), // Couleur et épaisseur de la bordure lorsque le champ est focus
+              borderRadius: BorderRadius.circular(30.0),
+              borderSide: BorderSide(color: Colors.blue, width: 2.0),
             ),
-            contentPadding: EdgeInsets.symmetric(
-                horizontal: 16.0, vertical: 10.0), // Espacement interne
+            contentPadding:
+                EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
           ),
         ),
       ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: StreamBuilder<List<DocumentSnapshot<Map<String, dynamic>>>>(
-            stream: recuperationDeMesTickets(),
+          child: StreamBuilder<List<Map<String, dynamic>>>(
+            stream: recupererLesTicketsScannes(),
             builder: (BuildContext context,
-                AsyncSnapshot<List<DocumentSnapshot<Map<String, dynamic>>>>
-                    snapshot) {
+                AsyncSnapshot<List<Map<String, dynamic>>> snapshot) {
               if (snapshot.hasError) {
                 return Center(
-                    child: Text('Erreur de chargement : ${snapshot.error}'));
+                  child: Text(
+                    'Vérifier la connexion',
+                    style: TextStyle(
+                        color: Config.colors.bleuFonce2,
+                        fontWeight: FontWeight.bold),
+                  ),
+                );
               }
-
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return Center(child: CircularProgressIndicator());
               }
-
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return Center(
-                    child: Text("Vous n'avez scanné aucun ticket",
-                        style: TextStyle(
-                            color: Config.colors.bleuFonce2,
-                            fontWeight: FontWeight.bold)));
+                  child: Text(
+                    "Vous n'avez scanné aucun ticket",
+                    style: TextStyle(
+                        color: Config.colors.bleuFonce2,
+                        fontWeight: FontWeight.bold),
+                  ),
+                );
               }
-
               final filteredTickets = _filterTickets(snapshot.data!);
 
               return ListView.builder(
                 itemCount: filteredTickets.length,
                 itemBuilder: (BuildContext context, int index) {
-                  DocumentSnapshot<Map<String, dynamic>> document =
-                      filteredTickets[index];
-                  Map<String, dynamic>? ticket = document.data();
-                  if (ticket == null) {
-                    return Center(
-                        child:
-                            Text('Erreur de chargement des données du ticket'));
-                  }
-                  var idTicket = document.id;
+                  Map<String, dynamic> ticket = filteredTickets[index];
+                  var idTicket = ticket['documentId'];
+                  DateTime date = DateTime.parse(ticket['date']);
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8.0),
                     child: TicketMaterial(
@@ -173,7 +157,7 @@ class _MesTicketsState extends State<MesTickets> {
                         ticket['idUtilisateur'],
                         ticket['nom'],
                         ticket['telephone'],
-                        ticket['date'],
+                        DateFormat('EEEE d MMMM y', 'fr_FR').format(date),
                         ticket['heure'],
                         ticket['depart'],
                         ticket['destination'],
@@ -181,6 +165,7 @@ class _MesTicketsState extends State<MesTickets> {
                         ticket['etatScanne'],
                         ticket['prixDuTicket'].toString(),
                         ticket['statut'],
+                        ticket['datePourCalcule'],
                       ),
                       rightChild: _buildRight(),
                       tapHandler: () {},
@@ -196,19 +181,21 @@ class _MesTicketsState extends State<MesTickets> {
   }
 
   Widget _buildLeft(
-      BuildContext context,
-      String idTicket,
-      String idUtilisateur,
-      String nom,
-      String contact,
-      String date,
-      String heure,
-      String depart,
-      String destination,
-      int numeroDePlace,
-      String etatScann,
-      String prixTicket,
-      String statut) {
+    BuildContext context,
+    String idTicket,
+    String idUtilisateur,
+    String nom,
+    String contact,
+    String date,
+    String heure,
+    String depart,
+    String destination,
+    int numeroDePlace,
+    String etatScann,
+    String prixTicket,
+    String statut,
+    DateTime dateCalcule,
+  ) {
     return GestureDetector(
       onTap: () {
         if (tailleEcran! >= 6) {
@@ -228,6 +215,7 @@ class _MesTicketsState extends State<MesTickets> {
                 etatScann: etatScann,
                 statut: statut,
                 prixTicket: prixTicket,
+                datePourCalcule: dateCalcule,
               ),
             ),
           );
@@ -248,71 +236,39 @@ class _MesTicketsState extends State<MesTickets> {
                 etatScann: etatScann,
                 statut: statut,
                 prixTicket: prixTicket,
+                datePourCalcule: dateCalcule,
               ),
             ),
           );
         }
       },
       child: Padding(
-        padding: const EdgeInsets.only(
-          left: 8,
-          top: 8,
-          right: 2,
-          bottom: 2,
-        ),
+        padding: const EdgeInsets.only(left: 8, top: 8, right: 2, bottom: 2),
         child: Column(
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  "Départ du : ",
-                  style: TextStyle(
-                    decorationColor: Colors.white,
-                  ),
-                ),
-                Text(
-                  date,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                const Text("Départ du : "),
+                Text(date, style: const TextStyle(fontWeight: FontWeight.bold)),
               ],
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  "Heure de départ : ",
-                  style: TextStyle(
-                    decorationColor: Colors.white,
-                  ),
-                ),
-                Text(
-                  heure,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                )
+                const Text("Heure de départ : "),
+                Text(heure,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold)),
               ],
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  "Siège : ",
-                  style: TextStyle(
-                    decorationColor: Colors.white,
-                  ),
-                ),
-                Text(
-                  "N° $numeroDePlace",
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                )
+                const Text("Siège : "),
+                Text("N° $numeroDePlace",
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold)),
               ],
             ),
             const Expanded(child: SizedBox()),
@@ -323,14 +279,16 @@ class _MesTicketsState extends State<MesTickets> {
                   height: 32,
                   child: TextButton(
                     style: ButtonStyle(
-                      shape: MaterialStateProperty.all<OutlinedBorder>(
+                      shape: WidgetStateProperty.all<RoundedRectangleBorder>(
                         RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30.0),
-                          side: const BorderSide(
-                              color: Color.fromARGB(255, 248, 244, 208),
-                              width: 2.0),
+                          borderRadius: BorderRadius.circular(10.0),
+                          side: BorderSide(color: Colors.white, width: 1.5),
                         ),
                       ),
+                    ),
+                    child: const Text(
+                      "Voir les détails",
+                      style: TextStyle(color: Colors.white),
                     ),
                     onPressed: () {
                       if (tailleEcran! >= 6) {
@@ -350,6 +308,7 @@ class _MesTicketsState extends State<MesTickets> {
                               etatScann: etatScann,
                               statut: statut,
                               prixTicket: prixTicket,
+                              datePourCalcule: dateCalcule,
                             ),
                           ),
                         );
@@ -370,17 +329,12 @@ class _MesTicketsState extends State<MesTickets> {
                               etatScann: etatScann,
                               statut: statut,
                               prixTicket: prixTicket,
+                              datePourCalcule: dateCalcule,
                             ),
                           ),
                         );
                       }
                     },
-                    child: const Text(
-                      " Détails du ticket ",
-                      style: TextStyle(
-                        color: Color.fromARGB(255, 248, 244, 208),
-                      ),
-                    ),
                   ),
                 ),
               ),
@@ -392,41 +346,21 @@ class _MesTicketsState extends State<MesTickets> {
   }
 
   Widget _buildRight() {
-    return Center(
-        child: Text(
-      "MVST",
-      style: TextStyle(
-        color: Config.colors.bleuFonce,
-        fontFamily: 'Lobster',
-        shadows: const [
-          Shadow(
-            color: Color.fromARGB(255, 248, 244, 208),
-            offset: Offset(1, 1),
-            blurRadius: 1,
+    return const Padding(
+      padding: EdgeInsets.all(2.0),
+      child: RotatedBox(
+        quarterTurns: 1,
+        child: Center(
+          child: Text(
+            "MVST",
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 3,
+            ),
           ),
-          Shadow(
-            color: Color.fromARGB(255, 248, 244, 208),
-            offset: Offset(-1, -1),
-            blurRadius: 1,
-          ),
-          Shadow(
-            color: Color.fromARGB(255, 248, 244, 208),
-            offset: Offset(1, -1),
-            blurRadius: 1,
-          ),
-          Shadow(
-            color: Color.fromARGB(255, 248, 244, 208),
-            offset: Offset(-1, 1),
-            blurRadius: 1,
-          ),
-        ],
+        ),
       ),
-    ));
+    );
   }
-}
-
-double calculeTailleEcran(BuildContext ctx) {
-  double screenWidth = MediaQuery.of(ctx).size.width;
-  double screenHeight = MediaQuery.of(ctx).size.height;
-  return sqrt(pow(screenWidth, 2) + pow(screenHeight, 2)) / 160.0;
 }

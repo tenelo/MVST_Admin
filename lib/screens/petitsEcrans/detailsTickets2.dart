@@ -15,6 +15,7 @@ class DetailsTickets2 extends StatefulWidget {
   final String etatScann;
   final String statut;
   final String prixTicket;
+  final DateTime datePourCalcule;
 
   const DetailsTickets2(
       {super.key,
@@ -29,7 +30,8 @@ class DetailsTickets2 extends StatefulWidget {
       required this.destination,
       required this.etatScann,
       required this.statut,
-      required this.prixTicket});
+      required this.prixTicket,
+      required this.datePourCalcule});
   @override
   _DetailsTickets2State createState() => _DetailsTickets2State();
 }
@@ -73,6 +75,7 @@ class _DetailsTickets2State extends State<DetailsTickets2> {
                   destination: widget.destination,
                   prixTicket: widget.prixTicket,
                   etatScann: widget.etatScann,
+                  dateCalcule: widget.datePourCalcule,
                 ),
               ),
             ),
@@ -97,6 +100,7 @@ class TicketData extends StatelessWidget {
     required this.destination,
     required this.etatScann,
     required this.prixTicket,
+    required this.dateCalcule,
   });
   final String idUtilisateur;
   final String idTicket;
@@ -109,6 +113,7 @@ class TicketData extends StatelessWidget {
   final String destination;
   final String prixTicket;
   final String etatScann;
+  final DateTime dateCalcule;
 
   @override
   Widget build(BuildContext context) {
@@ -314,7 +319,9 @@ class TicketData extends StatelessWidget {
                   heure,
                   depart,
                   destination,
+                  prixTicket,
                   etatScann,
+                  dateCalcule,
                 ),
               ),
             ),

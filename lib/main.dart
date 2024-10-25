@@ -12,7 +12,7 @@ import 'package:mvst_admin/firebase_options.dart';
 import 'package:mvst_admin/graphiques/diagrammeABarres.dart';
 import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/qrcode/lecteurQrCode.dart';
-import 'package:mvst_admin/screens/listeTicketsScannes.dart';
+import 'package:mvst_admin/screens/listeDesDeparts.dart';
 import 'package:mvst_admin/screens/parametres.dart';
 import 'package:mvst_admin/screens/profil.dart';
 import 'package:mvst_admin/screens/tableaudestickets.dart';
@@ -21,9 +21,23 @@ import 'package:mvst_admin/verifTickets/verifierticket.dart';
 DateTime? dateActuelle = DateTime.now();
 DateTime? aujourdhui =
     DateTime.utc(dateActuelle!.year, dateActuelle!.month, dateActuelle!.day);
+DateTime? dateDeDemain = DateTime.utc(
+    dateActuelle!.year, dateActuelle!.month, dateActuelle!.day + 1);
+DateTime? dateApresDemain = DateTime.utc(
+    dateActuelle!.year, dateActuelle!.month, dateActuelle!.day + 2);
+////////////
 var idDate = DateFormat('EEEE_d_MMMM_y', 'fr_FR').format(aujourdhui!);
 var idMoisAnnee = DateFormat('MMMM_y', 'fr_FR').format(aujourdhui!);
 var idAnnee = DateFormat('y', 'fr_FR').format(aujourdhui!);
+var dateAujourdhui = DateFormat('yyyy-MM-dd', 'fr_FR').format(aujourdhui!);
+var dateDApresDemain =
+    DateFormat('yyyy-MM-dd', 'fr_FR').format(dateApresDemain!);
+/////////////////
+var dateNormale = DateFormat('EEEE d MMMM y', 'fr_FR').format(aujourdhui!);
+var dateNormaleDemain =
+    DateFormat('EEEE d MMMM y', 'fr_FR').format(dateDeDemain!);
+var dateNormaleApresdemain =
+    DateFormat('EEEE d MMMM y', 'fr_FR').format(dateApresDemain!);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,8 +46,9 @@ void main() async {
   );
   // Initialiser les données de localisation pour 'fr_FR'
   await initializeDateFormatting('fr_FR', null);
+  listeDesTicketsScannes = await ListesDesTickets.ticketsAscanner();
   runApp(const MyApp());
-  ListeDesId.getTicketsAScanner(idDate);
+
   listenForTicketChanges();
 }
 
@@ -42,8 +57,8 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    ListeDesId.getTicketsAScanner(idDate);
     return MaterialApp(
+      title: 'MVST Admin',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Config.colors.bleuFonce),
@@ -70,11 +85,12 @@ class Accueil extends StatefulWidget {
 }
 
 class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
+  bool isLoading = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    ListeDesId.getTicketsAScanner(idDate);
   }
 
   @override
@@ -92,7 +108,6 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
     }
   }
 
-  bool isLoading = false;
   void setLoadingState(bool state) {
     setState(() {
       isLoading = state;
@@ -101,208 +116,230 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Config.colors.jauneBlanc,
-        title: const Text(
-          'CONTROLEURS MVST',
-          style: TextStyle(color: Colors.black),
-        ),
-        centerTitle: true,
-      ),
-      drawer: Drawer(
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  DrawerHeader(
-                    decoration: BoxDecoration(
-                      color: Config.colors.bleuFonce2,
-                    ),
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 120.0,
-                            height: 120.0,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Config.colors.jauneBlanc,
-                                width: 2.0,
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                'MVST',
-                                style: TextStyle(
-                                  color: Config.colors.bleuClaire,
-                                  fontSize: 24,
-                                  fontFamily: 'Lobster',
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: AppBar(
+            backgroundColor: Config.colors.jauneBlanc,
+            title: const Text(
+              'CONTROLEURS MVST',
+              style: TextStyle(color: Colors.black),
+            ),
+            centerTitle: true,
+          ),
+          drawer: Drawer(
+            child: Column(
+              children: [
+                Expanded(
+                  child: ListView(
+                    padding: EdgeInsets.zero,
+                    children: [
+                      DrawerHeader(
+                        decoration: BoxDecoration(
+                          color: Config.colors.bleuFonce2,
+                        ),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 120.0,
+                                height: 120.0,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Config.colors.jauneBlanc,
+                                    width: 2.0,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    'MVST',
+                                    style: TextStyle(
+                                      color: Config.colors.bleuClaire,
+                                      fontSize: 24,
+                                      fontFamily: 'Lobster',
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.perm_identity_outlined,
-                      color: Config.colors.bleuClaire,
-                    ),
-                    title: Text(
-                      'Profil',
-                      style: TextStyle(
-                        color: Config.colors.bleuClaire,
-                        fontFamily: 'Lobster',
-                      ),
-                    ),
-                    onTap: () {
-                      if (FirebaseAuth.instance.currentUser != null) {
-                        String userId = FirebaseAuth.instance.currentUser!.uid;
-                        String? userProfil =
-                            FirebaseAuth.instance.currentUser!.displayName;
+                      ListTile(
+                        leading: Icon(
+                          Icons.perm_identity_outlined,
+                          color: Config.colors.bleuClaire,
+                        ),
+                        title: Text(
+                          'Profil',
+                          style: TextStyle(
+                            color: Config.colors.bleuClaire,
+                            fontFamily: 'Lobster',
+                          ),
+                        ),
+                        onTap: () {
+                          if (FirebaseAuth.instance.currentUser != null) {
+                            String userId =
+                                FirebaseAuth.instance.currentUser!.uid;
+                            String? userProfil =
+                                FirebaseAuth.instance.currentUser!.displayName;
 
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => Profil(
-                              idUtilisateur: userId,
-                              userProfil: userProfil!,
-                            ),
-                          ),
-                        );
-                      } else {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const PageDAuthentification(),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.settings_outlined,
-                      color: Config.colors.bleuClaire,
-                    ),
-                    title: Text(
-                      'Parametres',
-                      style: TextStyle(
-                        color: Config.colors.bleuClaire,
-                        fontFamily: 'Lobster',
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => Profil(
+                                  idUtilisateur: userId,
+                                  userProfil: userProfil!,
+                                ),
+                              ),
+                            );
+                          } else {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const PageDAuthentification(),
+                              ),
+                            );
+                          }
+                        },
                       ),
-                    ),
-                    onTap: () {
-                      if (FirebaseAuth.instance.currentUser != null) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => Parametres(),
+                      ListTile(
+                        leading: Icon(
+                          Icons.settings_outlined,
+                          color: Config.colors.bleuClaire,
+                        ),
+                        title: Text(
+                          'Parametres',
+                          style: TextStyle(
+                            color: Config.colors.bleuClaire,
+                            fontFamily: 'Lobster',
                           ),
-                        );
-                      } else {
-                        Navigator.pop(context);
-                        showIncompleteFieldsSnackBar(context);
-                      }
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.search,
-                      color: Config.colors.bleuClaire,
-                    ),
-                    title: Text(
-                      'Vérifications de tickets',
-                      style: TextStyle(
-                        color: Config.colors.bleuClaire,
-                        fontFamily: 'Lobster',
+                        ),
+                        onTap: () {
+                          if (FirebaseAuth.instance.currentUser != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => Parametres(),
+                              ),
+                            );
+                          } else {
+                            Navigator.pop(context);
+                            showIncompleteFieldsSnackBar(context);
+                          }
+                        },
                       ),
-                    ),
-                    onTap: () {
-                      if (FirebaseAuth.instance.currentUser != null) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ParametresVerification(),
+                      ListTile(
+                        leading: Icon(
+                          Icons.search,
+                          color: Config.colors.bleuClaire,
+                        ),
+                        title: Text(
+                          'Vérifications de tickets',
+                          style: TextStyle(
+                            color: Config.colors.bleuClaire,
+                            fontFamily: 'Lobster',
                           ),
-                        );
-                      } else {
-                        Navigator.pop(context);
-                        showIncompleteFieldsSnackBar(context);
-                      }
-                    },
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.power_settings_new,
-                      color: Config.colors.bleuClaire,
-                    ),
-                    title: Text(
-                      'Déconnexion',
-                      style: TextStyle(
-                        color: Config.colors.bleuClaire,
-                        fontFamily: 'Lobster',
+                        ),
+                        onTap: () {
+                          if (FirebaseAuth.instance.currentUser != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ParametresVerification(),
+                              ),
+                            );
+                          } else {
+                            Navigator.pop(context);
+                            showIncompleteFieldsSnackBar(context);
+                          }
+                        },
                       ),
-                    ),
-                    onTap: () => deconnexion(context),
+                      ListTile(
+                        leading: Icon(
+                          Icons.power_settings_new,
+                          color: Config.colors.bleuClaire,
+                        ),
+                        title: Text(
+                          'Déconnexion',
+                          style: TextStyle(
+                            color: Config.colors.bleuClaire,
+                            fontFamily: 'Lobster',
+                          ),
+                        ),
+                        onTap: () => deconnexion(context),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                ListTile(
+                  leading: Icon(
+                    Icons.info_outlined,
+                    color: Config.colors.bleuClaire,
+                  ),
+                  title: Text(
+                    'À propos du développeur',
+                    style: TextStyle(
+                      color: Config.colors.bleuClaire,
+                      fontFamily: 'Lobster',
+                    ),
+                  ),
+                  onTap: () {
+                    if (FirebaseAuth.instance.currentUser != null) {
+                    } else {
+                      Navigator.pop(context);
+                      showIncompleteFieldsSnackBar(context);
+                    }
+                  },
+                ),
+              ],
             ),
-            ListTile(
-              leading: Icon(
-                Icons.info_outlined,
-                color: Config.colors.bleuClaire,
-              ),
-              title: Text(
-                'À propos du développeur',
-                style: TextStyle(
-                  color: Config.colors.bleuClaire,
-                  fontFamily: 'Lobster',
+          ),
+          body: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(
+                  height: 150,
+                ),
+                Expanded(
+                  child: GridView.count(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    children: [
+                      scannQrCode(context, setLoadingState),
+                      ticketsScannes(context, setLoadingState),
+                      graphiques(context, setLoadingState),
+                      tableau(context, setLoadingState),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (isLoading)
+          Positioned.fill(
+            child: Align(
+              alignment: Alignment.center,
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Center(
+                  child: CircularProgressIndicator(),
                 ),
               ),
-              onTap: () {
-                if (FirebaseAuth.instance.currentUser != null) {
-                } else {
-                  Navigator.pop(context);
-                  showIncompleteFieldsSnackBar(context);
-                }
-              },
             ),
-          ],
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              height: 150,
-            ),
-            Expanded(
-              child: GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-                children: [
-                  scannQrCode(context, setLoadingState),
-                  ticketsScannes(context, setLoadingState),
-                  graphiques(context, setLoadingState),
-                  tableau(context, setLoadingState),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+      ],
     );
   }
 }
@@ -311,23 +348,28 @@ Widget scannQrCode(BuildContext ctx, Function setLoadingState) {
   return GestureDetector(
     onTap: () async {
       setLoadingState(true);
-      await ListeDesId.getTicketsAScanner(idDate);
+
+      await ListesDesTickets.ticketsAscanner();
+
       if (FirebaseAuth.instance.currentUser != null) {
-        String userId = FirebaseAuth.instance.currentUser!.uid;
-        String? userProfil = FirebaseAuth.instance.currentUser!.displayName;
         Navigator.push(
-            ctx,
-            MaterialPageRoute(
-                builder: (BuildContext context) => const LecteurQrCode()));
+          ctx,
+          MaterialPageRoute(
+            builder: (BuildContext context) => LecteurQrCode(
+              dateNormale: dateNormale,
+              dateAujourdhui: dateAujourdhui,
+              dateApresDemain: dateDApresDemain,
+            ),
+          ),
+        ).then((_) => setLoadingState(false));
       } else {
         Navigator.pushReplacement(
           ctx,
           MaterialPageRoute(
             builder: (context) => const Login(),
           ),
-        );
+        ).then((_) => setLoadingState(false));
       }
-      setLoadingState(false);
     },
     child: Card(
       shadowColor: Colors.blue,
@@ -337,7 +379,7 @@ Widget scannQrCode(BuildContext ctx, Function setLoadingState) {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
+          children: const [
             SizedBox(
               width: 70,
               height: 70,
@@ -359,24 +401,21 @@ Widget ticketsScannes(BuildContext ctx, Function setLoadingState) {
     onTap: () async {
       setLoadingState(true);
       if (FirebaseAuth.instance.currentUser != null) {
-        String userId = FirebaseAuth.instance.currentUser!.uid;
-        String? userProfil = FirebaseAuth.instance.currentUser!.displayName;
         Navigator.push(
-            ctx,
-            MaterialPageRoute(
-                builder: (BuildContext context) => MesTickets(
-                      date: idDate,
-                      idUtilisateur: userId,
-                    )));
+          ctx,
+          MaterialPageRoute(
+            builder: (BuildContext context) =>
+                ListeTicketsScannes(date: idDate, dateNormale: dateNormale),
+          ),
+        ).then((_) => setLoadingState(false));
       } else {
         Navigator.pushReplacement(
           ctx,
           MaterialPageRoute(
             builder: (context) => const Login(),
           ),
-        );
+        ).then((_) => setLoadingState(false));
       }
-      setLoadingState(false);
     },
     child: Card(
       shadowColor: Colors.blue,
@@ -386,7 +425,7 @@ Widget ticketsScannes(BuildContext ctx, Function setLoadingState) {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
+          children: const [
             SizedBox(
               width: 70,
               height: 70,
@@ -395,7 +434,7 @@ Widget ticketsScannes(BuildContext ctx, Function setLoadingState) {
                 size: 60,
               ),
             ),
-            Text("TICKETS SCANNES")
+            Text("TICKETS SCANNÉS")
           ],
         ),
       ),
@@ -407,28 +446,16 @@ Widget graphiques(BuildContext ctx, Function setLoadingState) {
   return GestureDetector(
     onTap: () async {
       setLoadingState(true);
-      if (FirebaseAuth.instance.currentUser != null) {
-        String userId = FirebaseAuth.instance.currentUser!.uid;
-        String? userProfil = FirebaseAuth.instance.currentUser!.displayName;
-        Navigator.push(
-          ctx,
-          MaterialPageRoute(
-            builder: (BuildContext context) => GraphiquesABarres(
-              date: idDate,
-              moisAnnee: idMoisAnnee,
-              annee: idAnnee,
-            ),
+      Navigator.push(
+        ctx,
+        MaterialPageRoute(
+          builder: (BuildContext context) => GraphiquesABarres(
+            date: idDate,
+            moisAnnee: idMoisAnnee,
+            annee: idAnnee,
           ),
-        );
-      } else {
-        Navigator.pushReplacement(
-          ctx,
-          MaterialPageRoute(
-            builder: (context) => const Login(),
-          ),
-        );
-      }
-      setLoadingState(false);
+        ),
+      ).then((_) => setLoadingState(false));
     },
     child: Card(
       shadowColor: Colors.blue,
@@ -438,7 +465,7 @@ Widget graphiques(BuildContext ctx, Function setLoadingState) {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
+          children: const [
             SizedBox(
               width: 70,
               height: 70,
@@ -459,27 +486,14 @@ Widget tableau(BuildContext ctx, Function setLoadingState) {
   return GestureDetector(
     onTap: () async {
       setLoadingState(true);
-      if (FirebaseAuth.instance.currentUser != null) {
-        String userId = FirebaseAuth.instance.currentUser!.uid;
-        String? userProfil = FirebaseAuth.instance.currentUser!.displayName;
-
-        Navigator.push(
-          ctx,
-          MaterialPageRoute(
-            builder: (context) => TableauDeTickets(
-              date: idAnnee,
-            ),
+      Navigator.push(
+        ctx,
+        MaterialPageRoute(
+          builder: (BuildContext context) => TableauDeTickets(
+            date: idAnnee,
           ),
-        );
-      } else {
-        Navigator.pushReplacement(
-          ctx,
-          MaterialPageRoute(
-            builder: (context) => const PageDAuthentification(),
-          ),
-        );
-      }
-      setLoadingState(false);
+        ),
+      ).then((_) => setLoadingState(false));
     },
     child: Card(
       shadowColor: Colors.blue,
@@ -489,7 +503,7 @@ Widget tableau(BuildContext ctx, Function setLoadingState) {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
+          children: const [
             SizedBox(
               width: 70,
               height: 70,
@@ -498,9 +512,7 @@ Widget tableau(BuildContext ctx, Function setLoadingState) {
                 size: 60,
               ),
             ),
-            Text(
-              "TABLEAU DE TICKETS",
-            ),
+            Text("TABLEAU")
           ],
         ),
       ),
@@ -530,37 +542,3 @@ void deconnexion(BuildContext context) async {
     (route) => false,
   );
 }
-
-// MAIN AVEC BLOC 
-/*
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    ListeDesId.getTicketsAScanner(idDate);
-    return BlocProvider(
-      create: (context) => BlocListePlaces()..add(ChargerLaList()),
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Config.colors.bleuFonce),
-          useMaterial3: true,
-        ),
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [
-          Locale('fr', ''),
-        ],
-        home: const Accueil(),
-      ),
-    );
-  }
-}
-
-
-*/

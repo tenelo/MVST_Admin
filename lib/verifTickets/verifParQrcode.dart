@@ -160,8 +160,9 @@ class _VerifParQrCodeState extends State<VerifParQrCode> {
                     return valide(context, ticketData);
                   },
                 );
+                /*
                 await misAjourEtatScanne(
-                    ticket.idDocParent, ticket.idDoc, "scanné");
+                    ticket.idDocParent, ticket.idDoc, "scanné");*/
               } else {
                 showDialog(
                   context: context,

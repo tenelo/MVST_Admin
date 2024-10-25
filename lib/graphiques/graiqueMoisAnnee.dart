@@ -1,9 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/graphiques/diagrammeABarres.dart';
 import 'package:mvst_admin/graphiques/graphiqueAnnee.dart';
+import 'package:mysql1/mysql1.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
 class GraphiquesABarresMoisAnnee extends StatefulWidget {
@@ -32,7 +32,7 @@ class _GraphiquesABarresMoisAnneeState
   DateTime _selectedDate = DateTime.now(); // Date par défaut
   DateTime _selectedMonthYear = DateTime.now(); // Mois et année par défaut
   DateTime _selectedYear = DateTime.now(); // Année par défaut
-
+  MySqlConnection? _connection;
   final List<MesDonneesTickets> ticketsData = [];
 
   @override
@@ -59,41 +59,45 @@ class _GraphiquesABarresMoisAnneeState
     Color.fromARGB(255, 244, 80, 68),
   ];
 
-  Stream<List<DocumentSnapshot<Map<String, dynamic>>>>
-      recuperationDesTickets() {
-    return FirebaseFirestore.instance
-        .collection('tickets')
-        .where('moisAnnee', isEqualTo: widget.moisAnnee)
-        .snapshots()
-        .asyncMap((ticketsSnapshot) async {
-      List<DocumentSnapshot<Map<String, dynamic>>> allDocuments = [];
-      for (var ticketDoc in ticketsSnapshot.docs) {
-        try {
-          var subcollectionSnapshot = await ticketDoc.reference
-              .collection('sousCollectionTickets')
-              .get();
-          allDocuments.addAll(subcollectionSnapshot.docs);
-        } catch (e) {
-          print('Erreur de chargement du ticket ${ticketDoc.id}: $e');
-        }
-      }
+  Stream<List<Map<String, dynamic>>> recuperationDesTickets() async* {
+    // Connexion à la base de données MySQL
+    _connection = await Connexion.connexionDB();
+    String sql = '''
+    SELECT t.*
+    FROM Tickets t
+    JOIN (
+      SELECT d.documentId
+      FROM Departs d
+      WHERE d.moisAnnee = ?
+    ) AS selectedDeparts
+    ON t.documentId = selectedDeparts.documentId;
+  ''';
 
-      _classifyTickets(allDocuments);
+    try {
+      Results result = await _connection!.query(sql, [widget.moisAnnee]);
 
-      return allDocuments;
-    });
+      // Transformation du résultat en liste de maps
+      List<Map<String, dynamic>> tickets =
+          result.map((row) => row.fields).toList();
+
+      // Classification des tickets
+      _classifyTickets(tickets);
+
+      // Émission des résultats dans le Stream
+      yield tickets;
+    } catch (e) {
+      print('Erreur lors de la récupération des tickets : $e');
+      yield [];
+    }
   }
 
-  void _classifyTickets(List<DocumentSnapshot<Map<String, dynamic>>> tickets) {
+  void _classifyTickets(List<Map<String, dynamic>> tickets) {
     Map<String, int> destinationCounts = {};
 
     for (var ticket in tickets) {
-      var data = ticket.data();
-      if (data != null) {
-        var destination = data['destination'] ?? '';
-        destinationCounts[destination] =
-            (destinationCounts[destination] ?? 0) + 1;
-      }
+      var destination = ticket['destination'] ?? '';
+      destinationCounts[destination] =
+          (destinationCounts[destination] ?? 0) + 1;
     }
 
     ticketsData.clear();
@@ -235,11 +239,10 @@ class _GraphiquesABarresMoisAnneeState
         ),
         centerTitle: true,
       ),
-      body: StreamBuilder<List<DocumentSnapshot<Map<String, dynamic>>>>(
+      body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: recuperationDesTickets(),
         builder: (BuildContext context,
-            AsyncSnapshot<List<DocumentSnapshot<Map<String, dynamic>>>>
-                snapshot) {
+            AsyncSnapshot<List<Map<String, dynamic>>> snapshot) {
           if (snapshot.hasError) {
             return Center(
                 child: Text('Erreur de chargement : ${snapshot.error}'));
@@ -276,14 +279,20 @@ class _GraphiquesABarresMoisAnneeState
                         textStyle: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Config.colors.bleuA)),
-                    legend: Legend(isVisible: true),
+                    legend: Legend(
+                      isVisible: true,
+                      textStyle: TextStyle(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
                     tooltipBehavior: TooltipBehavior(enable: true),
                     series: <CartesianSeries<MesDonneesTickets, String>>[
                       BarSeries<MesDonneesTickets, String>(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(4),
                         sortingOrder: SortingOrder.descending,
                         color: Colors.orange,
-                        name: 'Total Passagers ${getTotalPassagers()}',
+                        name:
+                            'Total des passagers pour ${widget.moisAnnee} : ${getTotalPassagers()}',
                         dataSource: filteredTickets,
                         xValueMapper: (MesDonneesTickets data, _) =>
                             data.destinations,

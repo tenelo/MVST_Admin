@@ -1,34 +1,55 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:mvst_admin/config/config.dart';
 
 List<MonTicket> monTicket = [];
+List<Map<String, dynamic>> listeDesTicketsScannes = [];
 
-class ListeDesId {
-// Fonction pour récupérer un stream de tickets avec une date de départ spécifique
-  static Future<void> getTicketsAScanner(String date) async {
-    final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+class ListesDesTickets {
+  static Future<List<Map<String, dynamic>>> ticketsAscanner() async {
+    final conn = await Connexion.connexionDB();
+    try {
+      // Génère la date du jour au format 'yyyy-MM-dd'
+      String dateDuJour =
+          DateFormat('yyyy-MM-dd', 'fr_FR').format(DateTime.now());
 
-    // Requête Firestore pour obtenir les documents avec la date de départ spécifiée
-    QuerySnapshot<Map<String, dynamic>> querySnapshot = await _firestore
-        .collection('tickets')
-        .where('dateDeDepart', isEqualTo: date)
-        .get();
+      // Exécute la requête pour récupérer tous les tickets dont la date est supérieure ou égale à aujourd'hui
+      var result = await conn.query(
+          'SELECT * FROM Tickets WHERE datePourCalcule >= ?', [dateDuJour]);
 
-    // Parcourir les documents récupérés
-    for (var doc in querySnapshot.docs) {
-      // Récupérer la sous-collection 'sousCollectionTickets' pour chaque document
-      QuerySnapshot<Map<String, dynamic>> subcollectionSnapshot =
-          await doc.reference.collection('sousCollectionTickets').get();
+      List<Map<String, dynamic>> listeDesTicketsScannes =
+          result.map((row) => row.fields).toList();
 
-      // Extraire les ID des documents de la sous-collection et les ajouter à l'ensemble
-      for (var subDoc in subcollectionSnapshot.docs) {
-        monTicket.add(MonTicket(
-            idDocParent: doc.id,
-            idDoc: subDoc.id,
-            etatScanne: subDoc['etatScanne']));
-      }
+      return listeDesTicketsScannes;
+    } catch (error) {
+      return [];
+    } finally {
+      await conn.close();
+    }
+  }
+
+// Récupérer la liste des tickets scannés dont la date est égale à la date du jour
+  static Future<List<Map<String, dynamic>>> listeDesTicketsScannes(
+      String date) async {
+    final conn = await Connexion.connexionDB();
+    try {
+      var result = await conn.query(
+          'SELECT * FROM Tickets WHERE etatScanne = ? AND date = ?',
+          ['scanné', date]);
+
+      List<Map<String, dynamic>> listeDesTicketsScannes =
+          result.map((row) => row.fields).toList();
+
+      return listeDesTicketsScannes;
+    } catch (error) {
+      return [];
+    } finally {
+      await conn.close();
     }
   }
 }
@@ -53,7 +74,7 @@ void listenForTicketChanges() {
   final subscription = collectionRef.snapshots().listen((snapshot) {
     snapshot.docChanges.forEach((change) {
       // Réagir à n'importe quel changement ici
-      ListeDesId.getTicketsAScanner;
+      ListesDesTickets.ticketsAscanner;
     });
   });
 
@@ -113,18 +134,25 @@ class ImageService {
 }
 
 Future<void> misAjourEtatScanne(
-    String idDocParent, String docId, String _etat) async {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
+    String _documentId, String idUtilisateur, int _place) async {
+  final conn = await Connexion.connexionDB();
   try {
-    await _firestore
-        .collection('tickets')
-        .doc(idDocParent)
-        .collection('sousCollectionTickets')
-        .doc(docId)
-        .update({
-      'etatScanne': _etat,
-      'heureDeScanne': FieldValue.serverTimestamp(),
-    });
-  } catch (e) {}
+    // Mise à jour de la valeur du champ 'etatScanne' à 'scanné' si les trois champs correspondent
+    await conn.query(
+      'UPDATE Tickets SET etatScanne = ? WHERE documentId = ? AND idUtilisateur = ? AND place = ?',
+      ['scanné', _documentId, idUtilisateur, _place],
+    );
+  } catch (e) {
+    // Gérer l'erreur (par exemple, journaliser ou afficher une notification)
+  } finally {
+    await conn.close();
+  }
+}
+
+class Calcule {
+  static double tailleEcran(BuildContext ctx) {
+    double screenWidth = MediaQuery.of(ctx).size.width;
+    double screenHeight = MediaQuery.of(ctx).size.height;
+    return sqrt(pow(screenWidth, 2) + pow(screenHeight, 2)) / 160.0;
+  }
 }
