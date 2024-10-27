@@ -142,7 +142,10 @@ class _MesTicketsScannesState extends State<MesTicketsScannes> {
                 itemBuilder: (BuildContext context, int index) {
                   Map<String, dynamic> ticket = filteredTickets[index];
                   var idTicket = ticket['documentId'];
-                  DateTime date = DateTime.parse(ticket['date']);
+                  // Utiliser le format personnalisé pour analyser la date
+                  DateTime date = DateFormat('EEEE d MMMM yyyy', 'fr_FR')
+                      .parse(ticket['date']);
+
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8.0),
                     child: TicketMaterial(

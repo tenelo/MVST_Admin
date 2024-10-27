@@ -173,6 +173,15 @@ class _TableauDeTicketsState extends State<TableauDeTickets> {
                           data: ThemeData.light().copyWith(
                               cardColor: Theme.of(context).canvasColor),
                           child: PaginatedDataTable(
+                            header: Center(
+                              child: Text(
+                                "NOMBRE TOTAL DE TICKETS : ${donnees.length}",
+                                style: TextStyle(
+                                    color: Config.colors.bleuFonce2,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16),
+                              ),
+                            ),
                             horizontalMargin: 5,
                             columnSpacing: 20,
                             showFirstLastButtons: true,
