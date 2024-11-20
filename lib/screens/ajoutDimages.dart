@@ -113,49 +113,122 @@ class _ListeImagesState extends State<ListeImages> {
 
   Widget _buildImageCard(ImageModel image) {
     final String _lienImage = baseUrl + image.lien_image;
-    print("Construction de la carte pour l'image : $_lienImage");
-    return Card(
-      shadowColor: Colors.lightBlueAccent,
-      elevation: 4,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8.0),
-            child: Image.network(
-              _lienImage,
-              width: 120,
-              height: 110,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                print("Erreur lors du chargement de l'image : $error");
-                return Icon(Icons.error_outline_outlined,
-                    color: Colors.blue, size: 50);
-              },
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    image.titre,
-                    style: TextStyle(fontWeight: FontWeight.bold),
+
+    return GestureDetector(
+      onTap: () =>
+          _afficherImageEnGrand(_lienImage, image.titre, image.description),
+      child: Card(
+        shadowColor: Colors.lightBlueAccent,
+        elevation: 4,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(2.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.blue, width: 1.0),
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8.0),
+                  child: Image.network(
+                    _lienImage,
+                    width: 120,
+                    height: 110,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(Icons.error_outline_outlined,
+                          color: Colors.blue, size: 50);
+                    },
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    image.description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-          _buildActionButtons(image),
-        ],
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      image.titre,
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      image.description,
+                      maxLines: 10,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            _buildActionButtons(image),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _afficherImageEnGrand(
+      String imageUrl, String titre, String description) async {
+    await showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.blue, width: 1.0),
+                  borderRadius: BorderRadius.circular(
+                      10.0), // Assurer que la bordure a le même rayon que le ClipRRect
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10.0),
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(Icons.error_outline_outlined,
+                          color: Colors.blue, size: 50);
+                    },
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                textAlign: TextAlign.center,
+                titre,
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Text(
+                description,
+                textAlign: TextAlign.justify,
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Ok',
+                style:
+                    TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -724,80 +797,6 @@ class _AjouterImagesState extends State<AjouterImages> {
     }
   }
 
-/*
-  Future<void> _uploadData() async {
-    if (titreImage.text.isEmpty ||
-        detailsImage.text.isEmpty ||
-        _image == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Color.fromARGB(255, 35, 113, 177),
-          content: Text(
-            "Veuillez remplir tous les champs et ajouter une image",
-            style: TextStyle(color: Colors.white),
-          ),
-        ),
-      );
-      return;
-    }
-    // Assure-toi que la variable est vérifiée avant utilisation.
-    if (_image == null) {
-      return;
-    }
-    setState(() {
-      isLoading = true;
-    });
-
-    try {
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse('https://tenelodata-tech.com/mvst/upload.php'),
-      );
-
-      // Ajouter l'image
-      request.files
-          .add(await http.MultipartFile.fromPath('lienImage', _image!.path));
-
-      // Ajouter les autres champs
-      request.fields['titre'] = titreImage.text;
-      request.fields['description'] = detailsImage.text;
-
-      // Envoyer la requête
-      final response = await request.send();
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Color.fromARGB(255, 35, 113, 177),
-            content: Text(
-              "Image ajoutée avec succès",
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ListeImages(),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Color.fromARGB(255, 213, 76, 66),
-            content: Text(
-              "L'Image n'a pu être ajoutée",
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        );
-      }
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
-*/
   Future<void> _selectImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -809,30 +808,6 @@ class _AjouterImagesState extends State<AjouterImages> {
     }
   }
 
-  /*
-  Future<void> _selectImage() async {
-    final picker = ImagePicker();
-    try {
-      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-      if (pickedFile != null) {
-        setState(() {
-          print("IMAGE SELECTIONNEE $pickedFile");
-          _image = File(pickedFile.path);
-        });
-      } else {
-        print("Aucune image sélectionnée.");
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Aucune image sélectionnée"),
-          ),
-        );
-      }
-    } catch (e) {
-      print("Erreur lors de la sélection de l'image : $e");
-    }
-  }
-*/
   @override
   void dispose() {
     super.dispose();
