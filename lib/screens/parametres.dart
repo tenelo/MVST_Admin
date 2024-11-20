@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/imagesServeur/ajouterImages.dart';
 import 'package:mvst_admin/screens/ajoutDimages.dart';
 import 'package:mvst_admin/screens/gare.dart';
 import 'package:mvst_admin/screens/heuresDeparts.dart';
@@ -173,7 +174,7 @@ class Parametres extends StatelessWidget {
                       );
                     },
                     child: Text(
-                      "LES IMAGES",
+                      "GESTION DES IMAGES",
                       style: TextStyle(
                         fontSize: 16,
                         color: Config.colors.bleuClaire,
@@ -194,7 +195,14 @@ class Parametres extends StatelessWidget {
                         borderRadius: BorderRadius.circular(32.0),
                       ),
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ListeImages2(),
+                        ),
+                      );
+                    },
                     child: Text(
                       "LES NOTIFICATIONS",
                       style: TextStyle(

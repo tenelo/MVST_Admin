@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -16,34 +17,40 @@ class _ListeImagesState extends State<ListeImages> {
   bool isLoading = false;
   List<ImageModel> images = [];
   MySqlConnection? conn;
+  final String baseUrl = 'https://tenelodata-tech.com/mvst/';
 
   @override
   void initState() {
     super.initState();
     _connectToDatabase();
-    _fetchImages();
+    _recupImages();
   }
 
   Future<void> _connectToDatabase() async {
-    try {
-      conn = await Connexion.connexionDB();
-    } catch (e) {
-      print('Erreur de connexion à la base de données: $e');
-    }
+    conn = await Connexion.connexionDB();
   }
 
-  Future<void> _fetchImages() async {
+  Future<void> _recupImages() async {
     setState(() {
       isLoading = true;
     });
 
     try {
-      final results = await conn!.query('SELECT * FROM images');
+      conn ??= await Connexion.connexionDB();
+      final results = await conn!.query('SELECT * FROM Images');
       setState(() {
-        images = results.map((row) => ImageModel.fromJson(row.fields)).toList();
+        images = results.map((row) {
+          return ImageModel.fromJson({
+            'id': row['id'],
+            'titre': row['titre'].toString(),
+            'description': row['description'].toString(),
+            'statut': row['statut'].toString(),
+            'lien_image': row['lien_image'].toString(),
+          });
+        }).toList();
       });
     } catch (e) {
-      print('Erreur lors du chargement des images: $e');
+      conn = await Connexion.connexionDB();
     } finally {
       setState(() {
         isLoading = false;
@@ -53,7 +60,6 @@ class _ListeImagesState extends State<ListeImages> {
 
   @override
   void dispose() {
-    conn?.close();
     super.dispose();
   }
 
@@ -72,17 +78,30 @@ class _ListeImagesState extends State<ListeImages> {
         ),
       ),
       body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: images.length,
-              itemBuilder: (context, index) {
-                final image = images[index];
-                return _buildImageCard(image);
-              },
-            ),
+          ? Center(
+              child: CircularProgressIndicator(
+                color: Color.fromARGB(93, 12, 134, 195),
+              ),
+            )
+          : images.isEmpty
+              ? Center(
+                  child: Text(
+                    'Aucune image disponible',
+                    style: TextStyle(
+                        color: Color.fromARGB(93, 12, 134, 195),
+                        fontWeight: FontWeight.bold),
+                  ),
+                )
+              : ListView.builder(
+                  itemCount: images.length,
+                  itemBuilder: (context, index) {
+                    final image = images[index];
+                    return _buildImageCard(image);
+                  },
+                ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.push(
+          Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => AjouterImages()),
           );
@@ -93,6 +112,8 @@ class _ListeImagesState extends State<ListeImages> {
   }
 
   Widget _buildImageCard(ImageModel image) {
+    final String _lienImage = baseUrl + image.lien_image;
+    print("Construction de la carte pour l'image : $_lienImage");
     return Card(
       shadowColor: Colors.lightBlueAccent,
       elevation: 4,
@@ -102,10 +123,15 @@ class _ListeImagesState extends State<ListeImages> {
           ClipRRect(
             borderRadius: BorderRadius.circular(8.0),
             child: Image.network(
-              image.url,
+              _lienImage,
               width: 120,
               height: 110,
               fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                print("Erreur lors du chargement de l'image : $error");
+                return Icon(Icons.error_outline_outlined,
+                    color: Colors.blue, size: 50);
+              },
             ),
           ),
           Expanded(
@@ -138,11 +164,14 @@ class _ListeImagesState extends State<ListeImages> {
     return Row(
       children: [
         IconButton(
-          icon: Icon(Icons.edit),
+          icon: Icon(Icons.edit, color: Colors.blue),
           onPressed: () => _showEditDialog(image),
         ),
         IconButton(
-          icon: Icon(Icons.delete),
+          icon: Icon(
+            Icons.delete,
+            color: const Color.fromARGB(255, 233, 75, 64),
+          ),
           onPressed: () => _showDeleteDialog(image),
         ),
       ],
@@ -154,89 +183,278 @@ class _ListeImagesState extends State<ListeImages> {
         TextEditingController(text: image.titre);
     final TextEditingController descriptionController =
         TextEditingController(text: image.description);
+    final TextEditingController statutController =
+        TextEditingController(text: image.statut);
+
+    final List<String> statuts = ['Actif', 'Inactif'];
+    String statutSelectionne = image.statut;
+
+    bool isUpdating = false;
 
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Modifier l\'image'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titreController,
-              decoration: InputDecoration(labelText: 'Titre'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: Center(
+              child: Text(
+                'Modifier les informations',
+                style:
+                    TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+              ),
             ),
-            TextField(
-              maxLines: 5,
-              controller: descriptionController,
-              decoration: InputDecoration(labelText: 'Description'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titreController,
+                  decoration: InputDecoration(labelText: 'Titre'),
+                ),
+                TextField(
+                  maxLines: 5,
+                  controller: descriptionController,
+                  decoration: InputDecoration(labelText: 'Description'),
+                ),
+                SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  iconEnabledColor: Colors.blue,
+                  value: statutController.text,
+                  decoration: InputDecoration(labelText: 'Statut'),
+                  items: statuts
+                      .map((statut) => DropdownMenuItem(
+                            value: statut,
+                            child: Text(statut),
+                          ))
+                      .toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      statutSelectionne = val;
+                      statutController.text = val;
+                    }
+                  },
+                ),
+                if (isUpdating)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 20),
+                    child: CircularProgressIndicator(),
+                  ),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              setState(() => isLoading = true);
-              await _modifierImageDansMySQL(
-                  image.id, titreController.text, descriptionController.text);
-              _fetchImages();
-              Navigator.of(context).pop();
-            },
-            child: Text('Enregistrer'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Annuler'),
-          ),
-        ],
+            actions: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text(
+                      'Annuler',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.blue),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      setState(() => isUpdating = true);
+                      await _modifierImageDansMySQL(
+                        image.id,
+                        titreController.text,
+                        descriptionController.text,
+                        statutSelectionne,
+                      );
+                      setState(() => isUpdating = false);
+                      Navigator.of(context).pop();
+                    },
+                    child: Text(
+                      'Enregistrer',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.blue),
+                    ),
+                  ),
+                ],
+              )
+            ],
+          );
+        },
       ),
     );
-  }
-
-  Future<void> _showDeleteDialog(ImageModel image) async {
-    final bool confirmDelete = await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Confirmation'),
-        content: Text('Voulez-vous vraiment supprimer cette image ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Non'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text('Oui'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmDelete) {
-      await _supprimerImageDeMySQL(image.id);
-      _fetchImages();
-    }
   }
 
   Future<void> _modifierImageDansMySQL(
-      String id, String titre, String description) async {
+      int id, String titre, String description, String statut) async {
     try {
-      await conn!.query(
-        'UPDATE images SET titre = ?, description = ? WHERE id = ?',
-        [titre, description, id],
+      conn ??= await Connexion.connexionDB();
+      var result = await conn!.query(
+        'UPDATE Images SET titre = ?, description = ?, statut = ? WHERE id = ?',
+        [titre, description, statut, id],
       );
-      print('Image modifiée dans MySQL avec succès.');
+
+      if (result.affectedRows! > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Color.fromARGB(255, 35, 113, 177),
+            content: Text(
+              'Informations modifiées avec succès.',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Aucune modification n\'a été effectuée.')),
+        );
+      }
+      setState(() {
+        _recupImages();
+      });
     } catch (e) {
-      print('Erreur lors de la modification dans MySQL: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur lors de la modification de l\'image.')),
+      );
     }
   }
 
-  Future<void> _supprimerImageDeMySQL(String id) async {
+  Future<void> _showDeleteDialog(ImageModel image) async {
+    bool isDeleting = false;
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: Center(
+              child: Text(
+                'Suppression',
+                style: TextStyle(
+                    color: const Color.fromARGB(255, 233, 75, 64),
+                    fontWeight: FontWeight.bold),
+              ),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                    child:
+                        Text('Voulez-vous vraiment supprimer cette image ?')),
+                if (isDeleting)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 20),
+                    child: CircularProgressIndicator(),
+                  ),
+              ],
+            ),
+            actions: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: () async {
+                      setState(() => isDeleting = true);
+                      await _supprimerImage(image);
+                      Navigator.of(context).pop(true);
+                    },
+                    child: Text(
+                      'Oui',
+                      style: TextStyle(
+                          color: const Color.fromARGB(255, 233, 75, 64),
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: Text(
+                      'Non',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.blue),
+                    ),
+                  ),
+                ],
+              )
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _supprimerImage(ImageModel image) async {
     try {
-      await conn!.query('DELETE FROM images WHERE id = ?', [id]);
-      print('Image supprimée de MySQL avec succès.');
+      var url = Uri.parse('https://tenelodata-tech.com/mvst/upload.php');
+
+      var response = await http.post(
+        url,
+        body: {
+          'action': 'delete',
+          'id': image.id.toString(),
+        },
+      );
+
+      if (response.statusCode == 200) {
+        var jsonResponse = jsonDecode(response.body);
+        if (jsonResponse['success'] != null) {
+          // Image supprimée avec succès du serveur, maintenant supprimer dans la base de données
+          var dbResponse = await conn!.query(
+            'DELETE FROM Images WHERE id = ?',
+            [image.id],
+          );
+
+          if (dbResponse.affectedRows! > 0) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                backgroundColor: Color.fromARGB(255, 35, 113, 177),
+                content: Text(
+                  "Image supprimée avec succès.",
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                backgroundColor: const Color.fromARGB(255, 46, 46, 46),
+                content: Text(
+                  'Erreur : L\'enregistrement n\'a pas pu être supprimé.',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            );
+          }
+        } else if (jsonResponse['error'] != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              backgroundColor: const Color.fromARGB(255, 46, 46, 46),
+              content: Text(
+                'Erreur lors de la suppression sur le serveur.',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: const Color.fromARGB(255, 46, 46, 46),
+            content: Text(
+              'Erreur de connexion au serveur.',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        );
+      }
     } catch (e) {
-      print('Erreur lors de la suppression de MySQL: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color.fromARGB(255, 46, 46, 46),
+          content: Text(
+            'Erreur lors de la suppression de l\'image',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+    } finally {
+      setState(() {
+        _recupImages();
+        isLoading = false;
+      });
     }
   }
 }
@@ -253,37 +471,28 @@ class AjouterImages extends StatefulWidget {
 class _AjouterImagesState extends State<AjouterImages> {
   final TextEditingController titreImage = TextEditingController();
   final TextEditingController detailsImage = TextEditingController();
+  String? selectedOption;
+  final List<String> options = ['Actif', 'Inactif'];
   File? _image;
   bool isLoading = false;
-  MySqlConnection? conn; // Connexion à la base de données
+  MySqlConnection? conn;
 
   @override
   void initState() {
     super.initState();
-    _connectToDatabase(); // Connexion à la base de données
+    _connectToDatabase();
   }
 
   Future<void> _connectToDatabase() async {
-    try {
-      conn = await Connexion.connexionDB();
-    } catch (e) {
-      print('Erreur de connexion à la base de données: $e');
-    }
+    conn = await Connexion.connexionDB();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        iconTheme: IconThemeData(color: Config.colors.bleuFonce2),
+        title: const Text('Gestion d\'images'),
         centerTitle: true,
-        title: Text(
-          'Ajouter une Image',
-          style: TextStyle(
-            color: Config.colors.bleuFonce2,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -291,28 +500,50 @@ class _AjouterImagesState extends State<AjouterImages> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 16),
               GestureDetector(
                 onTap: _image == null ? _selectImage : null,
                 child: _buildImagePreview(),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 4),
               _buildTextField(titreImage, "Titre de l'image"),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
+              _buildDropdown(
+                label: 'Sélectionner statut',
+                items: options,
+                selectedItem: selectedOption,
+                onChanged: (value) {
+                  setState(() {
+                    selectedOption = value;
+                  });
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Veuillez choisir le statut';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 4),
               _buildTextField(detailsImage, "Détails de l'image", maxLines: 10),
-              const SizedBox(height: 8),
-              _buildSaveButton(),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: isLoading ? null : _uploadData,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  backgroundColor: Colors.blue,
+                ),
+                child: isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        'Ajouter',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.w700),
+                      ),
+              ),
             ],
           ),
         ),
       ),
-      persistentFooterButtons: [
-        Text(
-          "MVST",
-          style:
-              TextStyle(fontFamily: 'Lobster', color: Config.colors.bleuFonce2),
-        ),
-      ],
     );
   }
 
@@ -321,17 +552,34 @@ class _AjouterImagesState extends State<AjouterImages> {
       height: 200,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Config.colors.bleuFonce2),
+        border: Border.all(color: Colors.blue),
       ),
-      child: _image == null
-          ? Center(child: Text('Sélectionner une image'))
-          : ClipRRect(
+      child: _image != null
+          ? ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: Image.file(
                 _image!,
                 fit: BoxFit.cover,
                 width: double.infinity,
               ),
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  size: 50,
+                  Icons.photo_library_outlined,
+                  color: Config.colors.bleuA,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Sélectionner une image',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Config.colors.bleuA,
+                  ),
+                ),
+              ],
             ),
     );
   }
@@ -343,22 +591,70 @@ class _AjouterImagesState extends State<AjouterImages> {
       maxLines: maxLines,
       decoration: InputDecoration(
         labelText: label,
-        border: OutlineInputBorder(),
+        labelStyle: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+        border: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.blue),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.blue, width: 2.0),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.blue, width: 1.5),
+        ),
       ),
     );
   }
 
-  Widget _buildSaveButton() {
-    return ElevatedButton(
-      onPressed: isLoading ? null : _saveImage,
-      child: isLoading ? CircularProgressIndicator() : Text('Ajouter l\'image'),
+  Widget _buildDropdown<T>({
+    required String label,
+    required List<T> items,
+    required T? selectedItem,
+    required void Function(T?) onChanged,
+    String? Function(T?)? validator,
+  }) {
+    return DropdownButtonFormField<T>(
+      value: selectedItem,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+        border: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.blue),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.blue, width: 2.0),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.blue, width: 1.5),
+        ),
+      ),
+      iconEnabledColor: Colors.blue,
+      items: items
+          .map(
+            (item) => DropdownMenuItem<T>(
+              value: item,
+              child:
+                  Text(item.toString(), style: TextStyle(color: Colors.black)),
+            ),
+          )
+          .toList(),
+      onChanged: onChanged,
+      validator: validator,
     );
   }
 
-  Future<void> _saveImage() async {
-    if (_image == null) {
+  Future<void> _uploadData() async {
+    if (titreImage.text.isEmpty ||
+        detailsImage.text.isEmpty ||
+        _image == null ||
+        selectedOption == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Veuillez sélectionner une image.')),
+        const SnackBar(
+          backgroundColor: Color.fromARGB(255, 35, 113, 177),
+          content: Text(
+            "Veuillez remplir tous les champs,",
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
       );
       return;
     }
@@ -368,18 +664,58 @@ class _AjouterImagesState extends State<AjouterImages> {
     });
 
     try {
-      // Upload image and get the URL
-      String imageUrl = await _uploadImage(_image!);
-      await _ajouterImageDansMySQL(
-          titreImage.text, detailsImage.text, imageUrl);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Image ajoutée avec succès.')),
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('https://tenelodata-tech.com/mvst/upload.php'),
       );
-      Navigator.of(context).pop(); // Retourne à la page précédente
+
+      // Ajouter l'image
+      request.files.add(await http.MultipartFile.fromPath(
+          'lien_image', _image!.path)); // Correction : suppression de l'espace
+
+      // Ajouter les autres champs
+      request.fields['titre'] = titreImage.text;
+      request.fields['description'] = detailsImage.text;
+      request.fields['statut'] = selectedOption!; // Ajout du champ statut
+
+      // Envoyer la requête
+      final response = await request.send();
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Color.fromARGB(255, 35, 113, 177),
+            content: Text(
+              "Image ajoutée avec succès",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ListeImages(),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Color.fromARGB(255, 213, 76, 66),
+            content: Text(
+              "L'image n'a pas pu être ajoutée.",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        );
+      }
     } catch (e) {
-      print('Erreur lors de l\'ajout de l\'image: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de l\'ajout de l\'image.')),
+        SnackBar(
+          backgroundColor: Color.fromARGB(255, 213, 76, 66),
+          content: Text(
+            "Erreur : $e",
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
       );
     } finally {
       setState(() {
@@ -388,43 +724,80 @@ class _AjouterImagesState extends State<AjouterImages> {
     }
   }
 
-  Future<String> _uploadImage(File image) async {
-    String uploadUrl =
-        'https://srv1582-files.hstgr.io/95223698796713ad/files/public_html/appmobile/mvst/uploads/upload.php';
-
-    // Créer un multipart request
-    var request = http.MultipartRequest('POST', Uri.parse(uploadUrl));
-
-    // Ajouter le fichier à la requête
-    var pic = await http.MultipartFile.fromPath('image', image.path);
-    request.files.add(pic);
-
-    // Envoyer la requête
-    var response = await request.send();
-
-    if (response.statusCode == 200) {
-      // Si le téléchargement a réussi, obtenir l'URL de l'image
-      String responseBody = await response.stream.bytesToString();
-      // Assurez-vous que votre script PHP renvoie l'URL de l'image
-      return responseBody; // ou parsez pour obtenir l'URL si nécessaire
-    } else {
-      throw Exception('Erreur lors du téléchargement: ${response.statusCode}');
-    }
-  }
-
-  Future<void> _ajouterImageDansMySQL(
-      String titre, String description, String url) async {
-    try {
-      await conn!.query(
-        'INSERT INTO images (titre, description, url) VALUES (?, ?, ?)',
-        [titre, description, url],
+/*
+  Future<void> _uploadData() async {
+    if (titreImage.text.isEmpty ||
+        detailsImage.text.isEmpty ||
+        _image == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color.fromARGB(255, 35, 113, 177),
+          content: Text(
+            "Veuillez remplir tous les champs et ajouter une image",
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
       );
-      print('Image ajoutée dans MySQL avec succès.');
-    } catch (e) {
-      print('Erreur lors de l\'ajout dans MySQL: $e');
+      return;
+    }
+    // Assure-toi que la variable est vérifiée avant utilisation.
+    if (_image == null) {
+      return;
+    }
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('https://tenelodata-tech.com/mvst/upload.php'),
+      );
+
+      // Ajouter l'image
+      request.files
+          .add(await http.MultipartFile.fromPath('lienImage', _image!.path));
+
+      // Ajouter les autres champs
+      request.fields['titre'] = titreImage.text;
+      request.fields['description'] = detailsImage.text;
+
+      // Envoyer la requête
+      final response = await request.send();
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Color.fromARGB(255, 35, 113, 177),
+            content: Text(
+              "Image ajoutée avec succès",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ListeImages(),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Color.fromARGB(255, 213, 76, 66),
+            content: Text(
+              "L'Image n'a pu être ajoutée",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
-
+*/
   Future<void> _selectImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -436,9 +809,32 @@ class _AjouterImagesState extends State<AjouterImages> {
     }
   }
 
+  /*
+  Future<void> _selectImage() async {
+    final picker = ImagePicker();
+    try {
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+      if (pickedFile != null) {
+        setState(() {
+          print("IMAGE SELECTIONNEE $pickedFile");
+          _image = File(pickedFile.path);
+        });
+      } else {
+        print("Aucune image sélectionnée.");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Aucune image sélectionnée"),
+          ),
+        );
+      }
+    } catch (e) {
+      print("Erreur lors de la sélection de l'image : $e");
+    }
+  }
+*/
   @override
   void dispose() {
-    conn?.close(); // Assurez-vous de fermer la connexion
     super.dispose();
   }
 }

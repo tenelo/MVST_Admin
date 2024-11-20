@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/authentification/authentification.dart';
@@ -328,6 +329,46 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
               ],
             ),
           ),
+          floatingActionButton: SpeedDial(
+            animatedIcon: AnimatedIcons.menu_close,
+            backgroundColor: Config.colors.jauneBlanc,
+            overlayColor: Colors.black,
+            overlayOpacity: 0.5,
+            spacing: 10,
+            spaceBetweenChildren: 10,
+            children: [
+              SpeedDialChild(
+                //backgroundColor: Config.colors.jauneBlanc,
+                child: Icon(
+                  Icons.format_list_bulleted,
+                  color: Config.colors.bleuA,
+                  size: 30,
+                ),
+                label: 'Liste des passagers',
+                labelStyle: TextStyle(
+                  fontSize: 16.0,
+                  color: Config.colors.bleuA,
+                  fontWeight: FontWeight.bold,
+                ),
+                onTap: () => {},
+              ),
+              SpeedDialChild(
+                //backgroundColor: Config.colors.jauneBlanc,
+                child: Icon(
+                  Icons.event_seat,
+                  color: Config.colors.bleuA,
+                  size: 30,
+                ),
+                label: 'Places occupées',
+                labelStyle: TextStyle(
+                  fontSize: 16.0,
+                  color: Config.colors.bleuA,
+                  fontWeight: FontWeight.bold,
+                ),
+                onTap: () => {},
+              ),
+            ],
+          ),
         ),
         if (isLoading)
           Positioned.fill(
@@ -514,7 +555,7 @@ Widget tableau(BuildContext ctx, Function setLoadingState) {
               width: 70,
               height: 70,
               child: Icon(
-                Icons.table_rows_outlined,
+                Icons.format_list_bulleted_sharp,
                 size: 60,
               ),
             ),
