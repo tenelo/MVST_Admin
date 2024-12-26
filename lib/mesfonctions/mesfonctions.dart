@@ -6,20 +6,22 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
+import 'package:mysql1/mysql1.dart';
 
 List<MonTicket> monTicket = [];
 List<Map<String, dynamic>> listeDesTicketsScannes = [];
+List<int> listeDesPlacesOccupees = [];
 
 class ListesDesTickets {
   static Future<List<Map<String, dynamic>>> ticketsAscanner() async {
-    final conn = await Connexion.connexionDB();
+    final MySqlConnection? conn = await Connexion.connexionDB();
     try {
       // Génère la date du jour au format 'yyyy-MM-dd'
       String dateDuJour =
           DateFormat('yyyy-MM-dd', 'fr_FR').format(DateTime.now());
 
       // Exécute la requête pour récupérer tous les tickets dont la date est supérieure ou égale à aujourd'hui
-      var result = await conn.query(
+      var result = await conn!.query(
           'SELECT * FROM Tickets WHERE datePourCalcule >= ?', [dateDuJour]);
 
       List<Map<String, dynamic>> listeDesTicketsScannes =
@@ -29,7 +31,10 @@ class ListesDesTickets {
     } catch (error) {
       return [];
     } finally {
-      await conn.close();
+      // Vérifier si conn n'est pas null avant de fermer la connexion
+      if (conn != null) {
+        await conn.close();
+      }
     }
   }
 
@@ -38,7 +43,7 @@ class ListesDesTickets {
       String date) async {
     final conn = await Connexion.connexionDB();
     try {
-      var result = await conn.query(
+      var result = await conn!.query(
           'SELECT * FROM Tickets WHERE etatScanne = ? AND date = ?',
           ['scanné', date]);
 
@@ -49,7 +54,7 @@ class ListesDesTickets {
     } catch (error) {
       return [];
     } finally {
-      await conn.close();
+      await conn!.close();
     }
   }
 }
@@ -138,14 +143,14 @@ Future<void> misAjourEtatScanne(
   final conn = await Connexion.connexionDB();
   try {
     // Mise à jour de la valeur du champ 'etatScanne' à 'scanné' si les trois champs correspondent
-    await conn.query(
+    await conn!.query(
       'UPDATE Tickets SET etatScanne = ? WHERE documentId = ? AND idUtilisateur = ? AND place = ?',
       ['scanné', _documentId, idUtilisateur, _place],
     );
   } catch (e) {
     // Gérer l'erreur (par exemple, journaliser ou afficher une notification)
   } finally {
-    await conn.close();
+    await conn!.close();
   }
 }
 

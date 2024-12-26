@@ -174,7 +174,7 @@ class _InformationsState extends State<Informations> {
     final conn = await Connexion.connexionDB();
 
     try {
-      await conn.query('''
+      await conn!.query('''
       CREATE TABLE IF NOT EXISTS InfosGares (
         id INT AUTO_INCREMENT PRIMARY KEY,
         ville VARCHAR(50),
@@ -196,7 +196,7 @@ class _InformationsState extends State<Informations> {
     } catch (error) {
       print('Erreur lors de l\'ajout des informations: $error');
     } finally {
-      await conn.close();
+      await conn!.close();
     }
   }
 
@@ -311,7 +311,7 @@ class _InformationsState extends State<Informations> {
     final _conn = await Connexion.connexionDB();
     try {
       // Vérifiez la connexion
-      var result = await _conn.query(
+      var result = await _conn!.query(
         'UPDATE InfosGares SET ville = ?, description = ?, telephone = ? WHERE id = ?',
         [
           villeController.text,
@@ -331,7 +331,7 @@ class _InformationsState extends State<Informations> {
     } catch (error) {
       print('Erreur lors de la modification ');
     } finally {
-      await _conn.close();
+      await _conn!.close();
     }
   }
 

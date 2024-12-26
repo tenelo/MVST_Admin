@@ -14,7 +14,7 @@ import 'package:mvst_admin/firebase_options.dart';
 import 'package:mvst_admin/graphiques/diagrammeABarres.dart';
 import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/qrcode/lecteurQrCode.dart';
-import 'package:mvst_admin/screens/listeDesDeparts.dart';
+import 'package:mvst_admin/screens/menulateral.dart';
 import 'package:mvst_admin/screens/parametres.dart';
 import 'package:mvst_admin/screens/profil.dart';
 import 'package:mvst_admin/screens/tableaudestickets.dart';
@@ -41,6 +41,9 @@ var dateNormaleDemain =
 var dateNormaleApresdemain =
     DateFormat('EEEE d MMMM y', 'fr_FR').format(dateApresDemain!);
 
+User? user;
+int? tailleEcran;
+double? taille;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Désactive la rotation de l'écran en mode paysage
@@ -64,6 +67,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    tailleEcran = Calcule.tailleEcran(context).round();
     return MaterialApp(
       title: 'MVST Admin',
       debugShowCheckedModeBanner: false,
@@ -448,11 +452,15 @@ Widget ticketsScannes(BuildContext ctx, Function setLoadingState) {
     onTap: () async {
       setLoadingState(true);
       if (FirebaseAuth.instance.currentUser != null) {
+        user = FirebaseAuth.instance.currentUser;
         Navigator.push(
           ctx,
           MaterialPageRoute(
-            builder: (BuildContext context) =>
-                ListeTicketsScannes(date: idDate, dateNormale: dateNormale),
+            builder: (BuildContext context) => MenuLateral(
+              tailleEcran: tailleEcran!,
+              date: idDate,
+              dateNormale: dateNormale,
+            ),
           ),
         ).then((_) => setLoadingState(false));
       } else {
