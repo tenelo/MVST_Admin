@@ -43,8 +43,9 @@ class _TicketsDuJourState extends State<TicketsDuJour> {
     try {
       _connection = await Connexion.connexionDB();
 
-      var result = await _connection!
-          .query('SELECT * FROM Tickets WHERE documentId = ? ', [widget.idDoc]);
+      var result = await _connection!.query(
+          'SELECT * FROM Tickets WHERE documentId = ? ORDER BY dateDeCreation DESC',
+          [widget.idDoc]);
 
       // Transformation du résultat en liste de maps
       List<Map<String, dynamic>> tickets =

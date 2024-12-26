@@ -43,7 +43,7 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
       _connection = await Connexion.connexionDB();
 
       var result = await _connection!.query(
-          'SELECT * FROM Tickets WHERE scanneDate = ? AND etatScanne = ? ',
+          'SELECT * FROM Tickets WHERE scanneDate = ? AND etatScanne = ? ORDER BY dateDeCreation DESC',
           [widget.date, 'scanné']);
 
       // Transformation du résultat en liste de maps

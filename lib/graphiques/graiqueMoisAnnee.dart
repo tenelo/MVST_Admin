@@ -57,6 +57,12 @@ class _GraphiquesABarresMoisAnneeState
     Color.fromARGB(213, 57, 103, 255),
     Color.fromARGB(255, 236, 141, 255),
     Color.fromARGB(255, 244, 80, 68),
+    Color.fromARGB(255, 78, 52, 46),
+    Color.fromARGB(255, 0, 131, 143),
+    Color.fromARGB(255, 242, 121, 53),
+    Color.fromARGB(255, 111, 194, 169),
+    Color.fromARGB(255, 173, 94, 154),
+    Color.fromARGB(255, 255, 236, 79),
   ];
 
   Stream<List<Map<String, dynamic>>> recuperationDesTickets() async* {

@@ -26,7 +26,7 @@ class _ListeTicketsScannesState extends State<ListeTicketsScannes> {
     final conn = await Connexion.connexionDB();
     try {
       // Requête pour récupérer les heures, le nombre de tickets scannés (par heure), et les champs supplémentaires
-      var result = await conn!.query(
+      var result = await conn.query(
           'SELECT heureDeDepart,documentId, dateDeDepart,depart,destination,JSON_LENGTH(placesChoisies) as nombreDePlacesChoisies '
           'FROM Departs '
           'WHERE dateDeDepart = ? '
