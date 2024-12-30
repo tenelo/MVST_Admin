@@ -43,7 +43,7 @@ class ListesDesTickets {
       String date) async {
     final conn = await Connexion.connexionDB();
     try {
-      var result = await conn!.query(
+      var result = await conn.query(
           'SELECT * FROM Tickets WHERE etatScanne = ? AND date = ?',
           ['scanné', date]);
 
@@ -54,7 +54,7 @@ class ListesDesTickets {
     } catch (error) {
       return [];
     } finally {
-      await conn!.close();
+      await conn.close();
     }
   }
 }
@@ -143,14 +143,14 @@ Future<void> misAjourEtatScanne(
   final conn = await Connexion.connexionDB();
   try {
     // Mise à jour de la valeur du champ 'etatScanne' à 'scanné' si les trois champs correspondent
-    await conn!.query(
+    await conn.query(
       'UPDATE Tickets SET etatScanne = ? WHERE documentId = ? AND idUtilisateur = ? AND place = ?',
       ['scanné', _documentId, idUtilisateur, _place],
     );
   } catch (e) {
     // Gérer l'erreur (par exemple, journaliser ou afficher une notification)
   } finally {
-    await conn!.close();
+    await conn.close();
   }
 }
 

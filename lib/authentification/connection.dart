@@ -1,7 +1,9 @@
 // ignore_for_file: library_private_types_in_public_api
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mvst_admin/authentification/authentification.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/main.dart';
@@ -19,19 +21,71 @@ class _LoginState extends State<Login> {
 
   bool _isLoading = false;
 
-  Future<void> sauthentifier(BuildContext context, String telephhone) async {
+  Future<void> sauthentifier(BuildContext context, String telephone) async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // Authentification de l'utilisateur avec l'e-mail et le mot de passe
+      // Vérification si le numéro est présent dans la collection 'admins'
+      final QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('admins')
+          .where('telephone', isEqualTo: telephone)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        // Si le numéro n'est pas trouvé dans la collection 'admins', on affiche une alerte et ferme l'application
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.warning,
+                  color: Colors.red,
+                ),
+                SizedBox(width: 8),
+                const Text(
+                  "Accès Refusé",
+                  style:
+                      TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            content: const Text(
+                "Le numéro que vous utilisez n'est pas autorisé à se connecter."),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  // Fermer l'application après l'alerte
+                  Navigator.of(context).pop();
+                  Future.delayed(const Duration(milliseconds: 500), () {
+                    SystemNavigator.pop();
+                  });
+                },
+                child: const Text(
+                  "OK",
+                  style:
+                      TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+        return; // Arrêter l'exécution si le numéro n'est pas trouvé
+      }
+
+      // Si le numéro est trouvé dans la collection 'admins', on continue avec l'authentification
       await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: "$telephhone@gmail.com",
-        password: telephhone,
+        email: "$telephone@gmail.com",
+        password: telephone,
       );
 
-      // Redirection vers la page HomeAdmin après authentification réussie
+      // Redirection vers la page Accueil après authentification réussie
       Navigator.pushReplacement(
         // ignore: use_build_context_synchronously
         context,
@@ -40,7 +94,7 @@ class _LoginState extends State<Login> {
         ),
       );
     } catch (e) {
-      // Redirection vers la page Authentification en cas d'échec
+      // En cas d'erreur, redirection vers la page Authentification
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -85,6 +139,10 @@ class _LoginState extends State<Login> {
                       labelStyle: TextStyle(color: Colors.white),
                       labelText: 'Numéro de téléphone',
                       border: OutlineInputBorder(),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide:
+                            BorderSide(color: Colors.lightBlue, width: 2.0),
+                      ),
                       enabledBorder: OutlineInputBorder(
                         borderSide: BorderSide(
                           color: Colors.white,

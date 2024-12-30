@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mysql1/mysql1.dart';
 
-class GareDorigine extends StatefulWidget {
-  const GareDorigine({super.key});
+class Gares extends StatefulWidget {
+  const Gares({super.key});
 
   @override
-  _GareDorigineState createState() => _GareDorigineState();
+  _GaresState createState() => _GaresState();
 }
 
-class _GareDorigineState extends State<GareDorigine> {
+class _GaresState extends State<Gares> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _gareController = TextEditingController();
   List<Map<String, dynamic>> __gareDatasList = [];
@@ -29,39 +29,16 @@ class _GareDorigineState extends State<GareDorigine> {
   // Initialise la connexion à la base de données MySQL
   Future<void> _initialiserDB() async {
     _connection = await Connexion.connexionDB();
-    await verifEtCreationDeTable();
-    await rafraichirDonnees();
   }
 
-  // Vérifie et ouvre la connexion si elle est fermée
-  Future<void> _verifierEtOuvrirConnexion() async {
-    _connection = await Connexion.connexionDB();
-  }
-
-// Vérifie si la table existe et la crée si nécessaire
-  Future<void> verifEtCreationDeTable() async {
-    await _verifierEtOuvrirConnexion();
-    if (_connection != null) {
-      var result = await _connection!.query("SHOW TABLES LIKE 'GareDorigine'");
-
-      // Si la table n'existe pas, la créer
-      if (result.isEmpty) {
-        await _connection!.query('''CREATE TABLE GareDorigine (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        gare VARCHAR(50)
-      )''');
-      }
-    }
-  }
-
-  // Récupère les données de la table GareDorigine
+  // Récupère les données de la table Gares
   Future<void> rafraichirDonnees() async {
     setState(() {
       _isLoading = true; // Commencer le chargement
     });
-    await _verifierEtOuvrirConnexion();
+    _connection ??= await Connexion.connexionDB();
     if (_connection != null) {
-      var results = await _connection!.query('SELECT * FROM GareDorigine');
+      var results = await _connection!.query('SELECT * FROM Gares');
       __gareDatasList = results
           .map((row) => {
                 'id': row['id'],
@@ -134,7 +111,7 @@ class _GareDorigineState extends State<GareDorigine> {
                             IconButton(
                               icon: const Icon(Icons.edit),
                               onPressed: () =>
-                                  _modifierGareDorigine(context, _gareData),
+                                  _modifierGares(context, _gareData),
                             ),
                             IconButton(
                               icon: Icon(Icons.delete),
@@ -165,7 +142,7 @@ class _GareDorigineState extends State<GareDorigine> {
                                 );
 
                                 if (confirm == true) {
-                                  await _supprimerGareDorigine(_gareData['id']);
+                                  await _supprimerGares(_gareData['id']);
                                 }
                               },
                             ),
@@ -181,15 +158,15 @@ class _GareDorigineState extends State<GareDorigine> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _ajouterGareDorigine(context),
+        onPressed: () => _ajouterGares(context),
         child: const Icon(Icons.add),
       ),
     );
   }
 
   // Ajout de prix des _gareDatas
-  void _ajouterGareDorigine(BuildContext context) async {
-    await _verifierEtOuvrirConnexion();
+  void _ajouterGares(BuildContext context) async {
+    _connection ??= await Connexion.connexionDB();
     showModalBottomSheet(
       isScrollControlled: true,
       isDismissible: true,
@@ -222,12 +199,11 @@ class _GareDorigineState extends State<GareDorigine> {
                     const SizedBox(height: 8),
                     ElevatedButton(
                       onPressed: () async {
+                        _connection ??= await Connexion.connexionDB();
                         if (_formKey.currentState!.validate()) {
                           final gare = _gareController.text.trim();
-                          await _verifierEtOuvrirConnexion();
                           await _connection!.query(
-                              'INSERT INTO GareDorigine (gare) VALUES (?)',
-                              [gare]);
+                              'INSERT INTO Gares (gare) VALUES (?)', [gare]);
 
                           _gareController.clear();
                           Navigator.of(context).pop();
@@ -247,9 +223,9 @@ class _GareDorigineState extends State<GareDorigine> {
   }
 
   // Modification du prix des _gareDatas
-  void _modifierGareDorigine(
+  void _modifierGares(
       BuildContext context, Map<String, dynamic> _gareData) async {
-    await _verifierEtOuvrirConnexion();
+    _connection ??= await Connexion.connexionDB();
     _gareController.text = _gareData['gare'];
 
     showModalBottomSheet(
@@ -286,9 +262,9 @@ class _GareDorigineState extends State<GareDorigine> {
                       onPressed: () async {
                         if (_formKey.currentState!.validate()) {
                           final gare = _gareController.text.trim();
-                          await _verifierEtOuvrirConnexion();
+                          _connection ??= await Connexion.connexionDB();
                           await _connection!.query(
-                              'UPDATE GareDorigine SET gare = ? = ? WHERE id = ?',
+                              'UPDATE Gares SET gare = ? WHERE id = ?',
                               [gare, _gareData['id']]);
 
                           _gareController.clear();
@@ -309,9 +285,9 @@ class _GareDorigineState extends State<GareDorigine> {
   }
 
   // Suppression du prix des _gareDatas
-  Future<void> _supprimerGareDorigine(int id) async {
-    await _verifierEtOuvrirConnexion();
-    await _connection!.query('DELETE FROM GareDorigine WHERE id = ?', [id]);
+  Future<void> _supprimerGares(int id) async {
+    _connection ??= await Connexion.connexionDB();
+    await _connection!.query('DELETE FROM Gares WHERE id = ?', [id]);
     rafraichirDonnees(); // Rafraîchir les données
   }
 

@@ -47,7 +47,7 @@ class Parametres extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const GareDorigine(),
+                          builder: (context) => const Gares(),
                         ),
                       );
                     },

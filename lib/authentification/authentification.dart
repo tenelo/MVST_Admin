@@ -3,8 +3,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/main.dart';
+import 'package:mysql1/mysql1.dart';
 
 class PageDAuthentification extends StatefulWidget {
   const PageDAuthentification({super.key});
@@ -18,10 +20,96 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
   final TextEditingController _prenomController = TextEditingController();
   final TextEditingController _telephoneController = TextEditingController();
   final TextEditingController _residenceController = TextEditingController();
+  MySqlConnection? conn;
+  String? _gareSelectionnee;
+  final List<String> listeDesGares = [];
 
   bool _isLoading = false;
 
-  Future<void> _sendVerificationCode() async {
+  @override
+  void initState() {
+    super.initState();
+    _connectToDatabase();
+    recupererToutesLesGares();
+  }
+
+  Future<void> _connectToDatabase() async {
+    conn = await Connexion.connexionDB();
+  }
+
+  Future<void> recupererToutesLesGares() async {
+    conn ??= await Connexion.connexionDB();
+    try {
+      final results = await conn!.query('SELECT gare FROM Gares');
+      listeDesGares.clear(); // Nettoyer la liste avant de la remplir
+      for (var row in results) {
+        listeDesGares.add(row['gare']);
+      }
+      setState(() {}); // Mettre à jour l'interface utilisateur
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Erreur lors de la récupération des gares...'),
+      ));
+    }
+  }
+
+  Future<bool> verificationListeAdmin(String numero) async {
+    try {
+      final QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('admins')
+          .where('numero', isEqualTo: numero)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        // Le numéro est dans la liste noire
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.warning,
+                  color: Colors.red,
+                ),
+                SizedBox(width: 8),
+                const Text(
+                  "Accès Refusé",
+                  style:
+                      TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            content: const Text(
+                "\nLe numéro utilisé est déjà associé à un administrateur existant."),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  // Fermer l'application
+                  Future.delayed(const Duration(milliseconds: 500), () {
+                    SystemNavigator.pop();
+                  });
+                },
+                child: Text("OK",
+                    style: TextStyle(
+                        color: Colors.red, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+        return true; // Numéro trouvé dans la liste admin
+      }
+      return false; // Numéro non trouvé dans la liste admin
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Erreur lors de la vérification, reprenez le processus'),
+      ));
+      return false; // En cas d'erreur
+    }
+  }
+
+  Future<void> _envoyerCodeDeVerification() async {
     if (_nomController.text.isEmpty ||
         _prenomController.text.isEmpty ||
         _telephoneController.text.isEmpty ||
@@ -40,15 +128,27 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
       _isLoading = true;
     });
 
-    String phoneNumber = '+225${_telephoneController.text}';
+    // Vérification dans la liste admin
+    bool surListeNoire =
+        await verificationListeAdmin(_telephoneController.text);
+
+    if (surListeNoire) {
+      // Si le numéro est dans la liste admin, on arrête l'exécution
+      setState(() {
+        _isLoading = false;
+      });
+      return; // Ne pas continuer l'exécution si le numéro est dans la liste admin
+    }
+
+    String numeroTelephone = '+225${_telephoneController.text}';
 
     try {
       await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: phoneNumber,
+        phoneNumber: numeroTelephone,
         verificationCompleted: (PhoneAuthCredential credential) async {},
         verificationFailed: (FirebaseAuthException e) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Erreur de vérification : ${e.message}'),
+            content: Text('Erreur de vérification.'),
           ));
         },
         codeSent: (String verificationId, int? resendToken) async {
@@ -70,7 +170,7 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Erreur lors de l\'envoi du code : $e'),
+        content: Text('Erreur lors de l\'envoi du code'),
       ));
     }
 
@@ -114,6 +214,10 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
                       borderSide:
                           BorderSide(color: Colors.lightBlue, width: 2.0),
                     ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Colors.lightBlue, width: 2.0),
+                    ),
                     enabledBorder: OutlineInputBorder(
                       borderSide: BorderSide(
                         color: Colors.white,
@@ -134,6 +238,10 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
                     ),
                     labelText: 'Prénoms',
                     border: OutlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Colors.lightBlue, width: 2.0),
+                    ),
+                    focusedBorder: OutlineInputBorder(
                       borderSide:
                           BorderSide(color: Colors.lightBlue, width: 2.0),
                     ),
@@ -162,6 +270,10 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
                       borderSide:
                           BorderSide(color: Colors.lightBlue, width: 2.0),
                     ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Colors.lightBlue, width: 2.0),
+                    ),
                     enabledBorder: OutlineInputBorder(
                       borderSide: BorderSide(
                         color: Colors.white,
@@ -172,23 +284,43 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
               ),
               Padding(
                 padding: const EdgeInsets.all(4.0),
-                child: TextFormField(
-                  style: const TextStyle(color: Colors.white),
-                  controller: _residenceController,
-                  cursorColor: Colors.white,
-                  decoration: const InputDecoration(
-                    labelStyle: TextStyle(
-                      color: Colors.white,
-                    ),
-                    labelText: 'Lieu de résidence',
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(),
-                    enabledBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                        color: Colors.white,
+                child: DropdownButtonFormField<String>(
+                  value: _gareSelectionnee,
+                  items: listeDesGares.map((gare) {
+                    return DropdownMenuItem<String>(
+                      value: gare,
+                      child: Text(
+                        gare,
+                        style:
+                            const TextStyle(color: Colors.white), // Texte blanc
                       ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _gareSelectionnee = value;
+                    });
+                  },
+                  decoration: const InputDecoration(
+                    labelStyle: TextStyle(color: Colors.white),
+                    labelText: 'Gare',
+                    border: OutlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Colors.lightBlue, width: 2.0),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Colors.white), // Contour blanc
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide:
+                          BorderSide(color: Colors.lightBlue, width: 2.0),
                     ),
                   ),
+                  dropdownColor: Colors.blueGrey, // Fond de la liste déroulante
+                  iconEnabledColor: Colors.white, // Couleur de l'icône
+                  style:
+                      const TextStyle(color: Colors.white), // Texte sélectionné
                 ),
               ),
               Padding(
@@ -204,7 +336,7 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
                         side: const BorderSide(color: Colors.blue),
                       ),
                     ),
-                    onPressed: _isLoading ? null : _sendVerificationCode,
+                    onPressed: _isLoading ? null : _envoyerCodeDeVerification,
                     child: _isLoading
                         ? const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -241,7 +373,6 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
 }
 
 //::::::::::::::::::::::::::::::::::::::::
-///:::::::::::::::::::::::::::::::::::::::
 
 class PageDeVerification extends StatefulWidget {
   final String verificationId;
@@ -267,152 +398,22 @@ class _PageDeVerificationState extends State<PageDeVerification> {
   String idAuth = '';
   bool _isDisposed = false;
   bool _isLoading = false;
+  MySqlConnection? conn;
+
+  @override
+  void initState() {
+    super.initState();
+    _connectToDatabase();
+  }
 
   @override
   void dispose() {
-    _isDisposed =
-        true; // Mettre à jour l'indicateur lors du démontage du widget
+    _isDisposed = true;
     super.dispose();
   }
 
-  Future<void> _signInWithPhoneNumber(
-      String verificationId, String smsCode) async {
-    if (_isDisposed) return;
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final AuthCredential credential = PhoneAuthProvider.credential(
-        verificationId: verificationId,
-        smsCode: smsCode,
-      );
-
-      final UserCredential authResult =
-          await FirebaseAuth.instance.signInWithCredential(credential);
-
-      final User? user = authResult.user;
-
-      // Mise à jour du nom d'affichage
-      await user!.updateDisplayName('${widget.nom} ${widget.prenoms}');
-
-      // Mise à jour du numéro de téléphone
-      final PhoneAuthCredential phoneAuthCredential =
-          PhoneAuthProvider.credential(
-        verificationId: verificationId,
-        smsCode: smsCode,
-      );
-
-      await user.updatePhoneNumber(phoneAuthCredential);
-
-      setState(() {
-        idAuth = user.uid;
-      });
-
-      // Appel de la fonction createUserAndSignInWithEmail avec idAuth
-      createUserAndSignInWithEmail(
-          idAuth, widget.nom, widget.prenoms, widget.telephone, context);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Erreur lors de la connexion : $e'),
-      ));
-    }
-
-    setState(() {
-      _isLoading = false;
-    });
-  }
-
-/*
-  Future<void> _signInWithPhoneNumber(
-      String verificationId, String smsCode) async {
-    if (_isDisposed) return;
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final AuthCredential credential = PhoneAuthProvider.credential(
-        verificationId: verificationId,
-        smsCode: smsCode,
-      );
-
-      final UserCredential authResult =
-          await FirebaseAuth.instance.signInWithCredential(credential);
-
-      final User? user = authResult.user;
-
-      // Mise à jour du nom d'affichage
-      await user!.updateDisplayName('${widget.nom} ${widget.prenoms}');
-
-      // Mise à jour du numéro de téléphone
-      final PhoneAuthCredential phoneAuthCredential =
-          PhoneAuthProvider.credential(
-        verificationId: verificationId,
-        smsCode: smsCode,
-      );
-
-      await user.updatePhoneNumber(phoneAuthCredential);
-
-      setState(() {
-        idAuth = user.uid;
-      });
-    } catch (e) {}
-
-    setState(() {
-      _isLoading = false;
-    });
-  }
-*/
-  Future<void> createUserAndSignInWithEmail(
-    String authUid,
-    String nom,
-    String prenoms,
-    String telephone,
-    BuildContext context,
-  ) async {
-    try {
-      // Créer l'utilisateur avec l'adresse e-mail et le mot de passe
-      final UserCredential userCredential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: "$telephone@gmail.com",
-        password: telephone,
-      );
-
-      // Mettre à jour le profil de l'utilisateur avec les informations supplémentaires
-      User? user = userCredential.user;
-      if (user != null) {
-        // Mettre à jour le nom d'affichage de l'utilisateur
-        await user.updateDisplayName('$nom $prenoms');
-
-        // Ajouter dans Firestore
-        await FirebaseFirestore.instance
-            .collection('utilisateurs')
-            .doc(user.uid)
-            .set({
-          'id': user.uid,
-          'idAuth': authUid,
-          'nom': widget.nom,
-          'prenoms': widget.prenoms,
-          'residence': widget.ville,
-          'telephone': widget.telephone,
-          'mail': "${widget.telephone}@gmail.com",
-          'dateDeCreation': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-
-        // Deconnexion et Reconnexion automatique une fois que l'utilisateur est créé et authentifié avec succès
-        deconnexionEtReconnexion("$telephone@gmail.com", telephone);
-        // Rediriger vers la page HomeAdmin
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const Accueil(),
-          ),
-        );
-      }
-    } catch (e) {
-      // Gérer les erreurs
-    }
+  Future<void> _connectToDatabase() async {
+    conn = await Connexion.connexionDB();
   }
 
   @override
@@ -475,7 +476,7 @@ class _PageDeVerificationState extends State<PageDeVerification> {
                   onPressed: _isLoading || _codeController.text.isEmpty
                       ? null
                       : () {
-                          _signInWithPhoneNumber(
+                          _seConnecterParNumTelephone(
                               widget.verificationId, _codeController.text);
                         },
                   style: ElevatedButton.styleFrom(
@@ -501,6 +502,163 @@ class _PageDeVerificationState extends State<PageDeVerification> {
         ),
       ),
     );
+  }
+
+  Future<void> _seConnecterParNumTelephone(
+      String verificationId, String smsCode) async {
+    if (_isDisposed) return;
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final AuthCredential credential = PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
+
+      final UserCredential authResult =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+
+      final User? user = authResult.user;
+
+      // Mise à jour du nom d'affichage
+      await user!.updateDisplayName('${widget.nom} ${widget.prenoms}');
+
+      // Mise à jour du numéro de téléphone
+      final PhoneAuthCredential phoneAuthCredential =
+          PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
+
+      await user.updatePhoneNumber(phoneAuthCredential);
+
+      setState(() {
+        idAuth = user.uid;
+      });
+
+      // Appel de la fonction creerUtilisateurEtAuthentifierParMail avec idAuth
+      creerUtilisateurEtAuthentifierParMail(
+          idAuth, widget.nom, widget.prenoms, widget.telephone, context);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Erreur lors de la connexion...'),
+      ));
+    }
+
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  Future<void> creerUtilisateurEtAuthentifierParMail(
+    String authUid,
+    String nom,
+    String prenoms,
+    String telephone,
+    BuildContext context,
+  ) async {
+    try {
+      // Créer l'utilisateur avec l'adresse e-mail et le mot de passe
+      final UserCredential userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: "$telephone@gmail.com",
+        password: telephone,
+      );
+
+      // Mettre à jour le profil de l'utilisateur avec les informations supplémentaires
+      User? user = userCredential.user;
+      if (user != null) {
+        // Mettre à jour le nom d'affichage de l'utilisateur
+        await user.updateDisplayName('$nom $prenoms');
+        // Ajouter à la collection 'utilisateurs' dans Firestore
+        await FirebaseFirestore.instance
+            .collection('admins')
+            .doc(user.uid)
+            .set({
+          'id': user.uid,
+          'idAuth': authUid,
+          'nom': widget.nom,
+          'prenoms': widget.prenoms,
+          'gare': widget.ville,
+          'telephone': widget.telephone,
+          'mail': "${widget.telephone}@gmail.com",
+          'dateDeCreation': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        // Ajouter à la collection 'utilisateurs' dans Firestore
+        await FirebaseFirestore.instance
+            .collection('utilisateurs')
+            .doc(user.uid)
+            .set({
+          'id': user.uid,
+          'idAuth': authUid,
+          'nom': widget.nom,
+          'prenoms': widget.prenoms,
+          'gare': widget.ville,
+          'telephone': widget.telephone,
+          'points': 3,
+          'mail': "${widget.telephone}@gmail.com",
+          'dateDeCreation': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        // Ajouter à MySQL
+        await ajouterUtilisateurDansMySQL(
+            conn ??= await Connexion.connexionDB(),
+            idUtilisateur: user.uid,
+            idAuth: '',
+            nom: "${widget.nom} ${widget.prenoms}",
+            gare: widget.ville,
+            telephone: widget.telephone,
+            mail: "${widget.telephone}@gmail.com");
+
+        // Deconnexion et Reconnexion automatique une fois que l'utilisateur est créé et authentifié avec succès
+        deconnexionEtReconnexion("$telephone@gmail.com", telephone);
+        // Rediriger vers la page Home
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const Accueil(),
+          ),
+        );
+      }
+    } catch (e) {
+      // Gérer les erreurs
+    }
+  }
+
+  Future<void> ajouterUtilisateurDansMySQL(
+    MySqlConnection conn, {
+    required String idUtilisateur,
+    required String idAuth,
+    required String nom,
+    required String gare,
+    required String telephone,
+    required String mail,
+  }) async {
+    try {
+      final query = '''
+      INSERT INTO Admins (
+        idUtilisateur, idAuth, nom, gare, telephone, mail, dateDeCreation
+      ) VALUES (?, ?, ?, ?, ?, ?, NOW())
+      ON DUPLICATE KEY UPDATE
+        idAuth = VALUES(idAuth),
+        nom = VALUES(nom),
+        gare = VALUES(gare),
+        telephone = VALUES(telephone),
+        mail = VALUES(mail);
+    ''';
+
+      await conn.query(query, [
+        idUtilisateur,
+        idAuth,
+        nom,
+        gare,
+        telephone,
+        mail,
+      ]);
+    } catch (e) {}
   }
 }
 
