@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:mvst_admin/config/config.dart';
-import 'package:mvst_admin/screens/listeDesDeparts.dart';
 import 'package:mvst_admin/screens/ticketsDuJourScannes.dart';
+import 'package:mvst_admin/screens/tousLesDepartsDuJour.dart';
 import 'package:mysql1/mysql1.dart';
 
 class MenuLateral extends StatefulWidget {
@@ -32,7 +32,7 @@ class _MenuLateralState extends State<MenuLateral> {
       TicketsDuJourScannes(
         date: widget.date,
       ),
-      ListeTicketsScannes(
+      TousLesDepartsDuJour(
         date: widget.date,
         dateNormale: widget.dateNormale,
         tailleEcran: widget.tailleEcran,

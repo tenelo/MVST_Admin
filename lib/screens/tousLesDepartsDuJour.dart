@@ -6,9 +6,10 @@ import 'package:mvst_admin/screens/ticketsDuJour.dart';
 
 List<Map<String, dynamic>> heuresDepartEtNombreTickets = [];
 List<String> listeDesHeures = [];
+String? heuresFormattees;
 
-class ListeTicketsScannes extends StatefulWidget {
-  const ListeTicketsScannes(
+class TousLesDepartsDuJour extends StatefulWidget {
+  const TousLesDepartsDuJour(
       {super.key,
       required this.date,
       required this.dateNormale,
@@ -18,10 +19,10 @@ class ListeTicketsScannes extends StatefulWidget {
   final int tailleEcran;
 
   @override
-  State<ListeTicketsScannes> createState() => _ListeTicketsScannesState();
+  State<TousLesDepartsDuJour> createState() => _TousLesDepartsDuJourState();
 }
 
-class _ListeTicketsScannesState extends State<ListeTicketsScannes> {
+class _TousLesDepartsDuJourState extends State<TousLesDepartsDuJour> {
   Stream<List<Map<String, dynamic>>> recupererLesTicketsScannes() async* {
     final conn = await Connexion.connexionDB();
     try {
@@ -44,11 +45,20 @@ class _ListeTicketsScannesState extends State<ListeTicketsScannes> {
                 'nombreDePlacesChoisies': row[5],
               })
           .toList();
-      // Obtenir les heures uniques et formater
+      // Extraire uniquement les heures dans une liste
+      List<String> heures = heuresDepartEtNombreTickets
+          .map((ticket) => ticket['heure'] as String)
+          .toList();
+
+      // Formater la liste des heures en une chaîne séparée par '|'
+      heuresFormattees = heures.join(' | ');
+
+      // Obtenir les heures distincts et formater
       listeDesHeures = heuresDepartEtNombreTickets
           .map((item) => item['heure'].toString() + ' h')
           .toSet()
           .toList();
+
       yield heuresDepartEtNombreTickets;
     } catch (e) {
       yield [];
@@ -89,11 +99,14 @@ class _ListeTicketsScannesState extends State<ListeTicketsScannes> {
 
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return Center(
-              child: Text(
-                'Aucun ticket scanné',
-                style: TextStyle(
-                    color: Config.colors.bleuFonce2,
-                    fontWeight: FontWeight.bold),
+              child: Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: Text(
+                  'Aucun ticket pris pour le départ du ${widget.dateNormale}',
+                  style: TextStyle(
+                      color: Config.colors.bleuFonce2,
+                      fontWeight: FontWeight.bold),
+                ),
               ),
             );
           }
@@ -131,7 +144,8 @@ class _ListeTicketsScannesState extends State<ListeTicketsScannes> {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        "Heures de départs: ${listeDesHeures.join(', ')}",
+                        //"Heures de départs: ${listeDesHeures.join(' | ')}",
+                        "Heures de départs: $heuresFormattees",
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,

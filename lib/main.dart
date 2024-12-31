@@ -14,6 +14,8 @@ import 'package:mvst_admin/firebase_options.dart';
 import 'package:mvst_admin/graphiques/diagrammeABarres.dart';
 import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/qrcode/lecteurQrCode.dart';
+import 'package:mvst_admin/screens/boutonFlottant/departsBtFlottant.dart';
+import 'package:mvst_admin/screens/boutonFlottant/listePassagersBtFlottant.dart';
 import 'package:mvst_admin/screens/menulateral.dart';
 import 'package:mvst_admin/screens/parametres.dart';
 import 'package:mvst_admin/screens/profil.dart';
@@ -354,7 +356,18 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                   color: Config.colors.bleuA,
                   fontWeight: FontWeight.bold,
                 ),
-                onTap: () => {},
+                onTap: () => {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DepartsListePassagersPourBtFlottant(
+                        date: idDate,
+                        dateNormale: dateNormale,
+                        tailleEcran: tailleEcran!,
+                      ),
+                    ),
+                  ),
+                },
               ),
               SpeedDialChild(
                 //backgroundColor: Config.colors.jauneBlanc,
@@ -369,7 +382,18 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                   color: Config.colors.bleuA,
                   fontWeight: FontWeight.bold,
                 ),
-                onTap: () => {},
+                onTap: () => {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DepartsPlacesAssicesPourBtFlottant(
+                        date: idDate,
+                        dateNormale: dateNormale,
+                        tailleEcran: tailleEcran!,
+                      ),
+                    ),
+                  ),
+                },
               ),
             ],
           ),
