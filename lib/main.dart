@@ -24,14 +24,6 @@ import 'package:mvst_admin/screens/tableaudestickets.dart';
 import 'package:mvst_admin/verifTickets/verifierticket.dart';
 
 DateTime? dateActuelle = DateTime.now();
-/* DateTime? aujourdhui =
-    DateTime.utc(dateActuelle!.year, dateActuelle!.month, dateActuelle!.day);
-DateTime? dateDeDemain = DateTime.utc(
-    dateActuelle!.year, dateActuelle!.month, dateActuelle!.day + 1);
-DateTime? dateApresDemain = DateTime.utc(
-    dateActuelle!.year, dateActuelle!.month, dateActuelle!.day + 2);
-DateTime? dateDhier = DateTime.utc(
-    dateActuelle!.year, dateActuelle!.month, dateActuelle!.day - 1); */
 
 DateTime aujourdhui =
     DateTime(dateActuelle!.year, dateActuelle!.month, dateActuelle!.day);

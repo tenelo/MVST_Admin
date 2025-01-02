@@ -1,8 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
-import 'package:mvst_admin/screens/detailsTickets.dart';
 import 'package:mysql1/mysql1.dart';
+
+MySqlConnection? _connection;
 
 class Suppression extends StatefulWidget {
   const Suppression(
@@ -29,8 +31,6 @@ class _SuppressionState extends State<Suppression> {
       TextEditingController();
   final TextEditingController _rechercheParNom = TextEditingController();
   final TextEditingController _rechercheParHeure = TextEditingController();
-
-  MySqlConnection? _connection;
 
   @override
   void initState() {
@@ -301,7 +301,8 @@ class TicketDataSource extends DataTableSource {
     if (index >= tickets.length) return null;
     final ticketSnapshot = tickets[index];
     final ticket = ticketSnapshot;
-    var idDuTicket = ticket['documentId'];
+    var idDuTicket = ticket['id'];
+    var idUtilisateur = ticket['idUtilisateur'];
     DateTime date = parseDate(ticket['date'].toString());
 
     String formattedDate = DateFormat('dd MMMM yyyy', 'fr_FR').format(date);
@@ -310,47 +311,170 @@ class TicketDataSource extends DataTableSource {
       index: index,
       cells: [
         DataCell(Text(formattedDate, style: TextStyle(fontSize: 13)),
-            onLongPress: () => _onTapRow(ticket, idDuTicket)),
+            onLongPress: () =>
+                supprimerTicket(idDuTicket, idUtilisateur, ticket['nom'])),
         DataCell(Text("${ticket['heure']} h", style: TextStyle(fontSize: 13)),
-            onLongPress: () => _onTapRow(ticket, idDuTicket)),
+            onLongPress: () =>
+                supprimerTicket(idDuTicket, idUtilisateur, ticket['nom'])),
         DataCell(Text(ticket['depart'], style: TextStyle(fontSize: 13)),
-            onLongPress: () => _onTapRow(ticket, idDuTicket)),
+            onLongPress: () =>
+                supprimerTicket(idDuTicket, idUtilisateur, ticket['nom'])),
         DataCell(Text(ticket['destination'], style: TextStyle(fontSize: 13)),
-            onLongPress: () => _onTapRow(ticket, idDuTicket)),
+            onLongPress: () =>
+                supprimerTicket(idDuTicket, idUtilisateur, ticket['nom'])),
         DataCell(
             Text(ticket['place'].toString(), style: TextStyle(fontSize: 13)),
-            onLongPress: () => _onTapRow(ticket, idDuTicket)),
+            onLongPress: () =>
+                supprimerTicket(idDuTicket, idUtilisateur, ticket['nom'])),
         DataCell(
             Text(ticket['prixDuTicket'].toString(),
                 style: TextStyle(fontSize: 13)),
-            onLongPress: () => _onTapRow(ticket, idDuTicket)),
+            onLongPress: () =>
+                supprimerTicket(idDuTicket, idUtilisateur, ticket['nom'])),
         DataCell(Text(ticket['nom'].toString(), style: TextStyle(fontSize: 13)),
-            onLongPress: () => _onTapRow(ticket, idDuTicket)),
+            onLongPress: () =>
+                supprimerTicket(idDuTicket, idUtilisateur, ticket['nom'])),
       ],
     );
   }
 
-  void _onTapRow(Map<String, dynamic> ticket, String id) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DetailsTickets(
-          idTicket: id,
-          idUtilisateur: ticket['idUtilisateur'],
-          nom: ticket['nom'],
-          contact: ticket['telephone'],
-          date: ticket['date'],
-          heure: ticket['heure'],
-          depart: ticket['depart'],
-          destination: ticket['destination'],
-          place: ticket['place'],
-          etatScann: ticket['etatScanne'],
-          statut: ticket['statut'],
-          prixTicket: ticket['prixDuTicket'].toString(),
-          datePourCalcule: ticket['datePourCalcule'],
-        ),
-      ),
+  void supprimerTicket(int id, String idUtilisateur, String nom) async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          titleTextStyle: TextStyle(
+            color: Colors.red[300],
+            fontWeight: FontWeight.bold,
+          ),
+          title: Center(child: Text('Confirmer la suppression')),
+          content: RichText(
+            text: TextSpan(
+              text: 'Êtes-vous sûr de vouloir supprimer le ticket pris par ',
+              style: const TextStyle(color: Colors.black),
+              children: [
+                TextSpan(
+                  text: nom,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold), // Gras pour le nom
+                ),
+                const TextSpan(
+                  text: ' ?',
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text(
+                    'Non',
+                    style: TextStyle(
+                      color: Colors.blue,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    Navigator.of(context).pop();
+                    try {
+                      _connection = await Connexion.connexionDB();
+                      await _connection!
+                          .query('DELETE FROM Tickets WHERE id = ?', [id]);
+
+                      decrementerPointsFirebase(idUtilisateur);
+                      decrementePointsMySQL(idUtilisateur);
+                      afficherMessageConfirmation();
+                    } catch (e) {
+                      // Afficher un message d'erreur en cas d'échec
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Erreur lors de la suppression.'),
+                          duration: Duration(seconds: 5),
+                        ),
+                      );
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  child: Text(
+                    'Oui',
+                    style: TextStyle(
+                      color: Colors.red[300],
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            )
+          ],
+        );
+      },
     );
+  }
+
+  Future<void> decrementerPointsFirebase(String idDoc) async {
+    try {
+      // Référence au document de l'utilisateur
+      DocumentReference userRef =
+          FirebaseFirestore.instance.collection('utilisateurs').doc(idDoc);
+
+      // Transaction pour récupérer et mettre à jour le nombre de points
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        // Récupérer le document actuel
+        DocumentSnapshot snapshot = await transaction.get(userRef);
+
+        if (snapshot.exists) {
+          // Obtenir le nombre de points actuel
+          int points = snapshot['points'] ?? 0;
+
+          // Réduire de 1 le nombre de points, en s'assurant qu'il ne devienne pas négatif
+          int nouveauxPoints = (points > 0) ? points - 1 : 0;
+
+          // Mettre à jour les points dans Firestore
+          transaction.update(userRef, {'points': nouveauxPoints});
+        } else {
+          throw Exception("Utilisateur non trouvé");
+        }
+      });
+    } catch (e) {}
+  }
+
+  Future<void> decrementePointsMySQL(String idUtilisateur) async {
+    try {
+      _connection = await Connexion.connexionDB();
+      var result = await _connection!.query(
+        'UPDATE Utilisateurs SET points = points - 1 WHERE idUtilisateur = ?',
+        [idUtilisateur],
+      );
+      // Vérifier si la requête a été exécutée avec succès
+      if (result.affectedRows! > 0) {
+      } else {}
+    } catch (e) {}
+  }
+
+  void afficherMessageConfirmation() async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Center(child: Text('Ticket supprimé')),
+        );
+      },
+    );
+
+    // Fermer l'AlertDialog après 2 secondes
+    Future.delayed(Duration(seconds: 5), () {
+      if (Navigator.canPop(context)) {
+        Navigator.of(context).pop(); // Fermer l'AlertDialog automatiquement
+      }
+    });
+    Navigator.of(context).pop();
   }
 
   @override
