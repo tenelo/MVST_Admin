@@ -19,29 +19,46 @@ import 'package:mvst_admin/screens/boutonFlottant/listePassagersBtFlottant.dart'
 import 'package:mvst_admin/screens/menulateral.dart';
 import 'package:mvst_admin/screens/parametres.dart';
 import 'package:mvst_admin/screens/profil.dart';
+import 'package:mvst_admin/screens/suppression/suppression.dart';
 import 'package:mvst_admin/screens/tableaudestickets.dart';
 import 'package:mvst_admin/verifTickets/verifierticket.dart';
 
 DateTime? dateActuelle = DateTime.now();
-DateTime? aujourdhui =
+/* DateTime? aujourdhui =
     DateTime.utc(dateActuelle!.year, dateActuelle!.month, dateActuelle!.day);
 DateTime? dateDeDemain = DateTime.utc(
     dateActuelle!.year, dateActuelle!.month, dateActuelle!.day + 1);
 DateTime? dateApresDemain = DateTime.utc(
     dateActuelle!.year, dateActuelle!.month, dateActuelle!.day + 2);
+DateTime? dateDhier = DateTime.utc(
+    dateActuelle!.year, dateActuelle!.month, dateActuelle!.day - 1); */
+
+DateTime aujourdhui =
+    DateTime(dateActuelle!.year, dateActuelle!.month, dateActuelle!.day);
+DateTime dateDeDemain = aujourdhui.add(Duration(days: 1));
+DateTime dateApresDemain = aujourdhui.add(Duration(days: 2));
+DateTime dateDhier = aujourdhui.subtract(Duration(days: 1));
 ////////////
-var idDate = DateFormat('EEEE_d_MMMM_y', 'fr_FR').format(aujourdhui!);
-var idMoisAnnee = DateFormat('MMMM_y', 'fr_FR').format(aujourdhui!);
-var idAnnee = DateFormat('y', 'fr_FR').format(aujourdhui!);
-var dateAujourdhui = DateFormat('yyyy-MM-dd', 'fr_FR').format(aujourdhui!);
+var idDate = DateFormat('EEEE_d_MMMM_y', 'fr_FR').format(aujourdhui);
+var idMoisAnnee = DateFormat('MMMM_y', 'fr_FR').format(aujourdhui);
+var idAnnee = DateFormat('y', 'fr_FR').format(aujourdhui);
+var dateAujourdhui = DateFormat('yyyy-MM-dd', 'fr_FR').format(aujourdhui);
 var dateDApresDemain =
-    DateFormat('yyyy-MM-dd', 'fr_FR').format(dateApresDemain!);
+    DateFormat('yyyy-MM-dd', 'fr_FR').format(dateApresDemain);
 /////////////////
-var dateNormale = DateFormat('EEEE d MMMM y', 'fr_FR').format(aujourdhui!);
+var dateNormaleHiere = DateFormat('EEEE d MMMM y', 'fr_FR').format(dateDhier);
+var dateNormale = DateFormat('EEEE d MMMM y', 'fr_FR').format(aujourdhui);
 var dateNormaleDemain =
-    DateFormat('EEEE d MMMM y', 'fr_FR').format(dateDeDemain!);
+    DateFormat('EEEE d MMMM y', 'fr_FR').format(dateDeDemain);
 var dateNormaleApresdemain =
-    DateFormat('EEEE d MMMM y', 'fr_FR').format(dateApresDemain!);
+    DateFormat('EEEE d MMMM y', 'fr_FR').format(dateApresDemain);
+
+// Formater les dates
+String formatLong = 'EEEE d MMMM y'; // Exemple : jeudi 2 janvier 2025
+String dateAujourdhuistr = DateFormat(formatLong).format(aujourdhui);
+String dateDeDemainStr = DateFormat(formatLong).format(dateDeDemain);
+String dateApresDemainStr = DateFormat(formatLong).format(dateApresDemain);
+String dateDhierStr = DateFormat(formatLong).format(dateDhier);
 
 User? user;
 int? tailleEcran;
@@ -343,6 +360,33 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
             spacing: 10,
             spaceBetweenChildren: 10,
             children: [
+              SpeedDialChild(
+                //backgroundColor: Config.colors.jauneBlanc,
+                child: Icon(
+                  Icons.delete_forever_outlined,
+                  color: Colors.red[300],
+                  size: 30,
+                ),
+                label: 'Supprimer ticket',
+                labelStyle: TextStyle(
+                  fontSize: 16.0,
+                  color: Colors.red[300],
+                  fontWeight: FontWeight.bold,
+                ),
+                onTap: () => {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => Suppression(
+                        dateHier: dateNormaleHiere,
+                        aujoudhui: dateNormale,
+                        demain: dateNormaleDemain,
+                        apresDemain: dateNormaleApresdemain,
+                      ),
+                    ),
+                  ),
+                },
+              ),
               SpeedDialChild(
                 //backgroundColor: Config.colors.jauneBlanc,
                 child: Icon(

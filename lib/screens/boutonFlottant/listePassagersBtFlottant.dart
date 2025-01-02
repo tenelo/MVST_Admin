@@ -50,6 +50,7 @@ class _DepartsListePassagersPourBtFlottantState
 
   @override
   Widget build(BuildContext context) {
+    print("%%%% DATE NORMALE IN ${widget.dateNormale} %%%%%");
     return Scaffold(
       appBar: AppBar(
         iconTheme: IconThemeData(
