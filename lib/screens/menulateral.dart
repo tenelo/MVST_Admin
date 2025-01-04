@@ -8,9 +8,13 @@ import 'package:mysql1/mysql1.dart';
 class MenuLateral extends StatefulWidget {
   const MenuLateral(
       {super.key,
+      required this.gare,
+      required this.uid,
       required this.tailleEcran,
       required this.date,
       required this.dateNormale});
+  final String gare;
+  final String uid;
   final int tailleEcran;
   final String date;
   final String dateNormale;

@@ -13,9 +13,13 @@ List<String> lecture = [];
 class LecteurQrCode extends StatefulWidget {
   const LecteurQrCode(
       {super.key,
+      required this.gare,
+      required this.uid,
       required this.dateAujourdhui,
       required this.dateApresDemain,
       required this.dateNormale});
+  final String gare;
+  final String uid;
   final String dateAujourdhui;
   final String dateApresDemain;
   final String dateNormale;

@@ -9,9 +9,13 @@ import 'package:syncfusion_flutter_charts/charts.dart';
 class GraphiquesABarresMoisAnnee extends StatefulWidget {
   const GraphiquesABarresMoisAnnee(
       {super.key,
+      required this.gare,
+      required this.uid,
       required this.date,
       required this.moisAnnee,
       required this.annee});
+  final String gare;
+  final String uid;
   final String date;
   final String moisAnnee;
   final String annee;
@@ -81,23 +85,23 @@ class _GraphiquesABarresMoisAnneeState
 
     try {
       Results result = await _connection!.query(sql, [widget.moisAnnee]);
-
       // Transformation du résultat en liste de maps
       List<Map<String, dynamic>> tickets =
           result.map((row) => row.fields).toList();
-
+      // Ce filtre permet de recupérer les tickets en fonction de la gare de l'utilisateur
+      tickets =
+          tickets.where((ticket) => ticket['depart'] == widget.gare).toList();
       // Classification des tickets
-      _classifyTickets(tickets);
+      _classerLesTickets(tickets);
 
       // Émission des résultats dans le Stream
       yield tickets;
     } catch (e) {
-      print('Erreur lors de la récupération des tickets : $e');
       yield [];
     }
   }
 
-  void _classifyTickets(List<Map<String, dynamic>> tickets) {
+  void _classerLesTickets(List<Map<String, dynamic>> tickets) {
     Map<String, int> destinationCounts = {};
 
     for (var ticket in tickets) {
@@ -127,7 +131,7 @@ class _GraphiquesABarresMoisAnneeState
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: DateTime(2000),
+      firstDate: DateTime(2024),
       lastDate: DateTime(2101),
     );
     if (picked != null && picked != _selectedDate) {
@@ -147,6 +151,8 @@ class _GraphiquesABarresMoisAnneeState
           date: _dateController.text,
           moisAnnee: _monthYearController.text,
           annee: _yearController.text,
+          gare: widget.gare,
+          uid: widget.uid,
         ),
       ),
     );
@@ -156,8 +162,8 @@ class _GraphiquesABarresMoisAnneeState
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedMonthYear,
-      firstDate: DateTime(_selectedMonthYear.year - 100, 1),
-      lastDate: DateTime(_selectedMonthYear.year + 100, 12),
+      firstDate: DateTime(_selectedMonthYear.year - 2, 1),
+      lastDate: DateTime(_selectedMonthYear.year, 12),
       initialDatePickerMode: DatePickerMode.year,
     );
     if (picked != null && picked != _selectedMonthYear) {
@@ -178,6 +184,8 @@ class _GraphiquesABarresMoisAnneeState
           date: _dateController.text,
           moisAnnee: _monthYearController.text,
           annee: _yearController.text,
+          gare: widget.gare,
+          uid: widget.uid,
         ),
       ),
     );
@@ -187,8 +195,8 @@ class _GraphiquesABarresMoisAnneeState
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedYear,
-      firstDate: DateTime(_selectedYear.year - 100),
-      lastDate: DateTime(_selectedYear.year + 100),
+      firstDate: DateTime(_selectedYear.year - 2),
+      lastDate: DateTime(_selectedYear.year, 12),
       initialDatePickerMode: DatePickerMode.year,
     );
     if (picked != null && picked != _selectedYear) {
@@ -208,6 +216,8 @@ class _GraphiquesABarresMoisAnneeState
           date: _dateController.text,
           moisAnnee: _monthYearController.text,
           annee: _yearController.text,
+          gare: widget.gare,
+          uid: widget.uid,
         ),
       ),
     );
@@ -250,8 +260,7 @@ class _GraphiquesABarresMoisAnneeState
         builder: (BuildContext context,
             AsyncSnapshot<List<Map<String, dynamic>>> snapshot) {
           if (snapshot.hasError) {
-            return Center(
-                child: Text('Erreur de chargement : ${snapshot.error}'));
+            return Center(child: Text('Erreur de chargement...'));
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -281,8 +290,10 @@ class _GraphiquesABarresMoisAnneeState
                       labelStyle: TextStyle(fontSize: 0),
                     ),
                     title: ChartTitle(
-                        text: 'Répartition des Passagers par Destination',
+                        text:
+                            'Répartition des passagers par destinations\npartants de ${widget.gare}',
                         textStyle: TextStyle(
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                             color: Config.colors.bleuA)),
                     legend: Legend(

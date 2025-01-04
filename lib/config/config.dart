@@ -33,7 +33,6 @@ class Connexion {
       ));
       return conn;
     } catch (e) {
-      print("Erreur $e");
       throw Exception(
           'Connexion à la base de données échouée'); // Lève une exception
     }

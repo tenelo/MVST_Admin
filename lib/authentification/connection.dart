@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:mvst_admin/authentification/authentification.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -20,6 +21,12 @@ class _LoginState extends State<Login> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   bool _isLoading = false;
+
+  Future<void> enregistrerGare(String _gare, String uid) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('gare', _gare);
+    await prefs.setString('uid', uid);
+  }
 
   Future<void> sauthentifier(BuildContext context, String telephone) async {
     setState(() {
@@ -80,19 +87,34 @@ class _LoginState extends State<Login> {
       }
 
       // Si le numéro est trouvé dans la collection 'admins', on continue avec l'authentification
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      final UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: "$telephone@gmail.com",
         password: telephone,
       );
 
-      // Redirection vers la page Accueil après authentification réussie
-      Navigator.pushReplacement(
-        // ignore: use_build_context_synchronously
-        context,
-        MaterialPageRoute(
-          builder: (context) => const Accueil(),
-        ),
-      );
+      // Récupérer l'uid de l'utilisateur
+      String uid = userCredential.user!.uid;
+
+      // Récupérer le lieu de résidence (champ 'gare') depuis Firestore
+      DocumentSnapshot<Map<String, dynamic>> adminDoc =
+          await FirebaseFirestore.instance.collection('admins').doc(uid).get();
+
+      if (adminDoc.exists) {
+        String gare = adminDoc.data()?['gare'] ?? 'Non défini';
+
+        // Enregistrer le lieu de résidence dans SharedPreferences
+        await enregistrerGare(gare, uid);
+
+        // Redirection vers la page Accueil après authentification réussie
+        Navigator.pushReplacement(
+          // ignore: use_build_context_synchronously
+          context,
+          MaterialPageRoute(
+            builder: (context) => const Accueil(),
+          ),
+        );
+      }
     } catch (e) {
       // En cas d'erreur, redirection vers la page Authentification
       Navigator.pushReplacement(
@@ -101,11 +123,11 @@ class _LoginState extends State<Login> {
           builder: (context) => const PageDAuthentification(),
         ),
       );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
-
-    setState(() {
-      _isLoading = false;
-    });
   }
 
   @override
@@ -152,6 +174,10 @@ class _LoginState extends State<Login> {
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Veuillez entrer votre numéro de téléphone';
+                      }
+
+                      if (!RegExp(r'^\d{10}$').hasMatch(value)) {
+                        return 'Entrez un numéro valide à 10 chiffres';
                       }
                       return null;
                     },

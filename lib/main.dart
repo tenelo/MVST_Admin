@@ -22,6 +22,7 @@ import 'package:mvst_admin/screens/profil.dart';
 import 'package:mvst_admin/screens/suppression/suppression.dart';
 import 'package:mvst_admin/screens/tableaudestickets.dart';
 import 'package:mvst_admin/verifTickets/verifierticket.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 DateTime? dateActuelle = DateTime.now();
 
@@ -55,6 +56,8 @@ String dateDhierStr = DateFormat(formatLong).format(dateDhier);
 User? user;
 int? tailleEcran;
 double? taille;
+String? gare;
+String? uid;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Désactive la rotation de l'écran en mode paysage
@@ -459,14 +462,15 @@ Widget scannQrCode(BuildContext ctx, Function setLoadingState) {
   return GestureDetector(
     onTap: () async {
       setLoadingState(true);
-
       await ListesDesTickets.ticketsAscanner();
-
       if (FirebaseAuth.instance.currentUser != null) {
+        recupererGareEtUid();
         Navigator.push(
           ctx,
           MaterialPageRoute(
             builder: (BuildContext context) => LecteurQrCode(
+              gare: gare!,
+              uid: uid!,
               dateNormale: dateNormale,
               dateAujourdhui: dateAujourdhui,
               dateApresDemain: dateDApresDemain,
@@ -513,10 +517,13 @@ Widget ticketsScannes(BuildContext ctx, Function setLoadingState) {
       setLoadingState(true);
       if (FirebaseAuth.instance.currentUser != null) {
         user = FirebaseAuth.instance.currentUser;
+        recupererGareEtUid();
         Navigator.push(
           ctx,
           MaterialPageRoute(
             builder: (BuildContext context) => MenuLateral(
+              gare: gare!,
+              uid: uid!,
               tailleEcran: tailleEcran!,
               date: idDate,
               dateNormale: dateNormale,
@@ -561,16 +568,29 @@ Widget graphiques(BuildContext ctx, Function setLoadingState) {
   return GestureDetector(
     onTap: () async {
       setLoadingState(true);
-      Navigator.push(
-        ctx,
-        MaterialPageRoute(
-          builder: (BuildContext context) => GraphiquesABarres(
-            date: idDate,
-            moisAnnee: idMoisAnnee,
-            annee: idAnnee,
+      if (FirebaseAuth.instance.currentUser != null) {
+        user = FirebaseAuth.instance.currentUser;
+        recupererGareEtUid();
+        Navigator.push(
+          ctx,
+          MaterialPageRoute(
+            builder: (BuildContext context) => GraphiquesABarres(
+              gare: gare!,
+              uid: uid!,
+              date: idDate,
+              moisAnnee: idMoisAnnee,
+              annee: idAnnee,
+            ),
           ),
-        ),
-      ).then((_) => setLoadingState(false));
+        ).then((_) => setLoadingState(false));
+      } else {
+        Navigator.pushReplacement(
+          ctx,
+          MaterialPageRoute(
+            builder: (context) => const Login(),
+          ),
+        ).then((_) => setLoadingState(false));
+      }
     },
     child: Card(
       shadowColor: Colors.blue,
@@ -601,14 +621,27 @@ Widget tableau(BuildContext ctx, Function setLoadingState) {
   return GestureDetector(
     onTap: () async {
       setLoadingState(true);
-      Navigator.push(
-        ctx,
-        MaterialPageRoute(
-          builder: (BuildContext context) => TableauDeTickets(
-            date: idAnnee,
+      if (FirebaseAuth.instance.currentUser != null) {
+        user = FirebaseAuth.instance.currentUser;
+        recupererGareEtUid();
+        Navigator.push(
+          ctx,
+          MaterialPageRoute(
+            builder: (BuildContext context) => TableauDeTickets(
+              gare: gare!,
+              uid: uid!,
+              date: idAnnee,
+            ),
           ),
-        ),
-      ).then((_) => setLoadingState(false));
+        ).then((_) => setLoadingState(false));
+      } else {
+        Navigator.pushReplacement(
+          ctx,
+          MaterialPageRoute(
+            builder: (context) => const Login(),
+          ),
+        ).then((_) => setLoadingState(false));
+      }
     },
     child: Card(
       shadowColor: Colors.blue,
@@ -651,9 +684,33 @@ void showIncompleteFieldsSnackBar(BuildContext context) {
 void deconnexion(BuildContext context) async {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   await _auth.signOut();
+  // si l'admin est déconecté
+  await supprimerGareEtUid();
+
   Navigator.pushAndRemoveUntil(
     context,
     MaterialPageRoute(builder: (BuildContext context) => const Login()),
     (route) => false,
   );
+}
+
+Future<void> supprimerGareEtUid() async {
+  try {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    // Supprimer les valeurs associées aux clés 'gare' et 'uid'
+    await prefs.remove('gare');
+    await prefs.remove('uid');
+  } catch (e) {}
+}
+
+Future<void> recupererGareEtUid() async {
+  try {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    // Récupérer la gare et l'UID
+    gare = prefs.getString('gare');
+    uid = prefs.getString('uid');
+    // Vous pouvez également vérifier si les valeurs sont nulles
+    if (gare != null && uid != null) {
+    } else {}
+  } catch (e) {}
 }

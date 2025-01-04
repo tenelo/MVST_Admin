@@ -54,7 +54,7 @@ class _GraphiqueJourDepartState extends State<GraphiqueJourDepart> {
           result.map((row) => row.fields).toList();
 
       // Classification des tickets
-      _classifyTickets(tickets);
+      _classerLesTickets(tickets);
 
       // Émission des résultats dans le Stream
       yield tickets;
@@ -64,7 +64,7 @@ class _GraphiqueJourDepartState extends State<GraphiqueJourDepart> {
     }
   }
 
-  void _classifyTickets(List<Map<String, dynamic>> tickets) {
+  void _classerLesTickets(List<Map<String, dynamic>> tickets) {
     Map<String, int> destinationCounts = {};
 
     for (var ticket in tickets) {

@@ -5,7 +5,11 @@ import 'package:mvst_admin/screens/detailsTickets.dart';
 import 'package:mysql1/mysql1.dart';
 
 class TableauDeTickets extends StatefulWidget {
-  const TableauDeTickets({Key? key, required this.date}) : super(key: key);
+  const TableauDeTickets(
+      {Key? key, required this.gare, required this.uid, required this.date})
+      : super(key: key);
+  final String gare;
+  final String uid;
   final String date;
   @override
   State<TableauDeTickets> createState() => _TableauDeTicketsState();
