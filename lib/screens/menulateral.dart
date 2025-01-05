@@ -35,11 +35,15 @@ class _MenuLateralState extends State<MenuLateral> {
     _pages = [
       TicketsDuJourScannes(
         date: widget.date,
+        gare: widget.gare,
+        uid: widget.uid,
       ),
       TousLesDepartsDuJour(
         date: widget.date,
         dateNormale: widget.dateNormale,
         tailleEcran: widget.tailleEcran,
+        gare: widget.gare,
+        uid: widget.uid,
       ),
     ];
   }

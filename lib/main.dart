@@ -356,7 +356,6 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
             spaceBetweenChildren: 10,
             children: [
               SpeedDialChild(
-                //backgroundColor: Config.colors.jauneBlanc,
                 child: Icon(
                   Icons.delete_forever_outlined,
                   color: Colors.red[300],
@@ -368,22 +367,32 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                   color: Colors.red[300],
                   fontWeight: FontWeight.bold,
                 ),
-                onTap: () => {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => Suppression(
-                        dateHier: dateNormaleHiere,
-                        aujoudhui: dateNormale,
-                        demain: dateNormaleDemain,
-                        apresDemain: dateNormaleApresdemain,
+                onTap: () async {
+                  setLoadingState(true);
+                  if (FirebaseAuth.instance.currentUser != null) {
+                    recupererGareEtUid();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => Suppression(
+                          dateHier: dateNormaleHiere,
+                          aujoudhui: dateNormale,
+                          demain: dateNormaleDemain,
+                          apresDemain: dateNormaleApresdemain,
+                        ),
                       ),
-                    ),
-                  ),
+                    ).then((_) => setLoadingState(false));
+                  } else {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const Login(),
+                      ),
+                    ).then((_) => setLoadingState(false));
+                  }
                 },
               ),
               SpeedDialChild(
-                //backgroundColor: Config.colors.jauneBlanc,
                 child: Icon(
                   Icons.format_list_bulleted,
                   color: Config.colors.bleuA,
@@ -395,21 +404,34 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                   color: Config.colors.bleuA,
                   fontWeight: FontWeight.bold,
                 ),
-                onTap: () => {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => DepartsListePassagersPourBtFlottant(
-                        date: idDate,
-                        dateNormale: dateNormale,
-                        tailleEcran: tailleEcran!,
+                onTap: () async {
+                  setLoadingState(true);
+                  if (FirebaseAuth.instance.currentUser != null) {
+                    recupererGareEtUid();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            DepartsListePassagersPourBtFlottant(
+                          gare: gare!,
+                          uid: uid!,
+                          date: idDate,
+                          dateNormale: dateNormale,
+                          tailleEcran: tailleEcran!,
+                        ),
                       ),
-                    ),
-                  ),
+                    ).then((_) => setLoadingState(false));
+                  } else {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const Login(),
+                      ),
+                    ).then((_) => setLoadingState(false));
+                  }
                 },
               ),
               SpeedDialChild(
-                //backgroundColor: Config.colors.jauneBlanc,
                 child: Icon(
                   Icons.event_seat,
                   color: Config.colors.bleuA,
@@ -421,17 +443,31 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                   color: Config.colors.bleuA,
                   fontWeight: FontWeight.bold,
                 ),
-                onTap: () => {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => DepartsPlacesAssicesPourBtFlottant(
-                        date: idDate,
-                        dateNormale: dateNormale,
-                        tailleEcran: tailleEcran!,
+                onTap: () async {
+                  setLoadingState(true);
+                  if (FirebaseAuth.instance.currentUser != null) {
+                    recupererGareEtUid();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            DepartsPlacesAssicesPourBtFlottant(
+                          gare: gare!,
+                          uid: uid!,
+                          date: idDate,
+                          dateNormale: dateNormale,
+                          tailleEcran: tailleEcran!,
+                        ),
                       ),
-                    ),
-                  ),
+                    ).then((_) => setLoadingState(false));
+                  } else {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const Login(),
+                      ),
+                    ).then((_) => setLoadingState(false));
+                  }
                 },
               ),
             ],

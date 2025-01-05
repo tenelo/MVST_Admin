@@ -5,7 +5,13 @@ import 'package:syncfusion_flutter_charts/charts.dart';
 
 class GraphiqueJourDepart extends StatefulWidget {
   const GraphiqueJourDepart(
-      {super.key, required this.documentId, required this.date});
+      {super.key,
+      required this.gare,
+      required this.uid,
+      required this.documentId,
+      required this.date});
+  final String gare;
+  final String uid;
   final String documentId;
   final String date;
   @override
@@ -36,6 +42,12 @@ class _GraphiqueJourDepartState extends State<GraphiqueJourDepart> {
     Color.fromARGB(213, 57, 103, 255),
     Color.fromARGB(255, 236, 141, 255),
     Color.fromARGB(255, 244, 80, 68),
+    Color.fromARGB(255, 78, 52, 46),
+    Color.fromARGB(255, 0, 131, 143),
+    Color.fromARGB(255, 242, 121, 53),
+    Color.fromARGB(255, 111, 194, 169),
+    Color.fromARGB(255, 173, 94, 154),
+    Color.fromARGB(255, 255, 236, 79),
   ];
 
   Stream<List<Map<String, dynamic>>> recuperationDesTickets() async* {
@@ -52,6 +64,9 @@ class _GraphiqueJourDepartState extends State<GraphiqueJourDepart> {
       // Transformation du résultat en liste de maps
       List<Map<String, dynamic>> tickets =
           result.map((row) => row.fields).toList();
+      // Ce filtre permet de recupérer les tickets en fonction de la gare de l'utilisateur
+      tickets =
+          tickets.where((ticket) => ticket['depart'] == widget.gare).toList();
 
       // Classification des tickets
       _classerLesTickets(tickets);
@@ -59,7 +74,6 @@ class _GraphiqueJourDepartState extends State<GraphiqueJourDepart> {
       // Émission des résultats dans le Stream
       yield tickets;
     } catch (e) {
-      print('Erreur lors de la récupération des tickets : $e');
       yield [];
     }
   }
@@ -129,7 +143,7 @@ class _GraphiqueJourDepartState extends State<GraphiqueJourDepart> {
           if (snapshot.hasError) {
             return Center(
               child: Text(
-                'Problème de connexion',
+                'Problème de connexion...',
                 style: TextStyle(
                     color: Config.colors.bleuFonce2,
                     fontWeight: FontWeight.bold),
@@ -164,7 +178,8 @@ class _GraphiqueJourDepartState extends State<GraphiqueJourDepart> {
                       labelStyle: TextStyle(fontSize: 0),
                     ),
                     title: ChartTitle(
-                        text: 'Répartition des Passagers par Destination',
+                        text:
+                            'Les passagers par destinations\npartants de ${widget.gare}',
                         textStyle: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Config.colors.bleuA)),
@@ -181,7 +196,7 @@ class _GraphiqueJourDepartState extends State<GraphiqueJourDepart> {
                         sortingOrder: SortingOrder.descending,
                         color: Colors.orange,
                         name:
-                            'Passagers pour le ${widget.date} : ${getTotalPassagers()}',
+                            'Passagers du ${widget.date} : ${getTotalPassagers()}',
                         dataSource: filteredTickets,
                         xValueMapper: (MesDonneesTickets data, _) =>
                             data.destinations,

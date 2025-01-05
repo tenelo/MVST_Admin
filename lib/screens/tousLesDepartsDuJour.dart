@@ -11,9 +11,13 @@ String? heuresFormattees;
 class TousLesDepartsDuJour extends StatefulWidget {
   const TousLesDepartsDuJour(
       {super.key,
+      required this.gare,
+      required this.uid,
       required this.date,
       required this.dateNormale,
       required this.tailleEcran});
+  final String gare;
+  final String uid;
   final String date;
   final String dateNormale;
   final int tailleEcran;
@@ -28,11 +32,12 @@ class _TousLesDepartsDuJourState extends State<TousLesDepartsDuJour> {
     try {
       // Requête pour récupérer les heures, le nombre de tickets scannés (par heure), et les champs supplémentaires
       var result = await conn.query(
-          'SELECT heureDeDepart,documentId, dateDeDepart,depart,destination,JSON_LENGTH(placesChoisies) as nombreDePlacesChoisies '
+          'SELECT heureDeDepart, documentId, dateDeDepart, depart, destination, '
+          'JSON_LENGTH(placesChoisies) AS nombreDePlacesChoisies '
           'FROM Departs '
-          'WHERE dateDeDepart = ? '
+          'WHERE dateDeDepart = ? AND depart = ? '
           'GROUP BY documentId',
-          [widget.date]);
+          [widget.date, widget.gare]);
 
       // Extraire le résultat des requêtes
       var heuresDepartEtNombreTickets = result
@@ -168,6 +173,8 @@ class _TousLesDepartsDuJourState extends State<TousLesDepartsDuJour> {
                     return (widget.tailleEcran <= 6)
                         ? CartePetitEcran(
                             context,
+                            widget.gare,
+                            widget.uid,
                             heuresEtTickets[index]['heure'],
                             heuresEtTickets[index]['nombreDePlacesChoisies'],
                             heuresEtTickets[index]['documentId'],
@@ -178,6 +185,8 @@ class _TousLesDepartsDuJourState extends State<TousLesDepartsDuJour> {
                           )
                         : CarteGrandEcran(
                             context,
+                            widget.gare,
+                            widget.uid,
                             heuresEtTickets[index]['heure'],
                             heuresEtTickets[index]['nombreDePlacesChoisies'],
                             heuresEtTickets[index]['documentId'],
@@ -199,6 +208,8 @@ class _TousLesDepartsDuJourState extends State<TousLesDepartsDuJour> {
 
 Widget CartePetitEcran(
     BuildContext context,
+    String gare,
+    String uid,
     String heures,
     int nombrePlacesChoisies,
     String documentId,
@@ -270,8 +281,10 @@ Widget CartePetitEcran(
                     context,
                     MaterialPageRoute(
                       builder: (BuildContext context) => GraphiqueJourDepart(
-                        documentId: "$documentId",
+                        documentId: documentId,
                         date: date,
+                        gare: gare,
+                        uid: uid,
                       ),
                     ),
                   );
@@ -304,6 +317,8 @@ Widget CartePetitEcran(
                       builder: (BuildContext context) => TicketsDuJour(
                         date: date,
                         idDoc: documentId,
+                        gare: gare,
+                        uid: uid,
                       ),
                     ),
                   );
@@ -376,6 +391,8 @@ Widget CartePetitEcran(
 
 Widget CarteGrandEcran(
     BuildContext context,
+    String gare,
+    String uid,
     String heures,
     int nombrePlacesChoisies,
     String documentId,
@@ -447,8 +464,10 @@ Widget CarteGrandEcran(
                     context,
                     MaterialPageRoute(
                       builder: (BuildContext context) => GraphiqueJourDepart(
-                        documentId: "$documentId",
+                        documentId: documentId,
                         date: date,
+                        gare: gare,
+                        uid: uid,
                       ),
                     ),
                   );
@@ -516,6 +535,8 @@ Widget CarteGrandEcran(
                       builder: (BuildContext context) => TicketsDuJour(
                         date: date,
                         idDoc: documentId,
+                        gare: gare,
+                        uid: uid,
                       ),
                     ),
                   );

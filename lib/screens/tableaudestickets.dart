@@ -59,7 +59,9 @@ class _TableauDeTicketsState extends State<TableauDeTickets> {
       // Transformation du résultat en liste de maps
       List<Map<String, dynamic>> tickets =
           result.map((row) => row.fields).toList();
-
+      // Ce filtre permet de recupérer les tickets en fonction de la gare de l'utilisateur
+      tickets =
+          tickets.where((ticket) => ticket['depart'] == widget.gare).toList();
       setState(() {
         donnees = tickets;
         _filtre = tickets;

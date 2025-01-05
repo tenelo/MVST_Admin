@@ -7,9 +7,12 @@ import 'package:mysql1/mysql1.dart';
 class TicketsDuJourScannes extends StatefulWidget {
   const TicketsDuJourScannes({
     super.key,
+    required this.gare,
+    required this.uid,
     required this.date,
   });
-
+  final String gare;
+  final String uid;
   final String date;
 
   @override
@@ -49,7 +52,9 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
       // Transformation du résultat en liste de maps
       List<Map<String, dynamic>> tickets =
           result.map((row) => row.fields).toList();
-
+      // Ce filtre permet de recupérer les tickets en fonction de la gare de l'utilisateur
+      tickets =
+          tickets.where((ticket) => ticket['depart'] == widget.gare).toList();
       setState(() {
         donnees = tickets;
         _filtre = tickets;

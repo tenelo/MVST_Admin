@@ -9,9 +9,13 @@ String? heuresFormattees;
 class DepartsListePassagersPourBtFlottant extends StatefulWidget {
   const DepartsListePassagersPourBtFlottant(
       {super.key,
+      required this.gare,
+      required this.uid,
       required this.date,
       required this.dateNormale,
       required this.tailleEcran});
+  final String gare;
+  final String uid;
   final String date;
   final String dateNormale;
   final int tailleEcran;
@@ -28,11 +32,12 @@ class _DepartsListePassagersPourBtFlottantState
     try {
       // Requête pour récupérer les heures, le nombre de tickets scannés (par heure), et les champs supplémentaires
       var result = await conn.query(
-          'SELECT heureDeDepart,documentId, dateDeDepart,depart,destination,JSON_LENGTH(placesChoisies) as nombreDePlacesChoisies '
-          'FROM Departs '
-          'WHERE dateDeDepart = ? '
-          'GROUP BY documentId ',
-          [widget.date]);
+        'SELECT heureDeDepart, documentId, dateDeDepart, depart, destination, JSON_LENGTH(placesChoisies) as nombreDePlacesChoisies '
+        'FROM Departs '
+        'WHERE dateDeDepart = ? AND depart = ? '
+        'GROUP BY documentId',
+        [widget.date, widget.gare],
+      );
 
       // Extraire le résultat des requêtes
       var heuresDepartEtNombreTickets = result
@@ -50,7 +55,6 @@ class _DepartsListePassagersPourBtFlottantState
 
   @override
   Widget build(BuildContext context) {
-    print("%%%% DATE NORMALE IN ${widget.dateNormale} %%%%%");
     return Scaffold(
       appBar: AppBar(
         iconTheme: IconThemeData(
@@ -154,6 +158,8 @@ class _DepartsListePassagersPourBtFlottantState
                               context,
                               MaterialPageRoute(
                                 builder: (context) => TicketsDuJour(
+                                  gare: widget.gare,
+                                  uid: widget.uid,
                                   date: widget.date,
                                   idDoc: heuresEtTickets[index]['documentId'],
                                 ),

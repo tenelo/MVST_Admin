@@ -9,9 +9,13 @@ String? heuresFormattees;
 class DepartsPlacesAssicesPourBtFlottant extends StatefulWidget {
   const DepartsPlacesAssicesPourBtFlottant(
       {super.key,
+      required this.gare,
+      required this.uid,
       required this.date,
       required this.dateNormale,
       required this.tailleEcran});
+  final String gare;
+  final String uid;
   final String date;
   final String dateNormale;
   final int tailleEcran;
@@ -45,7 +49,12 @@ class _DepartsPlacesAssicesPourBtFlottantState
                 'nombreDePlacesChoisies': row[5],
               })
           .toList();
+      // Filtrer les tickets en fonction de la gare de l'utilisateur
+      heuresDepartEtNombreTickets = heuresDepartEtNombreTickets
+          .where((ticket) => ticket['depart'] == widget.gare)
+          .toList();
 
+      // Émettre les résultats filtrés
       yield heuresDepartEtNombreTickets;
     } catch (e) {
       yield [];
