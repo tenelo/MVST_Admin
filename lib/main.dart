@@ -370,7 +370,6 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                 onTap: () async {
                   setLoadingState(true);
                   if (FirebaseAuth.instance.currentUser != null) {
-                    recupererGareEtUid();
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -407,14 +406,16 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                 onTap: () async {
                   setLoadingState(true);
                   if (FirebaseAuth.instance.currentUser != null) {
-                    recupererGareEtUid();
+                    user = FirebaseAuth.instance.currentUser;
+                    final String _uid = user!.uid;
+                    final String? _gare = await recupererGare(_uid);
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) =>
                             DepartsListePassagersPourBtFlottant(
-                          gare: gare!,
-                          uid: uid!,
+                          gare: _gare!,
+                          uid: _uid,
                           date: idDate,
                           dateNormale: dateNormale,
                           tailleEcran: tailleEcran!,
@@ -446,14 +447,16 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                 onTap: () async {
                   setLoadingState(true);
                   if (FirebaseAuth.instance.currentUser != null) {
-                    recupererGareEtUid();
+                    user = FirebaseAuth.instance.currentUser;
+                    final String _uid = user!.uid;
+                    final String? _gare = await recupererGare(_uid);
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) =>
                             DepartsPlacesAssicesPourBtFlottant(
-                          gare: gare!,
-                          uid: uid!,
+                          gare: _gare!,
+                          uid: _uid,
                           date: idDate,
                           dateNormale: dateNormale,
                           tailleEcran: tailleEcran!,
@@ -500,13 +503,15 @@ Widget scannQrCode(BuildContext ctx, Function setLoadingState) {
       setLoadingState(true);
       await ListesDesTickets.ticketsAscanner();
       if (FirebaseAuth.instance.currentUser != null) {
-        recupererGareEtUid();
+        user = FirebaseAuth.instance.currentUser;
+        final String _uid = user!.uid;
+        final String? _gare = await recupererGare(_uid);
         Navigator.push(
           ctx,
           MaterialPageRoute(
             builder: (BuildContext context) => LecteurQrCode(
-              gare: gare!,
-              uid: uid!,
+              gare: _gare!,
+              uid: _uid,
               dateNormale: dateNormale,
               dateAujourdhui: dateAujourdhui,
               dateApresDemain: dateDApresDemain,
@@ -553,13 +558,14 @@ Widget ticketsScannes(BuildContext ctx, Function setLoadingState) {
       setLoadingState(true);
       if (FirebaseAuth.instance.currentUser != null) {
         user = FirebaseAuth.instance.currentUser;
-        recupererGareEtUid();
+        final String _uid = user!.uid;
+        final String? _gare = await recupererGare(_uid);
         Navigator.push(
           ctx,
           MaterialPageRoute(
             builder: (BuildContext context) => MenuLateral(
-              gare: gare!,
-              uid: uid!,
+              gare: _gare!,
+              uid: _uid,
               tailleEcran: tailleEcran!,
               date: idDate,
               dateNormale: dateNormale,
@@ -606,13 +612,14 @@ Widget graphiques(BuildContext ctx, Function setLoadingState) {
       setLoadingState(true);
       if (FirebaseAuth.instance.currentUser != null) {
         user = FirebaseAuth.instance.currentUser;
-        recupererGareEtUid();
+        final String _uid = user!.uid;
+        final String? _gare = await recupererGare(_uid);
         Navigator.push(
           ctx,
           MaterialPageRoute(
             builder: (BuildContext context) => GraphiquesABarres(
-              gare: gare!,
-              uid: uid!,
+              gare: _gare!,
+              uid: _uid,
               date: idDate,
               moisAnnee: idMoisAnnee,
               annee: idAnnee,
@@ -659,13 +666,14 @@ Widget tableau(BuildContext ctx, Function setLoadingState) {
       setLoadingState(true);
       if (FirebaseAuth.instance.currentUser != null) {
         user = FirebaseAuth.instance.currentUser;
-        recupererGareEtUid();
+        final String _uid = user!.uid;
+        final String? _gare = await recupererGare(_uid);
         Navigator.push(
           ctx,
           MaterialPageRoute(
             builder: (BuildContext context) => TableauDeTickets(
-              gare: gare!,
-              uid: uid!,
+              gare: _gare!,
+              uid: _uid,
               date: idAnnee,
             ),
           ),
@@ -739,14 +747,31 @@ Future<void> supprimerGareEtUid() async {
   } catch (e) {}
 }
 
-Future<void> recupererGareEtUid() async {
+// Méthode pour récupérer la gare associée à l'idUtilisateur
+Future<String?> recupererGare(String idUtilisateur) async {
+  // Connexion à la base de données
+  final conn = await Connexion.connexionDB();
+
   try {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    // Récupérer la gare et l'UID
-    gare = prefs.getString('gare');
-    uid = prefs.getString('uid');
-    // Vous pouvez également vérifier si les valeurs sont nulles
-    if (gare != null && uid != null) {
-    } else {}
-  } catch (e) {}
+    // Requête SQL pour récupérer la gare
+    var result = await conn.query(
+      '''
+        SELECT gare 
+        FROM Admins 
+        WHERE idUtilisateur = ?
+        ''',
+      [idUtilisateur],
+    );
+
+    // Vérification si un résultat est retourné
+    if (result.isNotEmpty) {
+      return result.first['gare'] as String;
+    } else {
+      return null; // Aucun résultat trouvé
+    }
+  } catch (e) {
+    return null;
+  } finally {
+    await conn.close();
+  }
 }

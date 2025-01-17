@@ -1,8 +1,14 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/screens/detailsTickets.dart';
+import 'package:mvst_admin/screens/petitsEcrans/detailsTickets2.dart';
 import 'package:mysql1/mysql1.dart';
+
+int? tailleEcran;
 
 class TableauDeTickets extends StatefulWidget {
   const TableauDeTickets(
@@ -93,6 +99,7 @@ class _TableauDeTicketsState extends State<TableauDeTickets> {
 
   @override
   Widget build(BuildContext context) {
+    tailleEcran = calculeTailleEcran(context).round();
     return Scaffold(
       appBar: AppBar(
         iconTheme: IconThemeData(
@@ -318,26 +325,49 @@ class TicketDataSource extends DataTableSource {
   }
 
   void _onTapRow(Map<String, dynamic> ticket, String id) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DetailsTickets(
-          idTicket: id,
-          idUtilisateur: ticket['idUtilisateur'],
-          nom: ticket['nom'],
-          contact: ticket['telephone'],
-          date: ticket['date'],
-          heure: ticket['heure'],
-          depart: ticket['depart'],
-          destination: ticket['destination'],
-          place: ticket['place'],
-          etatScann: ticket['etatScanne'],
-          statut: ticket['statut'],
-          prixTicket: ticket['prixDuTicket'].toString(),
-          datePourCalcule: ticket['datePourCalcule'],
+    if (tailleEcran! >= 6) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DetailsTickets(
+            idTicket: id,
+            idUtilisateur: ticket['idUtilisateur'].toString(),
+            nom: ticket['nom'].toString(),
+            contact: ticket['telephone'].toString(),
+            date: ConvertirHeure.formatDate((ticket['date'].toString())),
+            heure: ticket['heure'].toString(),
+            depart: ticket['depart'].toString(),
+            destination: ticket['destination'].toString(),
+            place: ticket['place'],
+            etatScann: ticket['etatScanne'].toString(),
+            statut: ticket['statut'].toString(),
+            prixTicket: ticket['prixDuTicket'].toString(),
+            datePourCalcule: ticket['datePourCalcule'],
+          ),
         ),
-      ),
-    );
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DetailsTickets2(
+            idTicket: id,
+            idUtilisateur: ticket['idUtilisateur'].toString(),
+            nom: ticket['nom'].toString(),
+            contact: ticket['telephone'].toString(),
+            date: ConvertirHeure.formatDate((ticket['date'].toString())),
+            heure: ticket['heure'].toString(),
+            depart: ticket['depart'].toString(),
+            destination: ticket['destination'].toString(),
+            place: ticket['place'],
+            etatScann: ticket['etatScanne'].toString(),
+            statut: ticket['statut'].toString(),
+            prixTicket: ticket['prixDuTicket'].toString(),
+            datePourCalcule: ticket['datePourCalcule'],
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -348,4 +378,10 @@ class TicketDataSource extends DataTableSource {
 
   @override
   int get selectedRowCount => 0;
+}
+
+double calculeTailleEcran(BuildContext ctx) {
+  double screenWidth = MediaQuery.of(ctx).size.width;
+  double screenHeight = MediaQuery.of(ctx).size.height;
+  return sqrt(pow(screenWidth, 2) + pow(screenHeight, 2)) / 160.0;
 }

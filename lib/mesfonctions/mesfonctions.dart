@@ -161,3 +161,23 @@ class Calcule {
     return sqrt(pow(screenWidth, 2) + pow(screenHeight, 2)) / 160.0;
   }
 }
+
+class ConvertirHeure {
+  static String formatDate(String date) {
+    DateTime parsedDate;
+
+    DateFormat inputFormat = DateFormat('EEEE d MMMM yyyy', 'fr_FR');
+    parsedDate = inputFormat.parse(date);
+
+    return DateFormat('EEEE d MMMM yyyy', 'fr_FR').format(parsedDate);
+  }
+
+  static String formatDatePourCalcule(String date) {
+    DateTime parsedDate;
+
+    DateFormat inputFormat = DateFormat('EEEE d MMMM yyyy', 'fr_FR');
+    parsedDate = inputFormat.parse(date);
+
+    return DateFormat('yyyy-MM-dd', 'fr_FR').format(parsedDate);
+  }
+}
