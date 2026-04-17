@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/screens/ticketsDuJourScannes.dart';
 import 'package:mvst_admin/screens/tousLesDepartsDuJour.dart';
-import 'package:mysql1/mysql1.dart';
 
 class MenuLateral extends StatefulWidget {
   const MenuLateral(
@@ -25,13 +24,11 @@ class MenuLateral extends StatefulWidget {
 class _MenuLateralState extends State<MenuLateral> {
   // Index de la page actuellement sélectionnée
   int _selectedIndex = 0;
-  MySqlConnection? conn;
   late final List<Widget> _pages;
 
   @override
   void initState() {
     super.initState();
-    _connectToDatabase();
     _pages = [
       TicketsDuJourScannes(
         date: widget.date,
@@ -46,10 +43,6 @@ class _MenuLateralState extends State<MenuLateral> {
         uid: widget.uid,
       ),
     ];
-  }
-
-  Future<void> _connectToDatabase() async {
-    conn = await Connexion.connexionDB();
   }
 
   @override

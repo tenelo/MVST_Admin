@@ -1,64 +1,76 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:mvst_admin/config/config.dart';
-import 'package:mysql1/mysql1.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 List<MonTicket> monTicket = [];
 List<Map<String, dynamic>> listeDesTicketsScannes = [];
 List<int> listeDesPlacesOccupees = [];
 
+// ─── Tickets à scanner ────────────────────────────────────────────────────────
 class ListesDesTickets {
-  static Future<List<Map<String, dynamic>>> ticketsAscanner() async {
-    final MySqlConnection? conn = await Connexion.connexionDB();
+  // Récupérer tous les tickets dont la date >= aujourd'hui
+  static Future<List<Map<String, dynamic>>> ticketsAscanner(
+    String gare,
+    String profil,
+  ) async {
     try {
-      // Génère la date du jour au format 'yyyy-MM-dd'
-      String dateDuJour =
-          DateFormat('yyyy-MM-dd', 'fr_FR').format(DateTime.now());
+      final String url = profil == 'superadmin'
+          ? 'https://mvst.tenelo.cloud/superadmin_ticketsAscanner.php'
+          : 'https://mvst.tenelo.cloud/ticketsAscanner.php';
 
-      // Exécute la requête pour récupérer tous les tickets dont la date est supérieure ou égale à aujourd'hui
-      var result = await conn!.query(
-          'SELECT * FROM Tickets WHERE datePourCalcule >= ?', [dateDuJour]);
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: profil == 'superadmin' ? null : jsonEncode({'gare': gare}),
+      );
 
-      List<Map<String, dynamic>> listeDesTicketsScannes =
-          result.map((row) => row.fields).toList();
-
-      return listeDesTicketsScannes;
-    } catch (error) {
-      return [];
-    } finally {
-      // Vérifier si conn n'est pas null avant de fermer la connexion
-      if (conn != null) {
-        await conn.close();
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          listeDesTicketsScannes = List<Map<String, dynamic>>.from(
+            data['tickets'],
+          );
+          return listeDesTicketsScannes;
+        }
       }
+      return [];
+    } catch (e) {
+      return [];
     }
   }
 
-// Récupérer la liste des tickets scannés dont la date est égale à la date du jour
-  static Future<List<Map<String, dynamic>>> listeDesTicketsScannes(
-      String date) async {
-    final conn = await Connexion.connexionDB();
+  // Récupérer les tickets scannés pour une date donnée
+  static Future<List<Map<String, dynamic>>> ticketsScannesPourDate(
+    String date,
+  ) async {
     try {
-      var result = await conn.query(
-          'SELECT * FROM Tickets WHERE etatScanne = ? AND date = ?',
-          ['scanné', date]);
+      final response = await http.post(
+        Uri.parse('https://mvst.tenelo.cloud/ticketsAscanner.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'date': date, 'etatScanne': 'scanné'}),
+      );
 
-      List<Map<String, dynamic>> listeDesTicketsScannes =
-          result.map((row) => row.fields).toList();
-
-      return listeDesTicketsScannes;
-    } catch (error) {
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          return List<Map<String, dynamic>>.from(data['tickets']);
+        }
+      }
       return [];
-    } finally {
-      await conn.close();
+    } catch (e) {
+      return [];
     }
   }
 }
 
+// ─── Modèle ticket ────────────────────────────────────────────────────────────
 class MonTicket {
   String idDocParent;
   String idDoc;
@@ -71,89 +83,73 @@ class MonTicket {
   });
 }
 
-void listenForTicketChanges() {
-  final collectionRef = FirebaseFirestore.instance.collection('tickets');
+// ─── Mise à jour etatScanne via PHP ──────────────────────────────────────────
+Future<void> misAjourEtatScanne(
+  String documentId,
+  String idUtilisateur,
+  int place,
+) async {
+  try {
+    final response = await http.post(
+      Uri.parse('https://mvst.tenelo.cloud/misAjourEtatScanne.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'documentId': documentId,
+        'idUtilisateur': idUtilisateur,
+        'place': place,
+      }),
+    );
 
-  // Écoute tous les changements dans la collection 'tickets'
-  // ignore: unused_local_variable
-  final subscription = collectionRef.snapshots().listen((snapshot) {
-    snapshot.docChanges.forEach((change) {
-      // Réagir à n'importe quel changement ici
-      ListesDesTickets.ticketsAscanner;
-    });
-  });
-
-  // Pour arrêter l'écoute lorsque nécessaire
-  // subscription.cancel();
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data['success'] != true) {
+        // Silencieux — ne pas bloquer le scan
+      }
+    }
+  } catch (e) {
+    // Silencieux — ne pas bloquer le scan
+  }
 }
 
+// ─── Service images Firebase ──────────────────────────────────────────────────
 class ImageService {
-  final CollectionReference _imagesCollection =
-      FirebaseFirestore.instance.collection('images');
+  final CollectionReference _imagesCollection = FirebaseFirestore.instance
+      .collection('images');
 
   Future<void> addImage(File imageFile, String description) async {
     try {
-      // Upload the image to Firebase Storage
       String fileName = DateTime.now().millisecondsSinceEpoch.toString();
-      Reference storageReference =
-          FirebaseStorage.instance.ref().child('images/$fileName');
+      Reference storageReference = FirebaseStorage.instance.ref().child(
+        'images/$fileName',
+      );
       UploadTask uploadTask = storageReference.putFile(imageFile);
       TaskSnapshot storageSnapshot = await uploadTask;
-
-      // Get the download URL
       String downloadUrl = await storageSnapshot.ref.getDownloadURL();
-
-      // Save the image info to Firestore
       await _imagesCollection.add({
         'url': downloadUrl,
         'description': description,
       });
-    } catch (e) {
-      print('Error adding image: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> updateImage(String id, String newDescription) async {
     try {
       await _imagesCollection.doc(id).update({'description': newDescription});
-    } catch (e) {
-      print('Error updating image: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> deleteImage(String id) async {
     try {
       DocumentSnapshot doc = await _imagesCollection.doc(id).get();
       String url = doc['url'];
-
-      // Delete the image from Firebase Storage
       Reference storageReference = FirebaseStorage.instance.refFromURL(url);
       await storageReference.delete();
-
-      // Delete the image info from Firestore
       await _imagesCollection.doc(id).delete();
-    } catch (e) {
-      print('Error deleting image: $e');
-    }
+    } catch (e) {}
   }
 }
 
-Future<void> misAjourEtatScanne(
-    String _documentId, String idUtilisateur, int _place) async {
-  final conn = await Connexion.connexionDB();
-  try {
-    // Mise à jour de la valeur du champ 'etatScanne' à 'scanné' si les trois champs correspondent
-    await conn.query(
-      'UPDATE Tickets SET etatScanne = ? WHERE documentId = ? AND idUtilisateur = ? AND place = ?',
-      ['scanné', _documentId, idUtilisateur, _place],
-    );
-  } catch (e) {
-    // Gérer l'erreur (par exemple, journaliser ou afficher une notification)
-  } finally {
-    await conn.close();
-  }
-}
-
+// ─── Utilitaires ──────────────────────────────────────────────────────────────
 class Calcule {
   static double tailleEcran(BuildContext ctx) {
     double screenWidth = MediaQuery.of(ctx).size.width;
@@ -164,20 +160,52 @@ class Calcule {
 
 class ConvertirHeure {
   static String formatDate(String date) {
-    DateTime parsedDate;
-
     DateFormat inputFormat = DateFormat('EEEE d MMMM yyyy', 'fr_FR');
-    parsedDate = inputFormat.parse(date);
-
+    DateTime parsedDate = inputFormat.parse(date);
     return DateFormat('EEEE d MMMM yyyy', 'fr_FR').format(parsedDate);
   }
 
   static String formatDatePourCalcule(String date) {
-    DateTime parsedDate;
-
     DateFormat inputFormat = DateFormat('EEEE d MMMM yyyy', 'fr_FR');
-    parsedDate = inputFormat.parse(date);
-
+    DateTime parsedDate = inputFormat.parse(date);
     return DateFormat('yyyy-MM-dd', 'fr_FR').format(parsedDate);
+  }
+}
+
+Future<void> supprimerGareEtUid() async {
+  try {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('gare');
+    await prefs.remove('uid');
+    await prefs.remove('profil');
+  } catch (e) {}
+}
+
+Future<String?> recupererGare(String idUtilisateur) async {
+  try {
+    final response = await http.post(
+      Uri.parse('https://mvst.tenelo.cloud/recupererGare.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'idUtilisateur': idUtilisateur}),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data['success'] == true) {
+        return data['gare'] as String;
+      }
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+
+Future<String?> recupererProfil() async {
+  try {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('profil') ?? 'admin';
+  } catch (e) {
+    return 'admin';
   }
 }

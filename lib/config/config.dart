@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:mysql1/mysql1.dart';
 
 class Config {
   // on met les propriétés à static pour pouvoir y avoir accès
@@ -19,41 +18,59 @@ class _Color {
   final vertB = const Color(0xff1a5441);
   final bleuA = const Color.fromARGB(221, 18, 136, 233);
   final bleuB = const Color.fromARGB(255, 29, 60, 106);
+
+  // ── Couleurs Auth ─────────────────────────────────────────────────────────
+  final authBackground = const Color(0xFF1A2B3C);
+  final authCardBackground = const Color(0xFF1E3A5F);
+  final authBorder = const Color(0xFF2A5080);
+  final authAccent = const Color(0xFF64B5F6);
+  final authButton = const Color.fromARGB(255, 1, 67, 142);
+  final authButtonDisabled = const Color(0xFF1E3A5F);
+  final authTextPrimary = const Color(0xFFFFFFFF);
+  final authTextSecondary = const Color(0x80FFFFFF);
+  final authDialogBackground = const Color(0xFF1E3A5F);
+
+  // ── Nouvelles Couleurs ────────────────────────────────────────────────────
+  final couleurIcone = const Color.fromARGB(255, 3, 57, 183);
+  final couleurDefondPrincipale = const Color.fromARGB(172, 54, 148, 241);
+  final couleurOmbreCarte = const Color.fromARGB(144, 0, 174, 255);
 }
 
-class Connexion {
-  static Future<MySqlConnection> connexionDB() async {
-    try {
-      final conn = await MySqlConnection.connect(ConnectionSettings(
-        host: 'srv1582.hstgr.io',
-        port: 3306,
-        user: 'u232422107_t_mvst',
-        password: 't_mvst_P@ss9',
-        db: 'u232422107_mvst',
-      ));
-      return conn;
-    } catch (e) {
-      throw Exception(
-          'Connexion à la base de données échouée'); // Lève une exception
-    }
-  }
+// class Connexion {
+//   static Future<MySqlConnection> connexionDB() async {
+//     try {
+//       final conn = await MySqlConnection.connect(ConnectionSettings(
+//         host: 'srv1582.hstgr.io',
+//         port: 3306,
+//         user: 'u232422107_t_mvst',
+//         password: 't_mvst_P@ss9',
+//         db: 'u232422107_mvst',
+//       ));
+//       return conn;
+//     } catch (e) {
+//       throw Exception(
+//           'Connexion à la base de données échouée'); // Lève une exception
+//     }
+//   }
 
-  static Future<MySqlConnection?> _connexionDB() async {
-    try {
-      final conn = await MySqlConnection.connect(ConnectionSettings(
-        host: 'srv1582.hstgr.io',
-        port: 3306,
-        user: 'u232422107_t_mvst',
-        password: 't_mvst_P@ss9',
-        db: 'u232422107_mvst',
-      ));
-      return conn;
-    } catch (e) {
-      print('Erreur de connexion à la base de données: $e');
-      return null;
-    }
-  }
-}
+//   static Future<MySqlConnection?> _connexionDB() async {
+//     try {
+//       final conn = await MySqlConnection.connect(ConnectionSettings(
+//         host: 'srv1582.hstgr.io',
+//         port: 3306,
+//         user: 'u232422107_t_mvst',
+//         password: 't_mvst_P@ss9',
+//         db: 'u232422107_mvst',
+//       ));
+//       return conn;
+//     } catch (e) {
+//       print('Erreur de connexion à la base de données: $e');
+//       return null;
+//     }
+//   }
+// }
+
+
 /*
 double calculeTailleEcran() {
     double screenWidth = MediaQuery.of(context).size.width;

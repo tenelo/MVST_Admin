@@ -1,35 +1,90 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
-import 'package:mysql1/mysql1.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
 class GraphiqueJourDepart extends StatefulWidget {
-  const GraphiqueJourDepart(
-      {super.key,
-      required this.gare,
-      required this.uid,
-      required this.documentId,
-      required this.date});
+  const GraphiqueJourDepart({
+    super.key,
+    required this.gare,
+    required this.uid,
+    required this.documentId,
+    required this.date,
+  });
   final String gare;
   final String uid;
   final String documentId;
   final String date;
+
   @override
   State<GraphiqueJourDepart> createState() => _GraphiqueJourDepartState();
 }
 
 class _GraphiqueJourDepartState extends State<GraphiqueJourDepart> {
   final TextEditingController _searchController = TextEditingController();
-  MySqlConnection? _connection;
   final List<MesDonneesTickets> ticketsData = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    recuperationDesTickets();
+    _chargerTickets();
   }
 
-  List<Color> listeDesCouleurs = [
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  // ── Charger les tickets via PHP ────────────────────────────────────────────
+  Future<void> _chargerTickets() async {
+    if (mounted) setState(() => _isLoading = true);
+    try {
+      final response = await http.post(
+        Uri.parse('https://mvst.tenelo.cloud/ticketsDuJour.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'documentId': widget.documentId,
+          'gare': widget.gare,
+        }),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          _classerLesTickets(List<Map<String, dynamic>>.from(data['tickets']));
+        }
+      }
+    } catch (e) {}
+    if (mounted) setState(() => _isLoading = false);
+  }
+
+  void _classerLesTickets(List<Map<String, dynamic>> tickets) {
+    final Map<String, int> destinationCounts = {};
+    for (var ticket in tickets) {
+      final destination = ticket['destination'] ?? '';
+      destinationCounts[destination] =
+          (destinationCounts[destination] ?? 0) + 1;
+    }
+    ticketsData.clear();
+    destinationCounts.forEach((destination, count) {
+      ticketsData.add(MesDonneesTickets(destination, count));
+    });
+  }
+
+  List<MesDonneesTickets> _getFilteredTickets() {
+    final query = _searchController.text.toLowerCase();
+    return ticketsData
+        .where((t) => t.destinations.toLowerCase().contains(query))
+        .toList();
+  }
+
+  int _getTotalPassagers() =>
+      ticketsData.fold(0, (sum, t) => sum + t.nombrePassagers);
+
+  final List<Color> listeDesCouleurs = const [
     Color.fromARGB(192, 6, 90, 132),
     Color.fromARGB(255, 255, 192, 0),
     Color.fromARGB(225, 85, 144, 80),
@@ -50,175 +105,78 @@ class _GraphiqueJourDepartState extends State<GraphiqueJourDepart> {
     Color.fromARGB(255, 255, 236, 79),
   ];
 
-  Stream<List<Map<String, dynamic>>> recuperationDesTickets() async* {
-    // Connexion à la base de données MySQL
-    _connection = await Connexion.connexionDB();
-    String sql = '''
-  SELECT *
-  FROM Tickets
-  WHERE documentId = ?
-''';
-    try {
-      Results result = await _connection!.query(sql, [widget.documentId]);
-
-      // Transformation du résultat en liste de maps
-      List<Map<String, dynamic>> tickets =
-          result.map((row) => row.fields).toList();
-      // Ce filtre permet de recupérer les tickets en fonction de la gare de l'utilisateur
-      tickets =
-          tickets.where((ticket) => ticket['depart'] == widget.gare).toList();
-
-      // Classification des tickets
-      _classerLesTickets(tickets);
-
-      // Émission des résultats dans le Stream
-      yield tickets;
-    } catch (e) {
-      yield [];
-    }
-  }
-
-  void _classerLesTickets(List<Map<String, dynamic>> tickets) {
-    Map<String, int> destinationCounts = {};
-
-    for (var ticket in tickets) {
-      var destination = ticket['destination'] ?? '';
-      destinationCounts[destination] =
-          (destinationCounts[destination] ?? 0) + 1;
-    }
-
-    ticketsData.clear();
-    destinationCounts.forEach((destination, count) {
-      ticketsData.add(MesDonneesTickets(destination, count));
-    });
-  }
-
-  List<MesDonneesTickets> getFilteredTickets() {
-    String query = _searchController.text.toLowerCase();
-    return ticketsData
-        .where((ticket) => ticket.destinations.toLowerCase().contains(query))
-        .toList();
-  }
-
-  int getTotalPassagers() {
-    return ticketsData.fold(0, (sum, ticket) => sum + ticket.nombrePassagers);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final filteredTickets = _getFilteredTickets();
     return Scaffold(
       appBar: AppBar(
-        iconTheme: IconThemeData(
-          color: Config.colors.bleuFonce2,
-        ),
+        iconTheme: IconThemeData(color: Config.colors.authCardBackground),
         title: TextField(
           controller: _searchController,
           decoration: InputDecoration(
             hintText: 'Rechercher...',
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30.0),
-              borderSide: BorderSide.none,
-            ),
+                borderRadius: BorderRadius.circular(30.0),
+                borderSide: BorderSide.none),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30.0),
-              borderSide: BorderSide(color: Colors.blueAccent, width: 2.0),
-            ),
+                borderRadius: BorderRadius.circular(30.0),
+                borderSide:
+                    const BorderSide(color: Colors.blueAccent, width: 2.0)),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(30.0),
-              borderSide: BorderSide(color: Colors.blue, width: 2.0),
-            ),
+                borderRadius: BorderRadius.circular(30.0),
+                borderSide: const BorderSide(color: Colors.blue, width: 2.0)),
             contentPadding:
-                EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
           ),
-          onChanged: (value) {
-            setState(() {}); // Actualiser l'état pour déclencher la recherche
-          },
+          onChanged: (value) => setState(() {}),
         ),
         centerTitle: true,
       ),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: recuperationDesTickets(),
-        builder: (BuildContext context,
-            AsyncSnapshot<List<Map<String, dynamic>>> snapshot) {
-          if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                'Problème de connexion...',
-                style: TextStyle(
-                    color: Config.colors.bleuFonce2,
-                    fontWeight: FontWeight.bold),
-              ),
-            );
-          }
-
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {}
-
-          final filteredTickets = getFilteredTickets();
-
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                Container(
-                  height: MediaQuery.of(context).size.height * 0.6,
-                  child: SfCartesianChart(
-                    primaryXAxis: CategoryAxis(
-                      labelStyle: TextStyle(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    primaryYAxis: NumericAxis(
-                      title: AxisTitle(
-                          //text: 'Nombre de Passagers',
-                          ),
-                      majorGridLines: MajorGridLines(width: 0),
-                      labelStyle: TextStyle(fontSize: 0),
-                    ),
-                    title: ChartTitle(
-                        text:
-                            'Les passagers par destinations\npartants de ${widget.gare}',
-                        textStyle: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Config.colors.bleuA)),
-                    legend: Legend(
-                      isVisible: true,
-                      textStyle: TextStyle(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    tooltipBehavior: TooltipBehavior(enable: true),
-                    series: <CartesianSeries<MesDonneesTickets, String>>[
-                      BarSeries<MesDonneesTickets, String>(
-                        borderRadius: BorderRadius.circular(4),
-                        sortingOrder: SortingOrder.descending,
-                        color: Colors.orange,
-                        name:
-                            'Passagers du ${widget.date} : ${getTotalPassagers()}',
-                        dataSource: filteredTickets,
-                        xValueMapper: (MesDonneesTickets data, _) =>
-                            data.destinations,
-                        yValueMapper: (MesDonneesTickets data, _) =>
-                            data.nombrePassagers,
-                        pointColorMapper: (MesDonneesTickets data, int index) =>
-                            listeDesCouleurs[index % listeDesCouleurs.length],
-                        dataLabelSettings: DataLabelSettings(
-                          isVisible: true,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              child: Column(
+                children: [
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.6,
+                    child: SfCartesianChart(
+                      primaryXAxis: const CategoryAxis(
+                          labelStyle: TextStyle(fontWeight: FontWeight.bold)),
+                      primaryYAxis: const NumericAxis(
+                          majorGridLines: MajorGridLines(width: 0),
+                          labelStyle: TextStyle(fontSize: 0)),
+                      title: ChartTitle(
+                          text:
+                              'Les passagers par destinations\npartants de ${widget.gare}',
                           textStyle: TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
+                              fontWeight: FontWeight.bold,
+                              color: Config.colors.bleuA)),
+                      legend: const Legend(
+                          isVisible: true,
+                          textStyle: TextStyle(fontWeight: FontWeight.w900)),
+                      tooltipBehavior: TooltipBehavior(enable: true),
+                      series: <CartesianSeries<MesDonneesTickets, String>>[
+                        BarSeries<MesDonneesTickets, String>(
+                          borderRadius: BorderRadius.circular(4),
+                          sortingOrder: SortingOrder.descending,
+                          name:
+                              'Passagers du ${widget.date} : ${_getTotalPassagers()}',
+                          dataSource: filteredTickets,
+                          xValueMapper: (d, _) => d.destinations,
+                          yValueMapper: (d, _) => d.nombrePassagers,
+                          pointColorMapper: (d, i) =>
+                              listeDesCouleurs[i % listeDesCouleurs.length],
+                          dataLabelSettings: const DataLabelSettings(
+                              isVisible: true,
+                              textStyle:
+                                  TextStyle(fontWeight: FontWeight.bold)),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          );
-        },
-      ),
     );
   }
 }

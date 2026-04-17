@@ -1,22 +1,24 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
-import 'package:mysql1/mysql1.dart';
-
-MySqlConnection? _connection;
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 
 class Suppression extends StatefulWidget {
-  const Suppression(
-      {super.key,
-      required this.dateHier,
-      required this.aujoudhui,
-      required this.demain,
-      required this.apresDemain});
+  const Suppression({
+    super.key,
+    required this.dateHier,
+    required this.aujoudhui,
+    required this.demain,
+    required this.apresDemain,
+  });
   final String dateHier;
   final String aujoudhui;
   final String demain;
   final String apresDemain;
+
   @override
   State<Suppression> createState() => _SuppressionState();
 }
@@ -38,50 +40,65 @@ class _SuppressionState extends State<Suppression> {
     _getDonnees();
   }
 
-  void _getDonnees() async {
-    setState(() {
-      _isLoading = true;
-    });
-    try {
-      _connection = await Connexion.connexionDB();
+  @override
+  void dispose() {
+    _rechercheParDate.dispose();
+    _rechercheParDestination.dispose();
+    _rechercheParNom.dispose();
+    _rechercheParHeure.dispose();
+    super.dispose();
+  }
 
-      var result = await _connection!.query(
-        'SELECT * FROM Tickets WHERE date IN (?, ?, ?, ?) ORDER BY dateDeCreation DESC',
-        [widget.dateHier, widget.aujoudhui, widget.demain, widget.apresDemain],
+  Future<void> _getDonnees() async {
+    if (mounted) setState(() => _isLoading = true);
+
+    try {
+      final response = await http.post(
+        Uri.parse('https://mvst.tenelo.cloud/suppressionTickets.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'dates': [
+            widget.dateHier,
+            widget.aujoudhui,
+            widget.demain,
+            widget.apresDemain,
+          ],
+        }),
       );
 
-      // Transformation du résultat en liste de maps
-      List<Map<String, dynamic>> tickets =
-          result.map((row) => row.fields).toList();
-
-      setState(() {
-        donnees = tickets;
-        _filtre = tickets;
-        _isLoading = false;
-      });
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          final tickets = List<Map<String, dynamic>>.from(data['tickets']);
+          if (mounted) {
+            setState(() {
+              donnees = tickets;
+              _filtre = tickets;
+              _isLoading = false;
+            });
+          }
+        }
+      }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _filtrerDonnees() {
-    String rechercheDate = _rechercheParDate.text.toLowerCase();
-    String rechercheDestination = _rechercheParDestination.text.toLowerCase();
-    String rechercheNom = _rechercheParNom.text.toLowerCase();
-    String rechercheHeure = _rechercheParHeure.text.toLowerCase();
+    final searchDate = _rechercheParDate.text.toLowerCase();
+    final searchDestination = _rechercheParDestination.text.toLowerCase();
+    final searchNom = _rechercheParNom.text.toLowerCase();
+    final searchHeure = _rechercheParHeure.text.toLowerCase();
 
     setState(() {
       donnees = _filtre.where((data) {
-        final dataDate = data['date'].toString().toLowerCase();
-        final dataDestination = data['destination'].toString().toLowerCase();
-        final dataNom = data['nom'].toString().toLowerCase();
-        final dataHeure = data['heure'].toString().toLowerCase();
-        return dataDate.contains(rechercheDate) &&
-            dataDestination.contains(rechercheDestination) &&
-            dataNom.contains(rechercheNom) &&
-            dataHeure.contains(rechercheHeure);
+        return data['date'].toString().toLowerCase().contains(searchDate) &&
+            data['destination']
+                .toString()
+                .toLowerCase()
+                .contains(searchDestination) &&
+            data['nom'].toString().toLowerCase().contains(searchNom) &&
+            data['heure'].toString().toLowerCase().contains(searchHeure);
       }).toList();
     });
   }
@@ -90,91 +107,94 @@ class _SuppressionState extends State<Suppression> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        iconTheme: IconThemeData(
-          color: Config.colors.bleuFonce2,
-        ),
+        iconTheme: IconThemeData(color: Config.colors.authCardBackground),
         title: Text(
           "Maintenir pour supprimer",
           style: TextStyle(
               fontSize: 14,
-              color: Config.colors.bleuFonce2,
+              color: Config.colors.authCardBackground,
               fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh, color: Config.colors.authCardBackground),
+            onPressed: _getDonnees,
+          ),
+        ],
       ),
       body: Container(
-        height: MediaQuery.of(context).size.height * 1,
+        height: MediaQuery.of(context).size.height,
         padding: const EdgeInsets.all(4.0),
         decoration: const BoxDecoration(
           color: Color.fromARGB(143, 228, 227, 227),
         ),
         child: Column(
           children: [
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
+            // ── Champs de recherche ───────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.only(top: 3, left: 4, right: 4),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  SizedBox(
-                    width: 170,
-                    height: 40,
+                  Expanded(
                     child: TextField(
                       controller: _rechercheParDate,
                       decoration: const InputDecoration(
-                        hintText: 'Recherche par date',
+                        hintText: 'Date',
                         hintStyle: TextStyle(fontSize: 11),
-                        prefixIcon: Icon(Icons.search),
+                        prefixIcon: Icon(Icons.search, size: 18),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(12.0)),
                         ),
+                        contentPadding: EdgeInsets.symmetric(vertical: 2),
                       ),
                       onChanged: (value) => _filtrerDonnees(),
                     ),
                   ),
-                  SizedBox(
-                    width: 198,
-                    height: 40,
+                  const SizedBox(width: 4),
+                  Expanded(
                     child: TextField(
                       controller: _rechercheParDestination,
                       decoration: const InputDecoration(
-                        hintText: 'Recherche par destination',
+                        hintText: 'Destination',
                         hintStyle: TextStyle(fontSize: 11),
-                        prefixIcon: Icon(Icons.search),
+                        prefixIcon: Icon(Icons.search, size: 18),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(12.0)),
                         ),
+                        contentPadding: EdgeInsets.symmetric(vertical: 2),
                       ),
                       onChanged: (value) => _filtrerDonnees(),
                     ),
                   ),
-                  SizedBox(
-                    width: 180,
-                    height: 40,
+                  const SizedBox(width: 4),
+                  Expanded(
                     child: TextField(
                       controller: _rechercheParNom,
                       decoration: const InputDecoration(
-                        hintText: 'Recherche par nom',
+                        hintText: 'Nom',
                         hintStyle: TextStyle(fontSize: 11),
-                        prefixIcon: Icon(Icons.search),
+                        prefixIcon: Icon(Icons.search, size: 18),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(12.0)),
                         ),
+                        contentPadding: EdgeInsets.symmetric(vertical: 2),
                       ),
                       onChanged: (value) => _filtrerDonnees(),
                     ),
                   ),
-                  SizedBox(
-                    width: 180,
-                    height: 40,
+                  const SizedBox(width: 4),
+                  Expanded(
                     child: TextField(
                       controller: _rechercheParHeure,
                       decoration: const InputDecoration(
-                        hintText: 'Recherche par heure',
+                        hintText: 'Heure',
                         hintStyle: TextStyle(fontSize: 11),
-                        prefixIcon: Icon(Icons.search),
+                        prefixIcon: Icon(Icons.search, size: 18),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(12.0)),
                         ),
+                        contentPadding: EdgeInsets.symmetric(vertical: 2),
                       ),
                       onChanged: (value) => _filtrerDonnees(),
                     ),
@@ -182,9 +202,12 @@ class _SuppressionState extends State<Suppression> {
                 ],
               ),
             ),
+            // ── Tableau ───────────────────────────────────────────────────
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(
+                      child: CircularProgressIndicator(
+                          color: Config.colors.authCardBackground))
                   : SingleChildScrollView(
                       child: SizedBox(
                         width: double.infinity,
@@ -196,7 +219,7 @@ class _SuppressionState extends State<Suppression> {
                               child: Text(
                                 "NOMBRE TOTAL DE TICKETS : ${donnees.length}",
                                 style: TextStyle(
-                                    color: Config.colors.bleuFonce2,
+                                    color: Config.colors.authCardBackground,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14),
                               ),
@@ -206,72 +229,56 @@ class _SuppressionState extends State<Suppression> {
                             showFirstLastButtons: true,
                             columns: const [
                               DataColumn(
-                                label: Text(
-                                  'Dates',
-                                  style: TextStyle(
-                                      color: Color.fromARGB(255, 9, 15, 123),
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ),
+                                  label: Text('Dates',
+                                      style: TextStyle(
+                                          color:
+                                              Color.fromARGB(255, 9, 15, 123),
+                                          fontWeight: FontWeight.bold))),
                               DataColumn(
-                                label: Text(
-                                  'Heures',
-                                  style: TextStyle(
-                                      color: Color.fromARGB(255, 9, 15, 123),
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ),
+                                  label: Text('Heures',
+                                      style: TextStyle(
+                                          color:
+                                              Color.fromARGB(255, 9, 15, 123),
+                                          fontWeight: FontWeight.bold))),
                               DataColumn(
-                                label: Text(
-                                  'Départs',
-                                  style: TextStyle(
-                                      color: Color.fromARGB(255, 9, 15, 123),
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ),
+                                  label: Text('Départs',
+                                      style: TextStyle(
+                                          color:
+                                              Color.fromARGB(255, 9, 15, 123),
+                                          fontWeight: FontWeight.bold))),
                               DataColumn(
-                                label: Text(
-                                  'Destinations',
-                                  style: TextStyle(
-                                      color: Color.fromARGB(255, 9, 15, 123),
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ),
+                                  label: Text('Destinations',
+                                      style: TextStyle(
+                                          color:
+                                              Color.fromARGB(255, 9, 15, 123),
+                                          fontWeight: FontWeight.bold))),
                               DataColumn(
-                                label: Text(
-                                  'Places',
-                                  style: TextStyle(
-                                      color: Color.fromARGB(255, 9, 15, 123),
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ),
+                                  label: Text('Places',
+                                      style: TextStyle(
+                                          color:
+                                              Color.fromARGB(255, 9, 15, 123),
+                                          fontWeight: FontWeight.bold))),
                               DataColumn(
-                                label: Text(
-                                  'Tarifs',
-                                  style: TextStyle(
-                                      color: Color.fromARGB(255, 9, 15, 123),
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ),
+                                  label: Text('Tarifs',
+                                      style: TextStyle(
+                                          color:
+                                              Color.fromARGB(255, 9, 15, 123),
+                                          fontWeight: FontWeight.bold))),
                               DataColumn(
-                                label: Text(
-                                  'Clients',
-                                  style: TextStyle(
-                                      color: Color.fromARGB(255, 9, 15, 123),
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ),
+                                  label: Text('Clients',
+                                      style: TextStyle(
+                                          color:
+                                              Color.fromARGB(255, 9, 15, 123),
+                                          fontWeight: FontWeight.bold))),
                             ],
                             rowsPerPage: _rowsPerPage,
                             availableRowsPerPage: const [10, 20, 50],
                             onRowsPerPageChanged: (int? value) {
-                              if (value != null) {
-                                setState(() {
-                                  _rowsPerPage = value;
-                                });
-                              }
+                              if (value != null)
+                                setState(() => _rowsPerPage = value);
                             },
-                            source: TicketDataSource(donnees, context),
+                            source:
+                                TicketDataSource(donnees, context, _getDonnees),
                           ),
                         ),
                       ),
@@ -285,82 +292,79 @@ class _SuppressionState extends State<Suppression> {
 }
 
 class TicketDataSource extends DataTableSource {
-  List<Map<String, dynamic>> tickets;
+  final List<Map<String, dynamic>> tickets;
   final BuildContext context;
+  final VoidCallback onRefresh;
 
-  TicketDataSource(this.tickets, this.context);
+  TicketDataSource(this.tickets, this.context, this.onRefresh);
 
   DateTime parseDate(String dateStr) {
-    DateFormat dateFormatFr = DateFormat('EEEE d MMMM yyyy', 'fr_FR');
-    DateTime dateTime = dateFormatFr.parse(dateStr);
-    return dateTime;
+    return DateFormat('EEEE d MMMM yyyy', 'fr_FR').parse(dateStr);
   }
 
   @override
   DataRow? getRow(int index) {
     if (index >= tickets.length) return null;
-    final ticketSnapshot = tickets[index];
-    final ticket = ticketSnapshot;
-    var idDuTicket = ticket['id'];
-    var idUtilisateur = ticket['idUtilisateur'];
-    DateTime date = parseDate(ticket['date'].toString());
-
-    String formattedDate = DateFormat('dd MMMM yyyy', 'fr_FR').format(date);
+    final ticket = tickets[index];
+    final date = parseDate(ticket['date'].toString());
+    final formattedDate = DateFormat('dd MMMM yyyy', 'fr_FR').format(date);
 
     return DataRow.byIndex(
       index: index,
       cells: [
-        DataCell(Text(formattedDate, style: TextStyle(fontSize: 13)),
-            onLongPress: () =>
-                supprimerTicket(idDuTicket, idUtilisateur, ticket['nom'])),
-        DataCell(Text("${ticket['heure']} h", style: TextStyle(fontSize: 13)),
-            onLongPress: () =>
-                supprimerTicket(idDuTicket, idUtilisateur, ticket['nom'])),
-        DataCell(Text(ticket['depart'], style: TextStyle(fontSize: 13)),
-            onLongPress: () =>
-                supprimerTicket(idDuTicket, idUtilisateur, ticket['nom'])),
-        DataCell(Text(ticket['destination'], style: TextStyle(fontSize: 13)),
-            onLongPress: () =>
-                supprimerTicket(idDuTicket, idUtilisateur, ticket['nom'])),
+        DataCell(Text(formattedDate, style: const TextStyle(fontSize: 13)),
+            onLongPress: () => _supprimerTicket(
+                ticket['id'], ticket['idUtilisateur'], ticket['nom'])),
         DataCell(
-            Text(ticket['place'].toString(), style: TextStyle(fontSize: 13)),
-            onLongPress: () =>
-                supprimerTicket(idDuTicket, idUtilisateur, ticket['nom'])),
+            Text("${ticket['heure']} h", style: const TextStyle(fontSize: 13)),
+            onLongPress: () => _supprimerTicket(
+                ticket['id'], ticket['idUtilisateur'], ticket['nom'])),
+        DataCell(
+            Text(ticket['depart'].toString(),
+                style: const TextStyle(fontSize: 13)),
+            onLongPress: () => _supprimerTicket(
+                ticket['id'], ticket['idUtilisateur'], ticket['nom'])),
+        DataCell(
+            Text(ticket['destination'].toString(),
+                style: const TextStyle(fontSize: 13)),
+            onLongPress: () => _supprimerTicket(
+                ticket['id'], ticket['idUtilisateur'], ticket['nom'])),
+        DataCell(
+            Text(ticket['place'].toString(),
+                style: const TextStyle(fontSize: 13)),
+            onLongPress: () => _supprimerTicket(
+                ticket['id'], ticket['idUtilisateur'], ticket['nom'])),
         DataCell(
             Text(ticket['prixDuTicket'].toString(),
-                style: TextStyle(fontSize: 13)),
-            onLongPress: () =>
-                supprimerTicket(idDuTicket, idUtilisateur, ticket['nom'])),
-        DataCell(Text(ticket['nom'].toString(), style: TextStyle(fontSize: 13)),
-            onLongPress: () =>
-                supprimerTicket(idDuTicket, idUtilisateur, ticket['nom'])),
+                style: const TextStyle(fontSize: 13)),
+            onLongPress: () => _supprimerTicket(
+                ticket['id'], ticket['idUtilisateur'], ticket['nom'])),
+        DataCell(
+            Text(ticket['nom'].toString(),
+                style: const TextStyle(fontSize: 13)),
+            onLongPress: () => _supprimerTicket(
+                ticket['id'], ticket['idUtilisateur'], ticket['nom'])),
       ],
     );
   }
 
-  void supprimerTicket(int id, String idUtilisateur, String nom) async {
+  void _supprimerTicket(int id, String idUtilisateur, String nom) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          titleTextStyle: TextStyle(
-            color: Colors.red[300],
-            fontWeight: FontWeight.bold,
-          ),
-          title: Center(child: Text('Confirmer la suppression')),
+          titleTextStyle:
+              TextStyle(color: Colors.red[300], fontWeight: FontWeight.bold),
+          title: const Center(child: Text('Confirmer la suppression')),
           content: RichText(
             text: TextSpan(
               text: 'Êtes-vous sûr de vouloir supprimer le ticket pris par ',
               style: const TextStyle(color: Colors.black),
               children: [
                 TextSpan(
-                  text: nom,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold), // Gras pour le nom
-                ),
-                const TextSpan(
-                  text: ' ?',
-                ),
+                    text: nom,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                const TextSpan(text: ' ?'),
               ],
             ),
           ),
@@ -369,112 +373,70 @@ class TicketDataSource extends DataTableSource {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: Text(
-                    'Non',
-                    style: TextStyle(
-                      color: Colors.blue,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Non',
+                      style: TextStyle(
+                          color: Colors.blue, fontWeight: FontWeight.bold)),
                 ),
                 TextButton(
                   onPressed: () async {
                     Navigator.of(context).pop();
                     try {
-                      _connection = await Connexion.connexionDB();
-                      await _connection!
-                          .query('DELETE FROM Tickets WHERE id = ?', [id]);
-
-                      decrementerPointsFirebase(idUtilisateur);
-                      decrementePointsMySQL(idUtilisateur);
-                      afficherMessageConfirmation();
-                    } catch (e) {
-                      // Afficher un message d'erreur en cas d'échec
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Erreur lors de la suppression.'),
-                          duration: Duration(seconds: 5),
-                        ),
+                      // ── Supprimer via PHP ──────────────────────────────
+                      await http.post(
+                        Uri.parse(
+                            'https://mvst.tenelo.cloud/suppressionTickets.php'),
+                        headers: {'Content-Type': 'application/json'},
+                        body: jsonEncode({'action': 'supprimer', 'id': id}),
                       );
-                      Navigator.of(context).pop();
+
+                      // ── Décrémenter points ────────────────────
+                      await _decrementerPoints(idUtilisateur);
+
+                      // ── Rafraîchir la liste ────────────────────
+                      onRefresh();
+                      _afficherMessageConfirmation();
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Erreur lors de la suppression.')),
+                      );
                     }
                   },
-                  child: Text(
-                    'Oui',
-                    style: TextStyle(
-                      color: Colors.red[300],
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: Text('Oui',
+                      style: TextStyle(
+                          color: Colors.red[300], fontWeight: FontWeight.bold)),
                 ),
               ],
-            )
+            ),
           ],
         );
       },
     );
   }
 
-  Future<void> decrementerPointsFirebase(String idDoc) async {
+  Future<void> _decrementerPoints(String idUtilisateur) async {
     try {
-      // Référence au document de l'utilisateur
-      DocumentReference userRef =
-          FirebaseFirestore.instance.collection('utilisateurs').doc(idDoc);
-
-      // Transaction pour récupérer et mettre à jour le nombre de points
-      await FirebaseFirestore.instance.runTransaction((transaction) async {
-        // Récupérer le document actuel
-        DocumentSnapshot snapshot = await transaction.get(userRef);
-
-        if (snapshot.exists) {
-          // Obtenir le nombre de points actuel
-          int points = snapshot['points'] ?? 0;
-
-          // Réduire de 1 le nombre de points, en s'assurant qu'il ne devienne pas négatif
-          int nouveauxPoints = (points > 0) ? points - 1 : 0;
-
-          // Mettre à jour les points dans Firestore
-          transaction.update(userRef, {'points': nouveauxPoints});
-        } else {
-          throw Exception("Utilisateur non trouvé");
-        }
-      });
-    } catch (e) {}
-  }
-
-  Future<void> decrementePointsMySQL(String idUtilisateur) async {
-    try {
-      _connection = await Connexion.connexionDB();
-      var result = await _connection!.query(
-        'UPDATE Utilisateurs SET points = points - 1 WHERE idUtilisateur = ?',
-        [idUtilisateur],
+      await http.post(
+        Uri.parse('https://mvst.tenelo.cloud/decrementerPoints.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'idUtilisateur': idUtilisateur}),
       );
-      // Vérifier si la requête a été exécutée avec succès
-      if (result.affectedRows! > 0) {
-      } else {}
     } catch (e) {}
   }
 
-  void afficherMessageConfirmation() async {
+  void _afficherMessageConfirmation() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
+        return const AlertDialog(
           title: Center(child: Text('Ticket supprimé')),
         );
       },
     );
-
-    // Fermer l'AlertDialog après 2 secondes
-    Future.delayed(Duration(seconds: 5), () {
-      if (Navigator.canPop(context)) {
-        Navigator.of(context).pop(); // Fermer l'AlertDialog automatiquement
-      }
+    Future.delayed(const Duration(seconds: 3), () {
+      if (Navigator.canPop(context)) Navigator.of(context).pop();
     });
-    Navigator.of(context).pop();
   }
 
   @override

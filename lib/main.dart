@@ -4,7 +4,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/authentification/authentification.dart';
@@ -21,13 +20,17 @@ import 'package:mvst_admin/screens/parametres.dart';
 import 'package:mvst_admin/screens/profil.dart';
 import 'package:mvst_admin/screens/suppression/suppression.dart';
 import 'package:mvst_admin/screens/tableaudestickets.dart';
+import 'package:mvst_admin/screens/suggestions_admin.dart';
 import 'package:mvst_admin/verifTickets/verifierticket.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 DateTime? dateActuelle = DateTime.now();
 
-DateTime aujourdhui =
-    DateTime(dateActuelle!.year, dateActuelle!.month, dateActuelle!.day);
+DateTime aujourdhui = DateTime(
+  dateActuelle!.year,
+  dateActuelle!.month,
+  dateActuelle!.day,
+);
 DateTime dateDeDemain = aujourdhui.add(Duration(days: 1));
 DateTime dateApresDemain = aujourdhui.add(Duration(days: 2));
 DateTime dateDhier = aujourdhui.subtract(Duration(days: 1));
@@ -36,15 +39,21 @@ var idDate = DateFormat('EEEE_d_MMMM_y', 'fr_FR').format(aujourdhui);
 var idMoisAnnee = DateFormat('MMMM_y', 'fr_FR').format(aujourdhui);
 var idAnnee = DateFormat('y', 'fr_FR').format(aujourdhui);
 var dateAujourdhui = DateFormat('yyyy-MM-dd', 'fr_FR').format(aujourdhui);
-var dateDApresDemain =
-    DateFormat('yyyy-MM-dd', 'fr_FR').format(dateApresDemain);
+var dateDApresDemain = DateFormat(
+  'yyyy-MM-dd',
+  'fr_FR',
+).format(dateApresDemain);
 /////////////////
 var dateNormaleHiere = DateFormat('EEEE d MMMM y', 'fr_FR').format(dateDhier);
 var dateNormale = DateFormat('EEEE d MMMM y', 'fr_FR').format(aujourdhui);
-var dateNormaleDemain =
-    DateFormat('EEEE d MMMM y', 'fr_FR').format(dateDeDemain);
-var dateNormaleApresdemain =
-    DateFormat('EEEE d MMMM y', 'fr_FR').format(dateApresDemain);
+var dateNormaleDemain = DateFormat(
+  'EEEE d MMMM y',
+  'fr_FR',
+).format(dateDeDemain);
+var dateNormaleApresdemain = DateFormat(
+  'EEEE d MMMM y',
+  'fr_FR',
+).format(dateApresDemain);
 
 // Formater les dates
 String formatLong = 'EEEE d MMMM y'; // Exemple : jeudi 2 janvier 2025
@@ -54,26 +63,27 @@ String dateApresDemainStr = DateFormat(formatLong).format(dateApresDemain);
 String dateDhierStr = DateFormat(formatLong).format(dateDhier);
 
 User? user;
+String? profil;
 int? tailleEcran;
 double? taille;
 String? gare;
 String? uid;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Désactive la rotation de l'écran en mode paysage
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  // Initialiser les données de localisation pour 'fr_FR'
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await initializeDateFormatting('fr_FR', null);
-  listeDesTicketsScannes = await ListesDesTickets.ticketsAscanner();
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  final String gareAdmin = prefs.getString('gare') ?? '';
+  final String profilAdmin = prefs.getString('profil') ?? 'admin';
+  listeDesTicketsScannes = await ListesDesTickets.ticketsAscanner(
+    gareAdmin,
+    profilAdmin,
+  );
   runApp(const MyApp());
-
-  listenForTicketChanges();
 }
 
 class MyApp extends StatelessWidget {
@@ -94,9 +104,7 @@ class MyApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('fr', ''),
-      ],
+      supportedLocales: const [Locale('fr', '')],
       home: const Accueil(),
     );
   }
@@ -111,6 +119,7 @@ class Accueil extends StatefulWidget {
 
 class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
   bool isLoading = false;
+  int _selectedIndex = 0;
 
   @override
   void initState() {
@@ -139,18 +148,31 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
     });
   }
 
+  static const _titres = ['CONTROLEURS MVST', 'PARAMÈTRES'];
+
   @override
   Widget build(BuildContext context) {
+    final c = Config.colors;
     return Stack(
       children: [
         Scaffold(
           appBar: AppBar(
-            backgroundColor: Config.colors.jauneBlanc,
-            title: const Text(
-              'CONTROLEURS MVST',
-              style: TextStyle(color: Colors.black),
+            iconTheme: IconThemeData(color: c.jauneBlanc),
+            backgroundColor: c.authCardBackground,
+            title: Text(
+              _titres[_selectedIndex],
+              style: TextStyle(
+                color: c.jauneBlanc,
+                fontSize: 22,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.5,
+              ),
             ),
             centerTitle: true,
+          ),
+          bottomNavigationBar: _BottomNav(
+            selectedIndex: _selectedIndex,
+            onTap: (i) => setState(() => _selectedIndex = i),
           ),
           drawer: Drawer(
             child: Column(
@@ -160,9 +182,7 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                     padding: EdgeInsets.zero,
                     children: [
                       DrawerHeader(
-                        decoration: BoxDecoration(
-                          color: Config.colors.bleuFonce2,
-                        ),
+                        decoration: BoxDecoration(color: c.authCardBackground),
                         child: Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -173,7 +193,7 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: Config.colors.jauneBlanc,
+                                    color: c.jauneBlanc,
                                     width: 2.0,
                                   ),
                                 ),
@@ -181,7 +201,7 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                                   child: Text(
                                     'MVST',
                                     style: TextStyle(
-                                      color: Config.colors.bleuClaire,
+                                      color: c.jauneBlanc,
                                       fontSize: 24,
                                       fontFamily: 'Lobster',
                                     ),
@@ -195,12 +215,12 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                       ListTile(
                         leading: Icon(
                           Icons.perm_identity_outlined,
-                          color: Config.colors.bleuClaire,
+                          color: c.bleuClaire,
                         ),
                         title: Text(
                           'Profil',
                           style: TextStyle(
-                            color: Config.colors.bleuClaire,
+                            color: c.bleuClaire,
                             fontFamily: 'Lobster',
                           ),
                         ),
@@ -234,12 +254,12 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                       ListTile(
                         leading: Icon(
                           Icons.settings_outlined,
-                          color: Config.colors.bleuClaire,
+                          color: c.bleuClaire,
                         ),
                         title: Text(
                           'Parametres',
                           style: TextStyle(
-                            color: Config.colors.bleuClaire,
+                            color: c.bleuClaire,
                             fontFamily: 'Lobster',
                           ),
                         ),
@@ -258,14 +278,11 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                         },
                       ),
                       ListTile(
-                        leading: Icon(
-                          Icons.search,
-                          color: Config.colors.bleuClaire,
-                        ),
+                        leading: Icon(Icons.search, color: c.bleuClaire),
                         title: Text(
                           'Vérifications de tickets',
                           style: TextStyle(
-                            color: Config.colors.bleuClaire,
+                            color: c.bleuClaire,
                             fontFamily: 'Lobster',
                           ),
                         ),
@@ -285,13 +302,35 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                       ),
                       ListTile(
                         leading: Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          color: c.bleuClaire,
+                        ),
+                        title: Text(
+                          'Suggestions',
+                          style: TextStyle(
+                            color: c.bleuClaire,
+                            fontFamily: 'Lobster',
+                          ),
+                        ),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SuggestionsAdmin(),
+                            ),
+                          );
+                        },
+                      ),
+                      ListTile(
+                        leading: Icon(
                           Icons.power_settings_new,
-                          color: Config.colors.bleuClaire,
+                          color: c.bleuClaire,
                         ),
                         title: Text(
                           'Déconnexion',
                           style: TextStyle(
-                            color: Config.colors.bleuClaire,
+                            color: c.bleuClaire,
                             fontFamily: 'Lobster',
                           ),
                         ),
@@ -301,14 +340,11 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                   ),
                 ),
                 ListTile(
-                  leading: Icon(
-                    Icons.info_outlined,
-                    color: Config.colors.bleuClaire,
-                  ),
+                  leading: Icon(Icons.info_outlined, color: c.bleuClaire),
                   title: Text(
                     'À propos du développeur',
                     style: TextStyle(
-                      color: Config.colors.bleuClaire,
+                      color: c.bleuClaire,
                       fontFamily: 'Lobster',
                     ),
                   ),
@@ -323,156 +359,29 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
               ],
             ),
           ),
-          body: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(
-                  height: 150,
-                ),
-                Expanded(
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 8,
-                    mainAxisSpacing: 8,
-                    children: [
-                      scannQrCode(context, setLoadingState),
-                      ticketsScannes(context, setLoadingState),
-                      graphiques(context, setLoadingState),
-                      tableau(context, setLoadingState),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          floatingActionButton: SpeedDial(
-            animatedIcon: AnimatedIcons.menu_close,
-            backgroundColor: Config.colors.jauneBlanc,
-            overlayColor: Colors.black,
-            overlayOpacity: 0.5,
-            spacing: 10,
-            spaceBetweenChildren: 10,
+          body: IndexedStack(
+            index: _selectedIndex,
             children: [
-              SpeedDialChild(
-                child: Icon(
-                  Icons.delete_forever_outlined,
-                  color: Colors.red[300],
-                  size: 30,
+              Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: GridView.count(
+                  crossAxisCount: 2,
+                  childAspectRatio: 1.25,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  children: [
+                    scannQrCode(context, setLoadingState),
+                    ticketsScannes(context, setLoadingState),
+                    graphiques(context, setLoadingState),
+                    tableau(context, setLoadingState),
+                    placesOccupees(context, setLoadingState),
+                    listePassagers(context, setLoadingState),
+                    suppressionTickets(context, setLoadingState),
+                    suggestions(context, setLoadingState),
+                  ],
                 ),
-                label: 'Supprimer ticket',
-                labelStyle: TextStyle(
-                  fontSize: 16.0,
-                  color: Colors.red[300],
-                  fontWeight: FontWeight.bold,
-                ),
-                onTap: () async {
-                  setLoadingState(true);
-                  if (FirebaseAuth.instance.currentUser != null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => Suppression(
-                          dateHier: dateNormaleHiere,
-                          aujoudhui: dateNormale,
-                          demain: dateNormaleDemain,
-                          apresDemain: dateNormaleApresdemain,
-                        ),
-                      ),
-                    ).then((_) => setLoadingState(false));
-                  } else {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const Login(),
-                      ),
-                    ).then((_) => setLoadingState(false));
-                  }
-                },
               ),
-              SpeedDialChild(
-                child: Icon(
-                  Icons.format_list_bulleted,
-                  color: Config.colors.bleuA,
-                  size: 30,
-                ),
-                label: 'Liste des passagers',
-                labelStyle: TextStyle(
-                  fontSize: 16.0,
-                  color: Config.colors.bleuA,
-                  fontWeight: FontWeight.bold,
-                ),
-                onTap: () async {
-                  setLoadingState(true);
-                  if (FirebaseAuth.instance.currentUser != null) {
-                    user = FirebaseAuth.instance.currentUser;
-                    final String _uid = user!.uid;
-                    final String? _gare = await recupererGare(_uid);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            DepartsListePassagersPourBtFlottant(
-                          gare: _gare!,
-                          uid: _uid,
-                          date: idDate,
-                          dateNormale: dateNormale,
-                          tailleEcran: tailleEcran!,
-                        ),
-                      ),
-                    ).then((_) => setLoadingState(false));
-                  } else {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const Login(),
-                      ),
-                    ).then((_) => setLoadingState(false));
-                  }
-                },
-              ),
-              SpeedDialChild(
-                child: Icon(
-                  Icons.event_seat,
-                  color: Config.colors.bleuA,
-                  size: 30,
-                ),
-                label: 'Places occupées',
-                labelStyle: TextStyle(
-                  fontSize: 16.0,
-                  color: Config.colors.bleuA,
-                  fontWeight: FontWeight.bold,
-                ),
-                onTap: () async {
-                  setLoadingState(true);
-                  if (FirebaseAuth.instance.currentUser != null) {
-                    user = FirebaseAuth.instance.currentUser;
-                    final String _uid = user!.uid;
-                    final String? _gare = await recupererGare(_uid);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            DepartsPlacesAssicesPourBtFlottant(
-                          gare: _gare!,
-                          uid: _uid,
-                          date: idDate,
-                          dateNormale: dateNormale,
-                          tailleEcran: tailleEcran!,
-                        ),
-                      ),
-                    ).then((_) => setLoadingState(false));
-                  } else {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const Login(),
-                      ),
-                    ).then((_) => setLoadingState(false));
-                  }
-                },
-              ),
+              const ParametresBody(),
             ],
           ),
         ),
@@ -486,9 +395,7 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Center(
-                  child: CircularProgressIndicator(),
-                ),
+                child: const Center(child: CircularProgressIndicator()),
               ),
             ),
           ),
@@ -497,19 +404,180 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
   }
 }
 
-Widget scannQrCode(BuildContext ctx, Function setLoadingState) {
+// ── Bottom nav  ─────────────────────────────────────────────────────────
+class _BottomNav extends StatelessWidget {
+  final int selectedIndex;
+  final ValueChanged<int> onTap;
+  const _BottomNav({required this.selectedIndex, required this.onTap});
+
+  static const _items = [
+    (
+      icon: Icons.home_outlined,
+      activeIcon: Icons.home_rounded,
+      label: 'Accueil',
+    ),
+    (
+      icon: Icons.settings_outlined,
+      activeIcon: Icons.settings,
+      label: 'Paramètres',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final c = Config.colors;
+    return Container(
+      height: 64,
+      decoration: BoxDecoration(
+        color: c.authCardBackground,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          for (int i = 0; i < _items.length; i++)
+            Expanded(
+              child: _NavTab(
+                icon: _items[i].icon,
+                activeIcon: _items[i].activeIcon,
+                label: _items[i].label,
+                selected: selectedIndex == i,
+                onTap: () => onTap(i),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavTab extends StatelessWidget {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _NavTab({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? Config.colors.jauneBlanc : Colors.white54;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: Icon(
+              selected ? activeIcon : icon,
+              key: ValueKey(selected),
+              color: color,
+              size: 26,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+              letterSpacing: 0.3,
+            ),
+          ),
+          const SizedBox(height: 4),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+            height: 3,
+            width: selected ? 24 : 0,
+            decoration: BoxDecoration(
+              color: Config.colors.jauneBlanc,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Helper carte commune ──────────────────────────────────────────────────────
+Widget _carteMenu({
+  required BuildContext ctx,
+  required Function setLoadingState,
+  required Future<void> Function() onTap,
+  required IconData icon,
+  required String label,
+  Color? iconColor,
+}) {
+  final c = Config.colors;
+  final color = iconColor ?? c.couleurIcone;
   return GestureDetector(
     onTap: () async {
       setLoadingState(true);
-      await ListesDesTickets.ticketsAscanner();
+      await onTap();
+    },
+    child: Card(
+      //color: Colors.white,
+      shadowColor: c.couleurOmbreCarte,
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(icon, size: 52, color: color),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                // color: Colors.black87,
+                color: c.couleurIcone,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Widget scannQrCode(BuildContext ctx, Function setLoadingState) {
+  return _carteMenu(
+    ctx: ctx,
+    setLoadingState: setLoadingState,
+    icon: Icons.qr_code_scanner_outlined,
+    label: 'SCANNER LES TICKETS',
+    onTap: () async {
       if (FirebaseAuth.instance.currentUser != null) {
         user = FirebaseAuth.instance.currentUser;
         final String _uid = user!.uid;
         final String? _gare = await recupererGare(_uid);
+        final String profilAdmin = await recupererProfil() ?? 'admin';
+        await ListesDesTickets.ticketsAscanner(_gare ?? '', profilAdmin);
         Navigator.push(
           ctx,
           MaterialPageRoute(
-            builder: (BuildContext context) => LecteurQrCode(
+            builder: (_) => LecteurQrCode(
               gare: _gare!,
               uid: _uid,
               dateNormale: dateNormale,
@@ -521,41 +589,20 @@ Widget scannQrCode(BuildContext ctx, Function setLoadingState) {
       } else {
         Navigator.pushReplacement(
           ctx,
-          MaterialPageRoute(
-            builder: (context) => const Login(),
-          ),
+          MaterialPageRoute(builder: (_) => const Login()),
         ).then((_) => setLoadingState(false));
       }
     },
-    child: Card(
-      shadowColor: Colors.blue,
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: const [
-            SizedBox(
-              width: 70,
-              height: 70,
-              child: Icon(
-                Icons.qr_code_scanner_outlined,
-                size: 60,
-              ),
-            ),
-            Text("SCANNER LES TICKETS")
-          ],
-        ),
-      ),
-    ),
   );
 }
 
 Widget ticketsScannes(BuildContext ctx, Function setLoadingState) {
-  return GestureDetector(
+  return _carteMenu(
+    ctx: ctx,
+    setLoadingState: setLoadingState,
+    icon: CupertinoIcons.tickets,
+    label: 'TICKETS SCANNÉS',
     onTap: () async {
-      setLoadingState(true);
       if (FirebaseAuth.instance.currentUser != null) {
         user = FirebaseAuth.instance.currentUser;
         final String _uid = user!.uid;
@@ -563,7 +610,7 @@ Widget ticketsScannes(BuildContext ctx, Function setLoadingState) {
         Navigator.push(
           ctx,
           MaterialPageRoute(
-            builder: (BuildContext context) => MenuLateral(
+            builder: (_) => MenuLateral(
               gare: _gare!,
               uid: _uid,
               tailleEcran: tailleEcran!,
@@ -575,41 +622,20 @@ Widget ticketsScannes(BuildContext ctx, Function setLoadingState) {
       } else {
         Navigator.pushReplacement(
           ctx,
-          MaterialPageRoute(
-            builder: (context) => const Login(),
-          ),
+          MaterialPageRoute(builder: (_) => const Login()),
         ).then((_) => setLoadingState(false));
       }
     },
-    child: Card(
-      shadowColor: Colors.blue,
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: const [
-            SizedBox(
-              width: 70,
-              height: 70,
-              child: Icon(
-                CupertinoIcons.tickets,
-                size: 60,
-              ),
-            ),
-            Text("TICKETS SCANNÉS")
-          ],
-        ),
-      ),
-    ),
   );
 }
 
 Widget graphiques(BuildContext ctx, Function setLoadingState) {
-  return GestureDetector(
+  return _carteMenu(
+    ctx: ctx,
+    setLoadingState: setLoadingState,
+    icon: Icons.bar_chart_outlined,
+    label: 'GRAPHIQUES',
     onTap: () async {
-      setLoadingState(true);
       if (FirebaseAuth.instance.currentUser != null) {
         user = FirebaseAuth.instance.currentUser;
         final String _uid = user!.uid;
@@ -617,7 +643,7 @@ Widget graphiques(BuildContext ctx, Function setLoadingState) {
         Navigator.push(
           ctx,
           MaterialPageRoute(
-            builder: (BuildContext context) => GraphiquesABarres(
+            builder: (_) => GraphiquesABarres(
               gare: _gare!,
               uid: _uid,
               date: idDate,
@@ -629,41 +655,20 @@ Widget graphiques(BuildContext ctx, Function setLoadingState) {
       } else {
         Navigator.pushReplacement(
           ctx,
-          MaterialPageRoute(
-            builder: (context) => const Login(),
-          ),
+          MaterialPageRoute(builder: (_) => const Login()),
         ).then((_) => setLoadingState(false));
       }
     },
-    child: Card(
-      shadowColor: Colors.blue,
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: const [
-            SizedBox(
-              width: 70,
-              height: 70,
-              child: Icon(
-                Icons.bar_chart_outlined,
-                size: 60,
-              ),
-            ),
-            Text("GRAPHIQUES")
-          ],
-        ),
-      ),
-    ),
   );
 }
 
 Widget tableau(BuildContext ctx, Function setLoadingState) {
-  return GestureDetector(
+  return _carteMenu(
+    ctx: ctx,
+    setLoadingState: setLoadingState,
+    icon: Icons.format_list_bulleted_sharp,
+    label: 'TABLEAU',
     onTap: () async {
-      setLoadingState(true);
       if (FirebaseAuth.instance.currentUser != null) {
         user = FirebaseAuth.instance.currentUser;
         final String _uid = user!.uid;
@@ -671,44 +676,135 @@ Widget tableau(BuildContext ctx, Function setLoadingState) {
         Navigator.push(
           ctx,
           MaterialPageRoute(
-            builder: (BuildContext context) => TableauDeTickets(
+            builder: (_) =>
+                TableauDeTickets(gare: _gare!, uid: _uid, date: idAnnee),
+          ),
+        ).then((_) => setLoadingState(false));
+      } else {
+        Navigator.pushReplacement(
+          ctx,
+          MaterialPageRoute(builder: (_) => const Login()),
+        ).then((_) => setLoadingState(false));
+      }
+    },
+  );
+}
+
+Widget placesOccupees(BuildContext ctx, Function setLoadingState) {
+  return _carteMenu(
+    ctx: ctx,
+    setLoadingState: setLoadingState,
+    icon: Icons.event_seat,
+    label: 'PLACES OCCUPÉES',
+    onTap: () async {
+      if (FirebaseAuth.instance.currentUser != null) {
+        user = FirebaseAuth.instance.currentUser;
+        final String _uid = user!.uid;
+        final String? _gare = await recupererGare(_uid);
+        Navigator.push(
+          ctx,
+          MaterialPageRoute(
+            builder: (_) => DepartsPlacesAssicesPourBtFlottant(
               gare: _gare!,
               uid: _uid,
-              date: idAnnee,
+              date: idDate,
+              dateNormale: dateNormale,
+              tailleEcran: tailleEcran!,
             ),
           ),
         ).then((_) => setLoadingState(false));
       } else {
         Navigator.pushReplacement(
           ctx,
-          MaterialPageRoute(
-            builder: (context) => const Login(),
-          ),
+          MaterialPageRoute(builder: (_) => const Login()),
         ).then((_) => setLoadingState(false));
       }
     },
-    child: Card(
-      shadowColor: Colors.blue,
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: const [
-            SizedBox(
-              width: 70,
-              height: 70,
-              child: Icon(
-                Icons.format_list_bulleted_sharp,
-                size: 60,
-              ),
+  );
+}
+
+Widget listePassagers(BuildContext ctx, Function setLoadingState) {
+  return _carteMenu(
+    ctx: ctx,
+    setLoadingState: setLoadingState,
+    icon: Icons.format_list_bulleted,
+    label: 'LISTE DES PASSAGERS',
+    onTap: () async {
+      if (FirebaseAuth.instance.currentUser != null) {
+        user = FirebaseAuth.instance.currentUser;
+        final String _uid = user!.uid;
+        final String? _gare = await recupererGare(_uid);
+        Navigator.push(
+          ctx,
+          MaterialPageRoute(
+            builder: (_) => DepartsListePassagersPourBtFlottant(
+              gare: _gare!,
+              uid: _uid,
+              date: idDate,
+              dateNormale: dateNormale,
+              tailleEcran: tailleEcran!,
             ),
-            Text("TABLEAU")
-          ],
-        ),
-      ),
-    ),
+          ),
+        ).then((_) => setLoadingState(false));
+      } else {
+        Navigator.pushReplacement(
+          ctx,
+          MaterialPageRoute(builder: (_) => const Login()),
+        ).then((_) => setLoadingState(false));
+      }
+    },
+  );
+}
+
+Widget suppressionTickets(BuildContext ctx, Function setLoadingState) {
+  return _carteMenu(
+    ctx: ctx,
+    setLoadingState: setLoadingState,
+    icon: Icons.delete_forever_outlined,
+    label: 'SUPPRIMER TICKET',
+    iconColor: Colors.red[300]!,
+    onTap: () async {
+      if (FirebaseAuth.instance.currentUser != null) {
+        Navigator.push(
+          ctx,
+          MaterialPageRoute(
+            builder: (_) => Suppression(
+              dateHier: dateNormaleHiere,
+              aujoudhui: dateNormale,
+              demain: dateNormaleDemain,
+              apresDemain: dateNormaleApresdemain,
+            ),
+          ),
+        ).then((_) => setLoadingState(false));
+      } else {
+        Navigator.pushReplacement(
+          ctx,
+          MaterialPageRoute(builder: (_) => const Login()),
+        ).then((_) => setLoadingState(false));
+      }
+    },
+  );
+}
+
+Widget suggestions(BuildContext ctx, Function setLoadingState) {
+  return _carteMenu(
+    ctx: ctx,
+    setLoadingState: setLoadingState,
+    icon: Icons.chat_bubble_outline_rounded,
+    label: 'SUGGESTIONS',
+    onTap: () async {
+      if (FirebaseAuth.instance.currentUser != null) {
+        Navigator.push(
+          ctx,
+          MaterialPageRoute(builder: (_) => const SuggestionsAdmin()),
+        ).then((_) => setLoadingState(false));
+      } else {
+        Navigator.pushReplacement(
+          ctx,
+          MaterialPageRoute(builder: (_) => const Login()),
+        ).then((_) => setLoadingState(false));
+      }
+    },
   );
 }
 
@@ -736,42 +832,4 @@ void deconnexion(BuildContext context) async {
     MaterialPageRoute(builder: (BuildContext context) => const Login()),
     (route) => false,
   );
-}
-
-Future<void> supprimerGareEtUid() async {
-  try {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    // Supprimer les valeurs associées aux clés 'gare' et 'uid'
-    await prefs.remove('gare');
-    await prefs.remove('uid');
-  } catch (e) {}
-}
-
-// Méthode pour récupérer la gare associée à l'idUtilisateur
-Future<String?> recupererGare(String idUtilisateur) async {
-  // Connexion à la base de données
-  final conn = await Connexion.connexionDB();
-
-  try {
-    // Requête SQL pour récupérer la gare
-    var result = await conn.query(
-      '''
-        SELECT gare 
-        FROM Admins 
-        WHERE idUtilisateur = ?
-        ''',
-      [idUtilisateur],
-    );
-
-    // Vérification si un résultat est retourné
-    if (result.isNotEmpty) {
-      return result.first['gare'] as String;
-    } else {
-      return null; // Aucun résultat trouvé
-    }
-  } catch (e) {
-    return null;
-  } finally {
-    await conn.close();
-  }
 }

@@ -27,22 +27,25 @@ class DetailsTickets2 extends StatefulWidget {
   final String statut;
   final String prixTicket;
   final DateTime datePourCalcule;
+  final String typeVoyage;
 
-  const DetailsTickets2(
-      {super.key,
-      required this.idTicket,
-      required this.idUtilisateur,
-      required this.place,
-      required this.nom,
-      required this.contact,
-      required this.date,
-      required this.heure,
-      required this.depart,
-      required this.destination,
-      required this.etatScann,
-      required this.statut,
-      required this.prixTicket,
-      required this.datePourCalcule});
+  const DetailsTickets2({
+    super.key,
+    required this.idTicket,
+    required this.idUtilisateur,
+    required this.place,
+    required this.nom,
+    required this.contact,
+    required this.date,
+    required this.heure,
+    required this.depart,
+    required this.destination,
+    required this.etatScann,
+    required this.statut,
+    required this.prixTicket,
+    required this.datePourCalcule,
+    required this.typeVoyage,
+  });
   @override
   _DetailsTickets2State createState() => _DetailsTickets2State();
 }
@@ -58,10 +61,7 @@ class _DetailsTickets2State extends State<DetailsTickets2> {
     final QrPainter qrPainter = QrPainter(
       data: qrData,
       version: QrVersions.auto,
-      eyeStyle: QrEyeStyle(
-        eyeShape: QrEyeShape.square,
-        color: couleurA,
-      ),
+      eyeStyle: QrEyeStyle(eyeShape: QrEyeShape.square, color: couleurA),
       dataModuleStyle: QrDataModuleStyle(
         dataModuleShape: QrDataModuleShape.square,
         color: couleurB,
@@ -70,8 +70,9 @@ class _DetailsTickets2State extends State<DetailsTickets2> {
     final qrImage = await qrPainter.toImage(280); // Taille du QR Code (200x200)
 
     // Convertir l'image en bytes
-    final ByteData? byteData =
-        await qrImage.toByteData(format: ImageByteFormat.png);
+    final ByteData? byteData = await qrImage.toByteData(
+      format: ImageByteFormat.png,
+    );
     final Uint8List imageData = byteData!.buffer.asUint8List();
 
     // Enregistrer l'image du QR Code en tant que fichier temporaire
@@ -105,15 +106,18 @@ class _DetailsTickets2State extends State<DetailsTickets2> {
                       height: 25.0,
                       decoration: pw.BoxDecoration(
                         borderRadius: pw.BorderRadius.circular(10.0),
-                        border:
-                            pw.Border.all(width: 1.0, color: PdfColors.green),
+                        border: pw.Border.all(
+                          width: 1.0,
+                          color: PdfColors.green,
+                        ),
                       ),
                       child: pw.Padding(
                         padding: const pw.EdgeInsets.all(2.0),
                         child: pw.Center(
-                          child: pw.Text(' Mieux Vous Servir Transport ',
-                              style:
-                                  const pw.TextStyle(color: PdfColors.green)),
+                          child: pw.Text(
+                            ' Mieux Vous Servir Transport ',
+                            style: const pw.TextStyle(color: PdfColors.green),
+                          ),
                         ),
                       ),
                     ),
@@ -128,7 +132,7 @@ class _DetailsTickets2State extends State<DetailsTickets2> {
                           ),
                         ),
                       ],
-                    )
+                    ),
                   ],
                 ),
                 pw.Padding(
@@ -138,8 +142,10 @@ class _DetailsTickets2State extends State<DetailsTickets2> {
                       pw.Text(
                         "Ticket N° ${widget.idTicket.toUpperCase()}",
                         style: const pw.TextStyle(
-                            fontSize: 9, color: PdfColors.grey),
-                      )
+                          fontSize: 9,
+                          color: PdfColors.grey,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -187,14 +193,16 @@ class _DetailsTickets2State extends State<DetailsTickets2> {
                     pw.Text(
                       widget.nom,
                       style: pw.TextStyle(
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.black),
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.black,
+                      ),
                     ),
                     pw.Text(
                       widget.contact,
                       style: pw.TextStyle(
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.black),
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.black,
+                      ),
                     ),
                   ],
                 ),
@@ -293,9 +301,7 @@ class _DetailsTickets2State extends State<DetailsTickets2> {
                 // QR CODE
                 pw.Center(
                   child: pw.Padding(
-                    padding: const pw.EdgeInsets.only(
-                      top: 8.0,
-                    ),
+                    padding: const pw.EdgeInsets.only(top: 8.0),
                     child: pw.SizedBox(
                       width: 200,
                       height: 200,
@@ -308,8 +314,9 @@ class _DetailsTickets2State extends State<DetailsTickets2> {
                   child: pw.Text(
                     'La compagnie MVST vous souhaite bon voyage!',
                     style: pw.TextStyle(
-                        font: pw.Font.courier(),
-                        fontItalic: pw.Font.timesItalic()),
+                      font: pw.Font.courier(),
+                      fontItalic: pw.Font.timesItalic(),
+                    ),
                   ),
                 ),
               ],
@@ -319,10 +326,12 @@ class _DetailsTickets2State extends State<DetailsTickets2> {
       ),
     );
 
-// SAUVEGARDE
+    // SAUVEGARDE
     Uint8List pdfData = await pdf.save();
     sauvegarderPdf(
-        pdfData, 'ticket_du_${widget.date}_Place_${widget.place}.pdf');
+      pdfData,
+      'ticket_du_${widget.date}_Place_${widget.place}.pdf',
+    );
   }
 
   Future<void> sauvegarderPdf(Uint8List pdfData, String nomDuFichier) async {
@@ -358,7 +367,7 @@ class _DetailsTickets2State extends State<DetailsTickets2> {
     // Enregistrer le fichier PDF
     final fic = File(cheminFichier);
     await fic.writeAsBytes(pdfData);
-// Ouvrir le fichier PDF
+    // Ouvrir le fichier PDF
     OpenFile.open(cheminFichier);
     // ignore: use_build_context_synchronously
     ScaffoldMessenger.of(context).showSnackBar(
@@ -384,9 +393,7 @@ class _DetailsTickets2State extends State<DetailsTickets2> {
         ),
         backgroundColor: Colors.blueGrey,
         centerTitle: true,
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-        ),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Padding(
         padding: const EdgeInsets.only(left: 6, right: 6, bottom: 6.0),
@@ -496,7 +503,7 @@ class TicketData extends StatelessWidget {
                   ),
                 ),
               ],
-            )
+            ),
           ],
         ),
         // deuxième ligne
@@ -507,7 +514,7 @@ class TicketData extends StatelessWidget {
               Text(
                 "Ticket Ref ${idTicket.toUpperCase()}",
                 style: TextStyle(fontSize: 7, color: Colors.grey),
-              )
+              ),
             ],
           ),
         ),
@@ -518,9 +525,10 @@ class TicketData extends StatelessWidget {
             child: Text(
               '$depart -> $destination',
               style: const TextStyle(
-                  color: Color.fromARGB(255, 9, 15, 123),
-                  fontSize: 20.0,
-                  fontWeight: FontWeight.bold),
+                color: Color.fromARGB(255, 9, 15, 123),
+                fontSize: 20.0,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ),
@@ -532,13 +540,17 @@ class TicketData extends StatelessWidget {
             children: [
               Text(
                 'Passager',
-                style:
-                    TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
               ),
               Text(
                 'Contact',
-                style:
-                    TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
               ),
             ],
           ),
@@ -547,18 +559,8 @@ class TicketData extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              nom,
-              style: const TextStyle(
-                fontFamily: 'Lobster',
-              ),
-            ),
-            Text(
-              contact,
-              style: const TextStyle(
-                fontFamily: 'Lobster',
-              ),
-            ),
+            Text(nom, style: const TextStyle(fontFamily: 'Lobster')),
+            Text(contact, style: const TextStyle(fontFamily: 'Lobster')),
           ],
         ),
         const Row(
@@ -568,16 +570,20 @@ class TicketData extends StatelessWidget {
               padding: EdgeInsets.only(top: 16.0),
               child: Text(
                 'Date de voyage',
-                style:
-                    TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
               ),
             ),
             Padding(
               padding: EdgeInsets.only(top: 16.0),
               child: Text(
                 'Heure',
-                style:
-                    TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
               ),
             ),
           ],
@@ -588,12 +594,16 @@ class TicketData extends StatelessWidget {
             Text(
               date,
               style: const TextStyle(
-                  fontWeight: FontWeight.bold, color: Colors.black),
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
             ),
             Text(
               heure,
               style: const TextStyle(
-                  fontWeight: FontWeight.bold, color: Colors.black),
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
             ),
           ],
         ),
@@ -604,16 +614,20 @@ class TicketData extends StatelessWidget {
               padding: EdgeInsets.only(left: 8, top: 16.0),
               child: Text(
                 'Tarif : $prixTicket f',
-                style:
-                    TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
               ),
             ),
             Padding(
               padding: EdgeInsets.only(top: 16.0, right: 10),
               child: Text(
                 'Siège',
-                style:
-                    TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
               ),
             ),
           ],
@@ -626,7 +640,9 @@ class TicketData extends StatelessWidget {
               child: Text(
                 "$place",
                 style: const TextStyle(
-                    fontWeight: FontWeight.bold, color: Colors.black),
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
               ),
             ),
           ],
@@ -636,26 +652,25 @@ class TicketData extends StatelessWidget {
         // QR CODE
         Center(
           child: Padding(
-            padding: const EdgeInsets.only(
-              top: 1.0,
-            ),
+            padding: const EdgeInsets.only(top: 1.0),
             child: SizedBox(
               width: 180,
               height: 180,
               child: FittedBox(
                 child: CreationQrCode.buildQrCode(
-                    idUtilisateur,
-                    idTicket,
-                    place,
-                    nom,
-                    contact,
-                    date,
-                    heure,
-                    depart,
-                    destination,
-                    prixTicket,
-                    etatScann,
-                    dateCalcule),
+                  idUtilisateur,
+                  idTicket,
+                  place,
+                  nom,
+                  contact,
+                  date,
+                  heure,
+                  depart,
+                  destination,
+                  prixTicket,
+                  etatScann,
+                  dateCalcule,
+                ),
               ),
             ),
           ),

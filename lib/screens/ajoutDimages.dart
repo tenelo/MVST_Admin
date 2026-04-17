@@ -6,8 +6,11 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/models/models.dart';
-import 'package:mysql1/mysql1.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
+const String _baseUrl = 'https://mvst.tenelo.cloud';
+
+// ── ListeImages ───────────────────────────────────────────────────────────────
 class ListeImages extends StatefulWidget {
   @override
   _ListeImagesState createState() => _ListeImagesState();
@@ -16,51 +19,62 @@ class ListeImages extends StatefulWidget {
 class _ListeImagesState extends State<ListeImages> {
   bool isLoading = false;
   List<ImageModel> images = [];
-  MySqlConnection? conn;
-  final String baseUrl = 'https://tenelodata-tech.com/mvst/';
+  late IO.Socket _socket; // ← AJOUTÉ
 
   @override
   void initState() {
     super.initState();
-    _connectToDatabase();
     _recupImages();
-  }
-
-  Future<void> _connectToDatabase() async {
-    conn = await Connexion.connexionDB();
-  }
-
-  Future<void> _recupImages() async {
-    setState(() {
-      isLoading = true;
-    });
-
-    try {
-      conn ??= await Connexion.connexionDB();
-      final results = await conn!.query('SELECT * FROM Images');
-      setState(() {
-        images = results.map((row) {
-          return ImageModel.fromJson({
-            'id': row['id'],
-            'titre': row['titre'].toString(),
-            'description': row['description'].toString(),
-            'statut': row['statut'].toString(),
-            'lien_image': row['lien_image'].toString(),
-          });
-        }).toList();
-      });
-    } catch (e) {
-      conn = await Connexion.connexionDB();
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
+    _connecterSocket(); // ← AJOUTÉ
   }
 
   @override
   void dispose() {
+    _socket.disconnect(); // ← AJOUTÉ
+    _socket.dispose(); // ← AJOUTÉ
     super.dispose();
+  }
+
+  // ── Socket.IO ─────────────────────────────────────────────────────────────
+
+  void _connecterSocket() {
+    _socket = IO.io(
+      'https://mvst.tenelo.cloud',
+      IO.OptionBuilder()
+          .setTransports(['websocket'])
+          .disableAutoConnect()
+          .build(),
+    );
+    _socket.connect();
+  }
+
+  void _notifierClients() {
+    if (_socket.connected) {
+      _socket.emit('images_modifiees');
+    } else {
+      _socket.off('connect');
+      _socket.onConnect((_) => _socket.emit('images_modifiees'));
+    }
+  }
+
+  Future<void> _recupImages() async {
+    setState(() => isLoading = true);
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/gestionImages.php'));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          setState(() {
+            images = List<ImageModel>.from(
+              data['images'].map((i) => ImageModel.fromJson(i)),
+            );
+          });
+        }
+      }
+    } catch (e) {
+    } finally {
+      setState(() => isLoading = false);
+    }
   }
 
   @override
@@ -68,104 +82,177 @@ class _ListeImagesState extends State<ListeImages> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(93, 12, 134, 195),
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-        ),
+        iconTheme: const IconThemeData(color: Colors.white),
         centerTitle: true,
-        title: Text(
+        title: const Text(
           'Gestion des images',
           style: TextStyle(color: Colors.white),
         ),
       ),
       body: isLoading
-          ? Center(
+          ? const Center(
               child: CircularProgressIndicator(
                 color: Color.fromARGB(93, 12, 134, 195),
               ),
             )
           : images.isEmpty
-              ? Center(
-                  child: Text(
-                    'Aucune image disponible',
-                    style: TextStyle(
-                        color: Color.fromARGB(93, 12, 134, 195),
-                        fontWeight: FontWeight.bold),
-                  ),
-                )
-              : ListView.builder(
-                  itemCount: images.length,
-                  itemBuilder: (context, index) {
-                    final image = images[index];
-                    return _buildImageCard(image);
-                  },
+          ? const Center(
+              child: Text(
+                'Aucune image disponible',
+                style: TextStyle(
+                  color: Color.fromARGB(93, 12, 134, 195),
+                  fontWeight: FontWeight.bold,
                 ),
+              ),
+            )
+          : ListView.builder(
+              itemCount: images.length,
+              itemBuilder: (context, index) => _buildImageCard(images[index]),
+            ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => AjouterImages()),
-          );
-        },
-        child: Icon(Icons.add),
+        onPressed: () => Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => AjouterImages()),
+        ),
+        child: const Icon(Icons.add),
       ),
     );
   }
 
   Widget _buildImageCard(ImageModel image) {
-    final String _lienImage = baseUrl + image.lien_image;
+    final String lienImage = '$_baseUrl/${image.lien_image}';
+    final bool isActif = image.statut.toLowerCase() == 'actif';
 
     return GestureDetector(
       onTap: () =>
-          _afficherImageEnGrand(_lienImage, image.titre, image.description),
+          _afficherImageEnGrand(lienImage, image.titre, image.description),
       child: Card(
-        shadowColor: Colors.lightBlueAccent,
+        shadowColor: isActif ? Colors.lightBlueAccent : Colors.grey,
         elevation: 4,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Stack(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(2.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.blue, width: 1.0),
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8.0),
-                  child: Image.network(
-                    _lienImage,
-                    width: 120,
-                    height: 110,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Icon(Icons.error_outline_outlined,
-                          color: Colors.blue, size: 50);
-                    },
+            // ── Contenu principal ──────────────────────────────────────
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(2.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: isActif ? Colors.blue : Colors.grey,
+                        width: 1.0,
+                      ),
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8.0),
+                      child: ColorFiltered(
+                        colorFilter: isActif
+                            ? const ColorFilter.mode(
+                                Colors.transparent,
+                                BlendMode.multiply,
+                              )
+                            : const ColorFilter.matrix([
+                                0.2126,
+                                0.7152,
+                                0.0722,
+                                0,
+                                0,
+                                0.2126,
+                                0.7152,
+                                0.0722,
+                                0,
+                                0,
+                                0.2126,
+                                0.7152,
+                                0.0722,
+                                0,
+                                0,
+                                0,
+                                0,
+                                0,
+                                1,
+                                0,
+                              ]),
+                        child: Image.network(
+                          lienImage,
+                          width: 120,
+                          height: 110,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
+                                Icons.error_outline_outlined,
+                                color: Colors.blue,
+                                size: 50,
+                              ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      image.titre,
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          image.titre,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isActif ? Colors.black : Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          image.description,
+                          maxLines: 10,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: isActif ? Colors.black87 : Colors.grey,
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(height: 4),
+                  ),
+                ),
+                _buildActionButtons(image),
+              ],
+            ),
+            // ── Badge statut ───────────────────────────────────────────
+            Positioned(
+              top: 6,
+              left: 6,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isActif
+                      ? const Color.fromARGB(255, 35, 177, 127)
+                      : Colors.grey,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isActif ? Icons.visibility : Icons.visibility_off,
+                      color: Colors.white,
+                      size: 11,
+                    ),
+                    const SizedBox(width: 3),
                     Text(
-                      image.description,
-                      maxLines: 10,
-                      overflow: TextOverflow.ellipsis,
+                      isActif ? 'Actif' : 'Inactif',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-            _buildActionButtons(image),
           ],
         ),
       ),
@@ -173,7 +260,10 @@ class _ListeImagesState extends State<ListeImages> {
   }
 
   Future<void> _afficherImageEnGrand(
-      String imageUrl, String titre, String description) async {
+    String imageUrl,
+    String titre,
+    String description,
+  ) async {
     await showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -185,21 +275,15 @@ class _ListeImagesState extends State<ListeImages> {
           children: [
             Padding(
               padding: const EdgeInsets.all(10.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.blue, width: 1.0),
-                  borderRadius: BorderRadius.circular(
-                      10.0), // Assurer que la bordure a le même rayon que le ClipRRect
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10.0),
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Icon(Icons.error_outline_outlined,
-                          color: Colors.blue, size: 50);
-                    },
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10.0),
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (c, e, s) => const Icon(
+                    Icons.error_outline_outlined,
+                    color: Colors.blue,
+                    size: 50,
                   ),
                 ),
               ),
@@ -207,24 +291,26 @@ class _ListeImagesState extends State<ListeImages> {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Text(
-                textAlign: TextAlign.center,
                 titre,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Text(
-                description,
-                textAlign: TextAlign.justify,
-              ),
+              child: Text(description, textAlign: TextAlign.justify),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text(
+              child: const Text(
                 'Ok',
-                style:
-                    TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.blue,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -237,13 +323,13 @@ class _ListeImagesState extends State<ListeImages> {
     return Row(
       children: [
         IconButton(
-          icon: Icon(Icons.edit, color: Colors.blue),
+          icon: const Icon(Icons.edit, color: Colors.blue),
           onPressed: () => _showEditDialog(image),
         ),
         IconButton(
-          icon: Icon(
+          icon: const Icon(
             Icons.delete,
-            color: const Color.fromARGB(255, 233, 75, 64),
+            color: Color.fromARGB(255, 233, 75, 64),
           ),
           onPressed: () => _showDeleteDialog(image),
         ),
@@ -252,291 +338,231 @@ class _ListeImagesState extends State<ListeImages> {
   }
 
   Future<void> _showEditDialog(ImageModel image) async {
-    final TextEditingController titreController =
-        TextEditingController(text: image.titre);
-    final TextEditingController descriptionController =
-        TextEditingController(text: image.description);
-    final TextEditingController statutController =
-        TextEditingController(text: image.statut);
-
+    final titreController = TextEditingController(text: image.titre);
+    final descriptionController = TextEditingController(
+      text: image.description,
+    );
     final List<String> statuts = ['Actif', 'Inactif'];
-    String statutSelectionne = image.statut;
-
+    String statutSelectionne =
+        image.statut[0].toUpperCase() + image.statut.substring(1);
     bool isUpdating = false;
 
     await showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: Center(
-              child: Text(
-                'Modifier les informations',
-                style:
-                    TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
-              ),
+        builder: (context, setState) => AlertDialog(
+          title: const Center(
+            child: Text(
+              'Modifier les informations',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
             ),
-            content: Column(
+          ),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          content: SingleChildScrollView(
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: titreController,
-                  decoration: InputDecoration(labelText: 'Titre'),
+                  decoration: const InputDecoration(labelText: 'Titre'),
                 ),
                 TextField(
                   maxLines: 5,
                   controller: descriptionController,
-                  decoration: InputDecoration(labelText: 'Description'),
+                  decoration: const InputDecoration(labelText: 'Description'),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
-                  iconEnabledColor: Colors.blue,
-                  value: statutController.text,
-                  decoration: InputDecoration(labelText: 'Statut'),
+                  value: statutSelectionne,
+                  decoration: const InputDecoration(labelText: 'Statut'),
                   items: statuts
-                      .map((statut) => DropdownMenuItem(
-                            value: statut,
-                            child: Text(statut),
-                          ))
+                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                       .toList(),
                   onChanged: (val) {
-                    if (val != null) {
-                      statutSelectionne = val;
-                      statutController.text = val;
-                    }
+                    if (val != null) setState(() => statutSelectionne = val);
                   },
                 ),
                 if (isUpdating)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 20),
+                  const Padding(
+                    padding: EdgeInsets.only(top: 20),
                     child: CircularProgressIndicator(),
                   ),
               ],
             ),
-            actions: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: Text(
-                      'Annuler',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.blue),
+          ),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text(
+                    'Annuler',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
                     ),
                   ),
-                  TextButton(
-                    onPressed: () async {
-                      setState(() => isUpdating = true);
-                      await _modifierImageDansMySQL(
-                        image.id,
-                        titreController.text,
-                        descriptionController.text,
-                        statutSelectionne,
-                      );
-                      setState(() => isUpdating = false);
-                      Navigator.of(context).pop();
-                    },
-                    child: Text(
-                      'Enregistrer',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.blue),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    setState(() => isUpdating = true);
+                    await _modifierImage(
+                      image.id,
+                      titreController.text,
+                      descriptionController.text,
+                      statutSelectionne,
+                    );
+                    setState(() => isUpdating = false);
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text(
+                    'Enregistrer',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
                     ),
                   ),
-                ],
-              )
-            ],
-          );
-        },
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Future<void> _modifierImageDansMySQL(
-      int id, String titre, String description, String statut) async {
+  Future<void> _modifierImage(
+    int id,
+    String titre,
+    String description,
+    String statut,
+  ) async {
     try {
-      conn ??= await Connexion.connexionDB();
-      var result = await conn!.query(
-        'UPDATE Images SET titre = ?, description = ?, statut = ? WHERE id = ?',
-        [titre, description, statut, id],
+      final response = await http.post(
+        Uri.parse('$_baseUrl/gestionImages.php'),
+        body: {
+          'action': 'modifier',
+          'id': id.toString(),
+          'titre': titre,
+          'description': description,
+          'statut': statut,
+        },
       );
-
-      if (result.affectedRows! > 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Color.fromARGB(255, 35, 113, 177),
-            content: Text(
-              'Informations modifiées avec succès.',
-              style: TextStyle(color: Colors.white),
-            ),
+      final data = jsonDecode(response.body);
+      if (data['success'] == true) _notifierClients(); // ← AJOUTÉ
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: data['success'] == true
+              ? const Color.fromARGB(255, 35, 113, 177)
+              : Colors.red,
+          content: Text(
+            data['message'],
+            style: const TextStyle(color: Colors.white),
           ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Aucune modification n\'a été effectuée.')),
-        );
-      }
-      setState(() {
-        _recupImages();
-      });
+        ),
+      );
+      _recupImages();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur lors de la modification de l\'image.')),
+        const SnackBar(content: Text('Erreur lors de la modification')),
       );
     }
   }
 
   Future<void> _showDeleteDialog(ImageModel image) async {
     bool isDeleting = false;
-
     await showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          return AlertDialog(
-            title: Center(
-              child: Text(
-                'Suppression',
-                style: TextStyle(
-                    color: const Color.fromARGB(255, 233, 75, 64),
-                    fontWeight: FontWeight.bold),
+        builder: (context, setState) => AlertDialog(
+          title: const Center(
+            child: Text(
+              'Suppression',
+              style: TextStyle(
+                color: Color.fromARGB(255, 233, 75, 64),
+                fontWeight: FontWeight.bold,
               ),
             ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Voulez-vous vraiment supprimer cette image ?'),
+              if (isDeleting)
+                const Padding(
+                  padding: EdgeInsets.only(top: 20),
+                  child: CircularProgressIndicator(),
+                ),
+            ],
+          ),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Center(
-                    child:
-                        Text('Voulez-vous vraiment supprimer cette image ?')),
-                if (isDeleting)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 20),
-                    child: CircularProgressIndicator(),
+                TextButton(
+                  onPressed: () async {
+                    setState(() => isDeleting = true);
+                    await _supprimerImage(image.id);
+                    Navigator.of(context).pop(true);
+                  },
+                  child: const Text(
+                    'Oui',
+                    style: TextStyle(
+                      color: Color.fromARGB(255, 233, 75, 64),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text(
+                    'Non',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                  ),
+                ),
               ],
             ),
-            actions: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: () async {
-                      setState(() => isDeleting = true);
-                      await _supprimerImage(image);
-                      Navigator.of(context).pop(true);
-                    },
-                    child: Text(
-                      'Oui',
-                      style: TextStyle(
-                          color: const Color.fromARGB(255, 233, 75, 64),
-                          fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: Text(
-                      'Non',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.blue),
-                    ),
-                  ),
-                ],
-              )
-            ],
-          );
-        },
+          ],
+        ),
       ),
     );
   }
 
-  Future<void> _supprimerImage(ImageModel image) async {
+  Future<void> _supprimerImage(int id) async {
     try {
-      var url = Uri.parse('https://tenelodata-tech.com/mvst/upload.php');
-
-      var response = await http.post(
-        url,
-        body: {
-          'action': 'delete',
-          'id': image.id.toString(),
-        },
+      final response = await http.post(
+        Uri.parse('$_baseUrl/gestionImages.php'),
+        body: {'action': 'supprimer', 'id': id.toString()},
       );
-
-      if (response.statusCode == 200) {
-        var jsonResponse = jsonDecode(response.body);
-        if (jsonResponse['success'] != null) {
-          // Image supprimée avec succès du serveur, maintenant supprimer dans la base de données
-          var dbResponse = await conn!.query(
-            'DELETE FROM Images WHERE id = ?',
-            [image.id],
-          );
-
-          if (dbResponse.affectedRows! > 0) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                backgroundColor: Color.fromARGB(255, 35, 113, 177),
-                content: Text(
-                  "Image supprimée avec succès.",
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                backgroundColor: const Color.fromARGB(255, 46, 46, 46),
-                content: Text(
-                  'Erreur : L\'enregistrement n\'a pas pu être supprimé.',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            );
-          }
-        } else if (jsonResponse['error'] != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              backgroundColor: const Color.fromARGB(255, 46, 46, 46),
-              content: Text(
-                'Erreur lors de la suppression sur le serveur.',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          );
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: const Color.fromARGB(255, 46, 46, 46),
-            content: Text(
-              'Erreur de connexion au serveur.',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        );
-      }
-    } catch (e) {
+      final data = jsonDecode(response.body);
+      if (data['success'] == true) _notifierClients(); // ← AJOUTÉ
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color.fromARGB(255, 46, 46, 46),
+          backgroundColor: data['success'] == true
+              ? const Color.fromARGB(255, 35, 113, 177)
+              : Colors.red,
           content: Text(
-            'Erreur lors de la suppression de l\'image',
-            style: TextStyle(color: Colors.white),
+            data['message'],
+            style: const TextStyle(color: Colors.white),
           ),
         ),
       );
-    } finally {
-      setState(() {
-        _recupImages();
-        isLoading = false;
-      });
+      _recupImages();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erreur lors de la suppression')),
+      );
     }
   }
 }
 
-///////////////////////////////////////////
-
+// ── AjouterImages ─────────────────────────────────────────────────────────────
 class AjouterImages extends StatefulWidget {
   const AjouterImages({Key? key}) : super(key: key);
-
   @override
   _AjouterImagesState createState() => _AjouterImagesState();
 }
@@ -548,25 +574,33 @@ class _AjouterImagesState extends State<AjouterImages> {
   final List<String> options = ['Actif', 'Inactif'];
   File? _image;
   bool isLoading = false;
-  MySqlConnection? conn;
+  late IO.Socket _socket; // ← AJOUTÉ
 
   @override
   void initState() {
     super.initState();
-    _connectToDatabase();
+    // ── Socket.IO ────────────────────────────────────────────────────
+    _socket = IO.io(
+      'https://mvst.tenelo.cloud',
+      IO.OptionBuilder()
+          .setTransports(['websocket'])
+          .disableAutoConnect()
+          .build(),
+    );
+    _socket.connect();
   }
 
-  Future<void> _connectToDatabase() async {
-    conn = await Connexion.connexionDB();
+  @override
+  void dispose() {
+    _socket.disconnect();
+    _socket.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Gestion d\'images'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('Gestion d\'images'), centerTitle: true),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(12.0),
@@ -584,17 +618,10 @@ class _AjouterImagesState extends State<AjouterImages> {
                 label: 'Sélectionner statut',
                 items: options,
                 selectedItem: selectedOption,
-                onChanged: (value) {
-                  setState(() {
-                    selectedOption = value;
-                  });
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Veuillez choisir le statut';
-                  }
-                  return null;
-                },
+                onChanged: (value) => setState(() => selectedOption = value),
+                validator: (value) => value == null || value.isEmpty
+                    ? 'Veuillez choisir le statut'
+                    : null,
               ),
               const SizedBox(height: 4),
               _buildTextField(detailsImage, "Détails de l'image", maxLines: 10),
@@ -610,7 +637,9 @@ class _AjouterImagesState extends State<AjouterImages> {
                     : const Text(
                         'Ajouter',
                         style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.w700),
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
               ),
             ],
@@ -640,8 +669,8 @@ class _AjouterImagesState extends State<AjouterImages> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
-                  size: 50,
                   Icons.photo_library_outlined,
+                  size: 50,
                   color: Config.colors.bleuA,
                 ),
                 const SizedBox(width: 10),
@@ -657,21 +686,27 @@ class _AjouterImagesState extends State<AjouterImages> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label,
-      {int maxLines = 1}) {
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label, {
+    int maxLines = 1,
+  }) {
     return TextField(
       controller: controller,
       maxLines: maxLines,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
-        border: OutlineInputBorder(
+        labelStyle: const TextStyle(
+          color: Colors.blue,
+          fontWeight: FontWeight.bold,
+        ),
+        border: const OutlineInputBorder(
           borderSide: BorderSide(color: Colors.blue),
         ),
-        focusedBorder: OutlineInputBorder(
+        focusedBorder: const OutlineInputBorder(
           borderSide: BorderSide(color: Colors.blue, width: 2.0),
         ),
-        enabledBorder: OutlineInputBorder(
+        enabledBorder: const OutlineInputBorder(
           borderSide: BorderSide(color: Colors.blue, width: 1.5),
         ),
       ),
@@ -689,25 +724,25 @@ class _AjouterImagesState extends State<AjouterImages> {
       value: selectedItem,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
-        border: OutlineInputBorder(
+        labelStyle: const TextStyle(
+          color: Colors.blue,
+          fontWeight: FontWeight.bold,
+        ),
+        border: const OutlineInputBorder(
           borderSide: BorderSide(color: Colors.blue),
         ),
-        focusedBorder: OutlineInputBorder(
+        focusedBorder: const OutlineInputBorder(
           borderSide: BorderSide(color: Colors.blue, width: 2.0),
         ),
-        enabledBorder: OutlineInputBorder(
+        enabledBorder: const OutlineInputBorder(
           borderSide: BorderSide(color: Colors.blue, width: 1.5),
         ),
       ),
       iconEnabledColor: Colors.blue,
       items: items
           .map(
-            (item) => DropdownMenuItem<T>(
-              value: item,
-              child:
-                  Text(item.toString(), style: TextStyle(color: Colors.black)),
-            ),
+            (item) =>
+                DropdownMenuItem<T>(value: item, child: Text(item.toString())),
           )
           .toList(),
       onChanged: onChanged,
@@ -724,7 +759,7 @@ class _AjouterImagesState extends State<AjouterImages> {
         const SnackBar(
           backgroundColor: Color.fromARGB(255, 35, 113, 177),
           content: Text(
-            "Veuillez remplir tous les champs,",
+            "Veuillez remplir tous les champs",
             style: TextStyle(color: Colors.white),
           ),
         ),
@@ -732,84 +767,78 @@ class _AjouterImagesState extends State<AjouterImages> {
       return;
     }
 
-    setState(() {
-      isLoading = true;
-    });
+    setState(() => isLoading = true);
 
     try {
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('https://tenelodata-tech.com/mvst/upload.php'),
+        Uri.parse('$_baseUrl/gestionImages.php'),
       );
-
-      // Ajouter l'image
-      request.files.add(await http.MultipartFile.fromPath(
-          'lien_image', _image!.path)); // Correction : suppression de l'espace
-
-      // Ajouter les autres champs
+      request.files.add(
+        await http.MultipartFile.fromPath('lien_image', _image!.path),
+      );
+      request.fields['action'] = 'ajouter';
       request.fields['titre'] = titreImage.text;
       request.fields['description'] = detailsImage.text;
-      request.fields['statut'] = selectedOption!; // Ajout du champ statut
+      request.fields['statut'] = selectedOption!;
 
-      // Envoyer la requête
       final response = await request.send();
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Color.fromARGB(255, 35, 113, 177),
-            content: Text(
-              "Image ajoutée avec succès",
-              style: TextStyle(color: Colors.white),
+      final body = await response.stream.bytesToString();
+      final data = jsonDecode(body);
+
+      if (data['success'] == true) {
+        if (_socket.connected) {
+          _socket.emit('images_modifiees');
+        } else {
+          _socket.onConnect((_) => _socket.emit('images_modifiees'));
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color.fromARGB(255, 35, 177, 127),
+              content: Text(
+                data['message'],
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
-          ),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ListeImages(),
-          ),
-        );
+          );
+          await Future.delayed(const Duration(milliseconds: 800));
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => ListeImages()),
+          );
+        }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Color.fromARGB(255, 213, 76, 66),
-            content: Text(
-              "L'image n'a pas pu être ajoutée.",
-              style: TextStyle(color: Colors.white),
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color.fromARGB(255, 213, 115, 66),
+              content: Text(
+                data['message'],
+                style: const TextStyle(color: Colors.white),
+              ),
             ),
-          ),
-        );
+          );
+        }
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: Color.fromARGB(255, 213, 76, 66),
           content: Text(
             "Erreur : $e",
             style: const TextStyle(color: Colors.white),
           ),
+          backgroundColor: const Color.fromARGB(255, 213, 76, 66),
         ),
       );
     } finally {
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
     }
   }
 
   Future<void> _selectImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-    if (pickedFile != null) {
-      setState(() {
-        _image = File(pickedFile.path);
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
+    if (pickedFile != null) setState(() => _image = File(pickedFile.path));
   }
 }

@@ -13,7 +13,7 @@ class ParametresVerification extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         iconTheme: IconThemeData(
-          color: Config.colors.bleuFonce2,
+          color: Config.colors.authCardBackground,
         ),
         centerTitle: true,
       ),

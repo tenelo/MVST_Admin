@@ -1,8 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/screens/detailsTickets.dart';
-import 'package:mysql1/mysql1.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class TicketsDuJourScannes extends StatefulWidget {
   const TicketsDuJourScannes({
@@ -29,57 +33,98 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
       TextEditingController();
   final TextEditingController _rechercheParNom = TextEditingController();
 
-  MySqlConnection? _connection;
+  // ── Socket.IO ──────────────────────────────────────────────────────────────
+  late IO.Socket socket;
 
   @override
   void initState() {
     super.initState();
     _getDonnees();
+    _connecterSocket();
   }
 
-  void _getDonnees() async {
-    setState(() {
-      _isLoading = true;
+  @override
+  void dispose() {
+    socket.disconnect();
+    socket.dispose();
+    _rechercheParDate.dispose();
+    _rechercheParDestination.dispose();
+    _rechercheParNom.dispose();
+    super.dispose();
+  }
+
+  // ── Connexion Socket.IO ────────────────────────────────────────────────────
+  void _connecterSocket() {
+    socket = IO.io(
+      'https://mvst.tenelo.cloud',
+      IO.OptionBuilder()
+          .setTransports(['websocket'])
+          .disableAutoConnect()
+          .build(),
+    );
+
+    socket.connect();
+
+    socket.onConnect((_) {
+      // Écouter tous les rooms du jour pour cette gare
+      socket.emit('rejoindre_room', {
+        'depart': widget.gare,
+        'date': widget.date,
+      });
     });
 
+    // ── Un ticket vient d'être scanné → rafraîchir la liste ────────────────
+    socket.on('ticket_valide', (data) {
+      if (data['depart'] == widget.gare || mounted) {
+        _getDonnees();
+      }
+    });
+  }
+
+  // ── Charger les tickets scannés via PHP ────────────────────────────────────
+  Future<void> _getDonnees() async {
+    if (mounted) setState(() => _isLoading = true);
+
     try {
-      _connection = await Connexion.connexionDB();
+      // La date reçue est au format 'EEEE_d_MMMM_y' → on extrait la date du jour
+      final String dateDuJour = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
-      var result = await _connection!.query(
-          'SELECT * FROM Tickets WHERE scanneDate = ? AND etatScanne = ? ORDER BY dateDeCreation DESC',
-          [widget.date, 'scanné']);
+      final response = await http.post(
+        Uri.parse('https://mvst.tenelo.cloud/ticketsDuJourScannes.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'date': dateDuJour, 'gare': widget.gare}),
+      );
 
-      // Transformation du résultat en liste de maps
-      List<Map<String, dynamic>> tickets =
-          result.map((row) => row.fields).toList();
-      // Ce filtre permet de recupérer les tickets en fonction de la gare de l'utilisateur
-      tickets =
-          tickets.where((ticket) => ticket['depart'] == widget.gare).toList();
-      setState(() {
-        donnees = tickets;
-        _filtre = tickets;
-        _isLoading = false;
-      });
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          final tickets = List<Map<String, dynamic>>.from(data['tickets']);
+          if (mounted) {
+            setState(() {
+              donnees = tickets;
+              _filtre = tickets;
+              _isLoading = false;
+            });
+          }
+        }
+      }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _filtrerDonnees() {
-    String searchDate = _rechercheParDate.text.toLowerCase();
-    String searchDestination = _rechercheParDestination.text.toLowerCase();
-    String searchNom = _rechercheParNom.text.toLowerCase();
+    final searchDate = _rechercheParDate.text.toLowerCase();
+    final searchDestination = _rechercheParDestination.text.toLowerCase();
+    final searchNom = _rechercheParNom.text.toLowerCase();
 
     setState(() {
       donnees = _filtre.where((data) {
-        final dataDate = data['date'].toString().toLowerCase();
-        final dataDestination = data['destination'].toString().toLowerCase();
-        final dataNom = data['nom'].toString().toLowerCase();
-        return dataDate.contains(searchDate) &&
-            dataDestination.contains(searchDestination) &&
-            dataNom.contains(searchNom);
+        return data['date'].toString().toLowerCase().contains(searchDate) &&
+            data['destination'].toString().toLowerCase().contains(
+              searchDestination,
+            ) &&
+            data['nom'].toString().toLowerCase().contains(searchNom);
       }).toList();
     });
   }
@@ -88,75 +133,83 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        iconTheme: IconThemeData(
-          color: Config.colors.bleuFonce2,
-        ),
+        iconTheme: IconThemeData(color: Config.colors.authCardBackground),
         title: Text(
-          "Tickets scannés \ndu ${widget.date}",
+          "Tickets scannés\ndu jour",
           style: TextStyle(
-              fontSize: 14,
-              color: Config.colors.bleuFonce2,
-              fontWeight: FontWeight.bold),
+            fontSize: 14,
+            color: Config.colors.authCardBackground,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
+        // ── Bouton rafraîchir manuel ──────────────────────────────────────
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh, color: Config.colors.authCardBackground),
+            onPressed: _getDonnees,
+          ),
+        ],
       ),
       body: Container(
-        height: MediaQuery.of(context).size.height * 1,
+        height: MediaQuery.of(context).size.height,
         padding: const EdgeInsets.all(4.0),
         decoration: const BoxDecoration(
           color: Color.fromARGB(143, 228, 227, 227),
         ),
         child: Column(
           children: [
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
+            // ── Champs de recherche ───────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.only(top: 3, left: 4, right: 4),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  SizedBox(
-                    width: 170,
-                    height: 40,
+                  Expanded(
                     child: TextField(
                       controller: _rechercheParDate,
                       decoration: const InputDecoration(
-                        hintText: 'Recherche par date',
+                        hintText: 'Recherche\npar date',
+                        hintMaxLines: 2,
                         hintStyle: TextStyle(fontSize: 11),
-                        prefixIcon: Icon(Icons.search),
+                        prefixIcon: Icon(Icons.search, size: 18),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(12.0)),
                         ),
+                        contentPadding: EdgeInsets.symmetric(vertical: 2),
                       ),
                       onChanged: (value) => _filtrerDonnees(),
                     ),
                   ),
-                  SizedBox(
-                    width: 198,
-                    height: 40,
+                  const SizedBox(width: 4),
+                  Expanded(
                     child: TextField(
                       controller: _rechercheParDestination,
                       decoration: const InputDecoration(
-                        hintText: 'Recherche par destination',
+                        hintText: 'Recherche\npar destination',
+                        hintMaxLines: 2,
                         hintStyle: TextStyle(fontSize: 11),
-                        prefixIcon: Icon(Icons.search),
+                        prefixIcon: Icon(Icons.search, size: 18),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(12.0)),
                         ),
+                        contentPadding: EdgeInsets.symmetric(vertical: 2),
                       ),
                       onChanged: (value) => _filtrerDonnees(),
                     ),
                   ),
-                  SizedBox(
-                    width: 200,
-                    height: 40,
+                  const SizedBox(width: 4),
+                  Expanded(
                     child: TextField(
                       controller: _rechercheParNom,
                       decoration: const InputDecoration(
-                        hintText: 'Recherche par nom',
+                        hintText: 'Recherche\npar nom',
+                        hintMaxLines: 2,
                         hintStyle: TextStyle(fontSize: 11),
-                        prefixIcon: Icon(Icons.search),
+                        prefixIcon: Icon(Icons.search, size: 18),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(12.0)),
                         ),
+                        contentPadding: EdgeInsets.symmetric(vertical: 2),
                       ),
                       onChanged: (value) => _filtrerDonnees(),
                     ),
@@ -164,23 +217,30 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
                 ],
               ),
             ),
+            // ── Tableau ───────────────────────────────────────────────────
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        color: Config.colors.authCardBackground,
+                      ),
+                    )
                   : SingleChildScrollView(
                       child: SizedBox(
                         width: double.infinity,
                         child: Theme(
                           data: ThemeData.light().copyWith(
-                              cardColor: Theme.of(context).canvasColor),
+                            cardColor: Theme.of(context).canvasColor,
+                          ),
                           child: PaginatedDataTable(
                             header: Center(
                               child: Text(
-                                "NOMBRE TOTAL DE TICKETS : ${donnees.length}",
+                                "TICKETS SCANNÉS : ${donnees.length}",
                                 style: TextStyle(
-                                    color: Config.colors.bleuFonce2,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14),
+                                  color: Config.colors.authCardBackground,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
                               ),
                             ),
                             horizontalMargin: 5,
@@ -189,69 +249,64 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
                             columns: const [
                               DataColumn(
                                 label: Text(
-                                  'Dates',
+                                  'Date',
                                   style: TextStyle(
-                                      color: Color.fromARGB(255, 9, 15, 123),
-                                      fontWeight: FontWeight.bold),
+                                    color: Color.fromARGB(255, 9, 15, 123),
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                               DataColumn(
                                 label: Text(
-                                  'Heures',
+                                  'Heure',
                                   style: TextStyle(
-                                      color: Color.fromARGB(255, 9, 15, 123),
-                                      fontWeight: FontWeight.bold),
+                                    color: Color.fromARGB(255, 9, 15, 123),
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                               DataColumn(
                                 label: Text(
-                                  'Départs',
+                                  'Départ',
                                   style: TextStyle(
-                                      color: Color.fromARGB(255, 9, 15, 123),
-                                      fontWeight: FontWeight.bold),
+                                    color: Color.fromARGB(255, 9, 15, 123),
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                               DataColumn(
                                 label: Text(
-                                  'Destinations',
+                                  'Destination',
                                   style: TextStyle(
-                                      color: Color.fromARGB(255, 9, 15, 123),
-                                      fontWeight: FontWeight.bold),
+                                    color: Color.fromARGB(255, 9, 15, 123),
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                               DataColumn(
                                 label: Text(
-                                  'Places',
+                                  'Place',
                                   style: TextStyle(
-                                      color: Color.fromARGB(255, 9, 15, 123),
-                                      fontWeight: FontWeight.bold),
+                                    color: Color.fromARGB(255, 9, 15, 123),
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                               DataColumn(
                                 label: Text(
-                                  'Tarifs',
+                                  'Client',
                                   style: TextStyle(
-                                      color: Color.fromARGB(255, 9, 15, 123),
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                              DataColumn(
-                                label: Text(
-                                  'Clients',
-                                  style: TextStyle(
-                                      color: Color.fromARGB(255, 9, 15, 123),
-                                      fontWeight: FontWeight.bold),
+                                    color: Color.fromARGB(255, 9, 15, 123),
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ],
                             rowsPerPage: _rowsPerPage,
                             availableRowsPerPage: const [10, 20, 50],
                             onRowsPerPageChanged: (int? value) {
-                              if (value != null) {
-                                setState(() {
-                                  _rowsPerPage = value;
-                                });
-                              }
+                              if (value != null)
+                                setState(() => _rowsPerPage = value);
                             },
                             source: TicketDataSource(donnees, context),
                           ),
@@ -267,69 +322,83 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
 }
 
 class TicketDataSource extends DataTableSource {
-  List<Map<String, dynamic>> tickets;
+  final List<Map<String, dynamic>> tickets;
   final BuildContext context;
 
   TicketDataSource(this.tickets, this.context);
 
   DateTime parseDate(String dateStr) {
-    DateFormat dateFormatFr = DateFormat('EEEE d MMMM yyyy', 'fr_FR');
-    DateTime dateTime = dateFormatFr.parse(dateStr);
-    return dateTime;
+    return DateFormat('EEEE d MMMM yyyy', 'fr_FR').parse(dateStr);
   }
 
   @override
   DataRow? getRow(int index) {
     if (index >= tickets.length) return null;
-    final ticketSnapshot = tickets[index];
-    final ticket = ticketSnapshot;
-    var idDuTicket = ticket['documentId'];
-    DateTime date = parseDate(ticket['date'].toString());
-
-    String formattedDate = DateFormat('dd MMMM yyyy', 'fr_FR').format(date);
+    final ticket = tickets[index];
+    final date = parseDate(ticket['date'].toString());
+    final formattedDate = DateFormat('dd MMMM yyyy', 'fr_FR').format(date);
 
     return DataRow.byIndex(
       index: index,
       cells: [
-        DataCell(Text(formattedDate, style: TextStyle(fontSize: 13)),
-            onTap: () => _onTapRow(ticket, idDuTicket)),
-        DataCell(Text("${ticket['heure']} h", style: TextStyle(fontSize: 13)),
-            onTap: () => _onTapRow(ticket, idDuTicket)),
-        DataCell(Text(ticket['depart'], style: TextStyle(fontSize: 13)),
-            onTap: () => _onTapRow(ticket, idDuTicket)),
-        DataCell(Text(ticket['destination'], style: TextStyle(fontSize: 13)),
-            onTap: () => _onTapRow(ticket, idDuTicket)),
         DataCell(
-            Text(ticket['place'].toString(), style: TextStyle(fontSize: 13)),
-            onTap: () => _onTapRow(ticket, idDuTicket)),
+          Text(formattedDate, style: const TextStyle(fontSize: 13)),
+          onTap: () => _onTapRow(ticket),
+        ),
         DataCell(
-            Text(ticket['prixDuTicket'].toString(),
-                style: TextStyle(fontSize: 13)),
-            onTap: () => _onTapRow(ticket, idDuTicket)),
-        DataCell(Text(ticket['nom'].toString(), style: TextStyle(fontSize: 13)),
-            onTap: () => _onTapRow(ticket, idDuTicket)),
+          Text("${ticket['heure']} h", style: const TextStyle(fontSize: 13)),
+          onTap: () => _onTapRow(ticket),
+        ),
+        DataCell(
+          Text(
+            ticket['depart'].toString(),
+            style: const TextStyle(fontSize: 13),
+          ),
+          onTap: () => _onTapRow(ticket),
+        ),
+        DataCell(
+          Text(
+            ticket['destination'].toString(),
+            style: const TextStyle(fontSize: 13),
+          ),
+          onTap: () => _onTapRow(ticket),
+        ),
+        DataCell(
+          Text(
+            ticket['place'].toString(),
+            style: const TextStyle(fontSize: 13),
+          ),
+          onTap: () => _onTapRow(ticket),
+        ),
+        DataCell(
+          Text(ticket['nom'].toString(), style: const TextStyle(fontSize: 13)),
+          onTap: () => _onTapRow(ticket),
+        ),
       ],
     );
   }
 
-  void _onTapRow(Map<String, dynamic> ticket, String id) {
+  void _onTapRow(Map<String, dynamic> ticket) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => DetailsTickets(
-          idTicket: id,
-          idUtilisateur: ticket['idUtilisateur'],
-          nom: ticket['nom'],
-          contact: ticket['telephone'],
-          date: ticket['date'],
-          heure: ticket['heure'],
-          depart: ticket['depart'],
-          destination: ticket['destination'],
+          idTicket: ticket['documentId'].toString(),
+          idUtilisateur: ticket['idUtilisateur'].toString(),
+          nom: ticket['nom'].toString(),
+          contact: ticket['telephone'].toString(),
+          date: ConvertirHeure.formatDate(ticket['date'].toString()),
+          heure: ticket['heure'].toString(),
+          depart: ticket['depart'].toString(),
+          destination: ticket['destination'].toString(),
           place: ticket['place'],
-          etatScann: ticket['etatScanne'],
-          statut: ticket['statut'],
+          etatScann: ticket['etatScanne'].toString(),
+          statut: ticket['statut'].toString(),
           prixTicket: ticket['prixDuTicket'].toString(),
-          datePourCalcule: ticket['datePourCalcule'],
+          datePourCalcule: ticket['datePourCalcule'] != null
+              ? DateTime.parse(ticket['datePourCalcule'].toString())
+              : DateTime.now(),
+          typeVoyage: ticket['typeVoyage'].toString(),
         ),
       ),
     );

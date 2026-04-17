@@ -57,7 +57,7 @@ class CreationQrCode {
             embeddedImage: snapshot.data,
             // taille de l'image dans le qrcode
             embeddedImageStyle: const QrEmbeddedImageStyle(
-              size: Size.square(72),
+              size: Size.square(52),
             ),
           ),
         );

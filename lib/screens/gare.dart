@@ -1,8 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
-import 'package:mysql1/mysql1.dart';
 
 class Gares extends StatefulWidget {
   const Gares({super.key});
@@ -14,42 +15,76 @@ class Gares extends StatefulWidget {
 class _GaresState extends State<Gares> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _gareController = TextEditingController();
-  List<Map<String, dynamic>> __gareDatasList = [];
-  MySqlConnection? _connection;
-  final StreamController<List<Map<String, dynamic>>> _streamController =
-      StreamController();
-  bool _isLoading = true; // Indicateur de chargement
+  List<Map<String, dynamic>> _garesList = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _initialiserDB();
+    _rafraichirDonnees();
   }
 
-  // Initialise la connexion à la base de données MySQL
-  Future<void> _initialiserDB() async {
-    _connection = await Connexion.connexionDB();
+  @override
+  void dispose() {
+    _gareController.dispose();
+    super.dispose();
   }
 
-  // Récupère les données de la table Gares
-  Future<void> rafraichirDonnees() async {
-    setState(() {
-      _isLoading = true; // Commencer le chargement
-    });
-    _connection ??= await Connexion.connexionDB();
-    if (_connection != null) {
-      var results = await _connection!.query('SELECT * FROM Gares');
-      __gareDatasList = results
-          .map((row) => {
-                'id': row['id'],
-                'gare': row['gare'],
-              })
-          .toList();
-      _streamController.add(__gareDatasList);
+  // ── Charger les gares ──────────────────────────────────────────────────────
+  Future<void> _rafraichirDonnees() async {
+    if (mounted) setState(() => _isLoading = true);
+    try {
+      final response = await http.get(
+        Uri.parse('https://mvst.tenelo.cloud/gares.php'),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && mounted) {
+          setState(() {
+            _garesList = List<Map<String, dynamic>>.from(data['gares']);
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
     }
-    setState(() {
-      _isLoading = false;
-    });
+  }
+
+  // ── Ajouter une gare ───────────────────────────────────────────────────────
+  Future<void> _ajouterGare(String gare) async {
+    try {
+      await http.post(
+        Uri.parse('https://mvst.tenelo.cloud/gares.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'action': 'ajouter', 'gare': gare}),
+      );
+      _rafraichirDonnees();
+    } catch (e) {}
+  }
+
+  // ── Modifier une gare ──────────────────────────────────────────────────────
+  Future<void> _modifierGare(int id, String gare) async {
+    try {
+      await http.post(
+        Uri.parse('https://mvst.tenelo.cloud/gares.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'action': 'modifier', 'id': id, 'gare': gare}),
+      );
+      _rafraichirDonnees();
+    } catch (e) {}
+  }
+
+  // ── Supprimer une gare ─────────────────────────────────────────────────────
+  Future<void> _supprimerGare(int id) async {
+    try {
+      await http.post(
+        Uri.parse('https://mvst.tenelo.cloud/gares.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'action': 'supprimer', 'id': id}),
+      );
+      _rafraichirDonnees();
+    } catch (e) {}
   }
 
   @override
@@ -57,244 +92,167 @@ class _GaresState extends State<Gares> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(93, 12, 134, 195),
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-        ),
+        iconTheme: const IconThemeData(color: Colors.white),
         centerTitle: true,
-        title: const Text(
-          'Gare d\'origine ',
-          style: TextStyle(color: Colors.white),
-        ),
+        title:
+            const Text("Gare d'origine", style: TextStyle(color: Colors.white)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: _rafraichirDonnees,
+          ),
+        ],
       ),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: _streamController.stream,
-        builder: (context, snapshot) {
-          if (_isLoading) {
-            return Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(
-              child: Text(
-                'Aucune donnée disponible',
-                style: TextStyle(
-                  color: Config.colors.bleuFonce2,
-                  fontFamily: 'Lobster',
-                ),
-              ),
-            );
-          }
-
-          return ListView.builder(
-            itemCount: snapshot.data!.length,
-            itemBuilder: (context, index) {
-              final _gareData = snapshot.data![index];
-              return Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                child: Card(
-                  margin: const EdgeInsets.all(4),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(_gareData['gare']),
-                          ],
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _garesList.isEmpty
+              ? Center(
+                  child: Text('Aucune donnée disponible',
+                      style: TextStyle(
+                          color: Config.colors.authCardBackground,
+                          fontFamily: 'Lobster')))
+              : ListView.builder(
+                  itemCount: _garesList.length,
+                  itemBuilder: (context, index) {
+                    final gare = _garesList[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      child: Card(
+                        margin: const EdgeInsets.all(4),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(gare['gare'].toString()),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit),
+                                    onPressed: () =>
+                                        _afficherModalModifier(context, gare),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete),
+                                    onPressed: () async {
+                                      final confirm =
+                                          await _confirmerSuppression(context);
+                                      if (confirm == true) {
+                                        await _supprimerGare(gare['id']);
+                                      }
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit),
-                              onPressed: () =>
-                                  _modifierGares(context, _gareData),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.delete),
-                              onPressed: () async {
-                                final bool? confirm = await showDialog<bool>(
-                                  context: context,
-                                  builder: (context) {
-                                    return AlertDialog(
-                                      title: Text('Confirmer la suppression'),
-                                      content: Text(
-                                          'Voulez-vous vraiment supprimer cette entrée ?'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.of(context).pop(false);
-                                          },
-                                          child: Text('Annuler'),
-                                        ),
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.of(context).pop(true);
-                                          },
-                                          child: Text('Supprimer'),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-
-                                if (confirm == true) {
-                                  await _supprimerGares(_gareData['id']);
-                                }
-                              },
-                            ),
-                          ],
-                        )
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          );
-        },
-      ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _ajouterGares(context),
+        onPressed: () => _afficherModalAjouter(context),
         child: const Icon(Icons.add),
       ),
     );
   }
 
-  // Ajout de prix des _gareDatas
-  void _ajouterGares(BuildContext context) async {
-    _connection ??= await Connexion.connexionDB();
+  void _afficherModalAjouter(BuildContext context) {
+    _gareController.clear();
     showModalBottomSheet(
       isScrollControlled: true,
-      isDismissible: true,
       context: context,
-      builder: (BuildContext ctx) {
-        return Wrap(
-          children: [
-            Padding(
-              padding: EdgeInsets.only(
-                top: 20,
-                left: 20,
-                right: 20,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+            top: 20,
+            left: 20,
+            right: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _gareController,
+                decoration: const InputDecoration(labelText: 'Gare'),
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Veuillez entrer une gare' : null,
               ),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: _gareController,
-                      decoration: const InputDecoration(labelText: 'gare'),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Veuillez entrer un gare.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: () async {
-                        _connection ??= await Connexion.connexionDB();
-                        if (_formKey.currentState!.validate()) {
-                          final gare = _gareController.text.trim();
-                          await _connection!.query(
-                              'INSERT INTO Gares (gare) VALUES (?)', [gare]);
-
-                          _gareController.clear();
-                          Navigator.of(context).pop();
-                          rafraichirDonnees(); // Rafraîchir les données
-                        }
-                      },
-                      child: const Text('Ajouter'),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: () async {
+                  if (_formKey.currentState!.validate()) {
+                    await _ajouterGare(_gareController.text.trim());
+                    Navigator.of(context).pop();
+                  }
+                },
+                child: const Text('Ajouter'),
               ),
-            ),
-          ],
-        );
-      },
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  // Modification du prix des _gareDatas
-  void _modifierGares(
-      BuildContext context, Map<String, dynamic> _gareData) async {
-    _connection ??= await Connexion.connexionDB();
-    _gareController.text = _gareData['gare'];
-
+  void _afficherModalModifier(BuildContext context, Map<String, dynamic> gare) {
+    _gareController.text = gare['gare'];
     showModalBottomSheet(
       isScrollControlled: true,
-      isDismissible: true,
       context: context,
-      builder: (BuildContext ctx) {
-        return Wrap(
-          children: [
-            Padding(
-              padding: EdgeInsets.only(
-                top: 20,
-                left: 20,
-                right: 20,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+            top: 20,
+            left: 20,
+            right: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _gareController,
+                decoration: const InputDecoration(labelText: 'Gare'),
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Veuillez entrer une gare' : null,
               ),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: _gareController,
-                      decoration: const InputDecoration(labelText: 'gare'),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Veuillez entrer un gare.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: () async {
-                        if (_formKey.currentState!.validate()) {
-                          final gare = _gareController.text.trim();
-                          _connection ??= await Connexion.connexionDB();
-                          await _connection!.query(
-                              'UPDATE Gares SET gare = ? WHERE id = ?',
-                              [gare, _gareData['id']]);
-
-                          _gareController.clear();
-                          Navigator.of(context).pop();
-                          rafraichirDonnees(); // Rafraîchir les données
-                        }
-                      },
-                      child: const Text('Modifier'),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: () async {
+                  if (_formKey.currentState!.validate()) {
+                    await _modifierGare(
+                        gare['id'], _gareController.text.trim());
+                    Navigator.of(context).pop();
+                  }
+                },
+                child: const Text('Modifier'),
               ),
-            ),
-          ],
-        );
-      },
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  // Suppression du prix des _gareDatas
-  Future<void> _supprimerGares(int id) async {
-    _connection ??= await Connexion.connexionDB();
-    await _connection!.query('DELETE FROM Gares WHERE id = ?', [id]);
-    rafraichirDonnees(); // Rafraîchir les données
-  }
-
-  @override
-  void dispose() {
-    _streamController.close();
-    _gareController.dispose();
-    super.dispose();
+  Future<bool?> _confirmerSuppression(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmer la suppression'),
+        content: const Text('Voulez-vous vraiment supprimer cette entrée ?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Annuler')),
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Supprimer')),
+        ],
+      ),
+    );
   }
 }

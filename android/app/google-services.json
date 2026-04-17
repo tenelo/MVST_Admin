@@ -27,9 +27,28 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:507287568722:android:9258f9d0e0ca52ff3dfa8b",
+        "mobilesdk_app_id": "1:507287568722:android:6e6eb7b68e6c1c3d3dfa8b",
         "android_client_info": {
-          "package_name": "com.example.mvst_admin"
+          "package_name": "com.app.mvst_admin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTtjEN24HL0wIFHL0-zHtPPNssb8two6Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:507287568722:android:465cdca15c242f5f3dfa8b",
+        "android_client_info": {
+          "package_name": "com.example.etv"
         }
       },
       "oauth_client": [],

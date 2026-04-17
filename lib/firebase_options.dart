@@ -51,7 +51,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDTtjEN24HL0wIFHL0-zHtPPNssb8two6Y',
-    appId: '1:507287568722:android:9258f9d0e0ca52ff3dfa8b',
+    appId: '1:507287568722:android:6e6eb7b68e6c1c3d3dfa8b',
     messagingSenderId: '507287568722',
     projectId: 'application-mobile-mvst',
     databaseURL: 'https://application-mobile-mvst-default-rtdb.europe-west1.firebasedatabase.app',
@@ -60,11 +60,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBGIdevmYkbBzPJ7ozu1t0r0EROKjb5TA0',
-    appId: '1:507287568722:ios:025ea5c9bb873a883dfa8b',
+    appId: '1:507287568722:ios:731a08c6f2045e843dfa8b',
     messagingSenderId: '507287568722',
     projectId: 'application-mobile-mvst',
     databaseURL: 'https://application-mobile-mvst-default-rtdb.europe-west1.firebasedatabase.app',
     storageBucket: 'application-mobile-mvst.appspot.com',
-    iosBundleId: 'com.example.design',
+    iosBundleId: 'com.app.mvstAdmin',
   );
 }

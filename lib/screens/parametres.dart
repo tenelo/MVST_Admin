@@ -1,35 +1,24 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mvst_admin/config/config.dart';
-import 'package:mvst_admin/imagesServeur/ajouterImages.dart';
 import 'package:mvst_admin/screens/ajoutDimages.dart';
 import 'package:mvst_admin/screens/gare.dart';
 import 'package:mvst_admin/screens/heuresDeparts.dart';
 import 'package:mvst_admin/screens/infosGare.dart';
 import 'package:mvst_admin/screens/prixTickets.dart';
+import 'package:mvst_admin/screens/vip/heureDepartVip.dart';
+import 'package:mvst_admin/screens/vip/prixTicketsVip.dart';
 
-// ignore: must_be_immutable
-class Parametres extends StatelessWidget {
-  Parametres({super.key});
-  User? user = FirebaseAuth.instance.currentUser;
+// Corps réutilisable (embarqué dans le bottom nav ou dans Parametres standalone)
+class ParametresBody extends StatelessWidget {
+  const ParametresBody({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        iconTheme: IconThemeData(
-          color: Config.colors.bleuFonce2,
-        ),
-        title: Text(
-          "Paramètres",
-          style: TextStyle(
-            color: Config.colors.bleuFonce2,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: Container(
-        padding: const EdgeInsets.all(8),
-        child: ListView(children: [
+    return Container(
+      padding: const EdgeInsets.all(8),
+      child: ListView(
+        children: [
           Center(
             child: Column(
               children: [
@@ -46,9 +35,7 @@ class Parametres extends StatelessWidget {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => const Gares(),
-                        ),
+                        MaterialPageRoute(builder: (context) => const Gares()),
                       );
                     },
                     child: Text(
@@ -60,9 +47,7 @@ class Parametres extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(
-                  height: 8,
-                ),
+                const SizedBox(height: 8),
                 SizedBox(
                   width: MediaQuery.of(context).size.width * .85,
                   height: 50,
@@ -90,9 +75,47 @@ class Parametres extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(
-                  height: 8,
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width * .85,
+                  height: 50,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color.fromARGB(255, 57, 57, 240),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(32.0),
+                        side: const BorderSide(
+                          color: Color(0xFFFFD700),
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const HeureDepartVip(),
+                        ),
+                      );
+                    },
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.star, color: Color(0xFFFFD700), size: 16),
+                        SizedBox(width: 8),
+                        Text(
+                          'HEURE DEPART VIP',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFFFFD700),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
+                const SizedBox(height: 8),
                 SizedBox(
                   width: MediaQuery.of(context).size.width * .85,
                   height: 50,
@@ -120,11 +143,47 @@ class Parametres extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(
-                  height: 8,
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width * .85,
+                  height: 50,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color.fromARGB(255, 57, 57, 240),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(32.0),
+                        side: const BorderSide(
+                          color: Color(0xFFFFD700),
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const PrixTicketsVip(),
+                        ),
+                      );
+                    },
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.star, color: Color(0xFFFFD700), size: 16),
+                        SizedBox(width: 8),
+                        Text(
+                          'PRIX DES TICKETS VIP',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFFFFD700),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                /* INFORMATIONS SUR LES GARES*/
-
+                const SizedBox(height: 8),
                 SizedBox(
                   width: MediaQuery.of(context).size.width * .85,
                   height: 50,
@@ -138,9 +197,7 @@ class Parametres extends StatelessWidget {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => Informations(),
-                        ),
+                        MaterialPageRoute(builder: (context) => Informations()),
                       );
                     },
                     child: Text(
@@ -152,9 +209,7 @@ class Parametres extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(
-                  height: 8,
-                ),
+                const SizedBox(height: 8),
                 SizedBox(
                   width: MediaQuery.of(context).size.width * .85,
                   height: 50,
@@ -168,9 +223,7 @@ class Parametres extends StatelessWidget {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => ListeImages(),
-                        ),
+                        MaterialPageRoute(builder: (context) => ListeImages()),
                       );
                     },
                     child: Text(
@@ -182,9 +235,7 @@ class Parametres extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(
-                  height: 8,
-                ),
+                const SizedBox(height: 8),
                 SizedBox(
                   width: MediaQuery.of(context).size.width * .85,
                   height: 50,
@@ -195,14 +246,7 @@ class Parametres extends StatelessWidget {
                         borderRadius: BorderRadius.circular(32.0),
                       ),
                     ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ListeImages2(),
-                        ),
-                      );
-                    },
+                    onPressed: () {},
                     child: Text(
                       "LES NOTIFICATIONS",
                       style: TextStyle(
@@ -211,20 +255,41 @@ class Parametres extends StatelessWidget {
                       ),
                     ),
                   ),
-                )
+                ),
               ],
             ),
-          )
-        ]),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+// ignore: must_be_immutable
+class Parametres extends StatelessWidget {
+  Parametres({super.key});
+  User? user = FirebaseAuth.instance.currentUser;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        iconTheme: IconThemeData(color: Config.colors.authCardBackground),
+        title: Text(
+          "Paramètres",
+          style: TextStyle(color: Config.colors.authCardBackground),
+        ),
+        centerTitle: true,
+      ),
+      body: const ParametresBody(),
       persistentFooterButtons: [
         Text(
-          user!.displayName!,
+          user?.displayName ?? '',
           style: TextStyle(
             fontFamily: 'Lobster',
             color: Config.colors.bleuClaire,
           ),
-        )
+        ),
       ],
     );
   }

@@ -1,19 +1,20 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/screens/placesAssisesPE.dart';
-
-List<Map<String, dynamic>> heuresDepartEtNombreTickets = [];
-List<String> listeDesHeures = [];
-String? heuresFormattees;
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 class DepartsPlacesAssicesPourBtFlottant extends StatefulWidget {
-  const DepartsPlacesAssicesPourBtFlottant(
-      {super.key,
-      required this.gare,
-      required this.uid,
-      required this.date,
-      required this.dateNormale,
-      required this.tailleEcran});
+  const DepartsPlacesAssicesPourBtFlottant({
+    super.key,
+    required this.gare,
+    required this.uid,
+    required this.date,
+    required this.dateNormale,
+    required this.tailleEcran,
+  });
   final String gare;
   final String uid;
   final String date;
@@ -27,37 +28,66 @@ class DepartsPlacesAssicesPourBtFlottant extends StatefulWidget {
 
 class _DepartsPlacesAssicesPourBtFlottantState
     extends State<DepartsPlacesAssicesPourBtFlottant> {
-  Stream<List<Map<String, dynamic>>> recupererLesTicketsScannes() async* {
-    final conn = await Connexion.connexionDB();
+  List<Map<String, dynamic>> departs = [];
+  bool _isLoading = true;
+
+  // ── Socket.IO ──────────────────────────────────────────────────────────────
+  late IO.Socket socket;
+
+  @override
+  void initState() {
+    super.initState();
+    _chargerDeparts();
+    _connecterSocket();
+  }
+
+  @override
+  void dispose() {
+    socket.disconnect();
+    socket.dispose();
+    super.dispose();
+  }
+
+  void _connecterSocket() {
+    socket = IO.io(
+      'https://mvst.tenelo.cloud',
+      IO.OptionBuilder()
+          .setTransports(['websocket'])
+          .disableAutoConnect()
+          .build(),
+    );
+    socket.connect();
+
+    // ── Nouveau ticket acheté → rafraîchir ────────────────────────────────
+    socket.on('liste_mise_a_jour', (data) {
+      if (data['depart'] == widget.gare) {
+        _chargerDeparts();
+      }
+    });
+  }
+
+  Future<void> _chargerDeparts() async {
+    if (mounted) setState(() => _isLoading = true);
     try {
-      // Requête pour récupérer les heures, le nombre de tickets scannés (par heure), et les champs supplémentaires
-      var result = await conn.query(
-          'SELECT heureDeDepart,documentId, dateDeDepart,depart,destination,JSON_LENGTH(placesChoisies) as nombreDePlacesChoisies '
-          'FROM Departs '
-          'WHERE dateDeDepart = ? '
-          'GROUP BY documentId ',
-          [widget.date]);
+      final response = await http.post(
+        Uri.parse('https://mvst.tenelo.cloud/departsParGare.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'date': widget.date, 'gare': widget.gare}),
+      );
 
-      // Extraire le résultat des requêtes
-      var heuresDepartEtNombreTickets = result
-          .map((row) => {
-                'heure': row[0].toString(),
-                'documentId': row[1],
-                'dateDeDepart': row[2].toString(),
-                'depart': row[3],
-                'destination': row[4],
-                'nombreDePlacesChoisies': row[5],
-              })
-          .toList();
-      // Filtrer les tickets en fonction de la gare de l'utilisateur
-      heuresDepartEtNombreTickets = heuresDepartEtNombreTickets
-          .where((ticket) => ticket['depart'] == widget.gare)
-          .toList();
-
-      // Émettre les résultats filtrés
-      yield heuresDepartEtNombreTickets;
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          if (mounted) {
+            setState(() {
+              departs = List<Map<String, dynamic>>.from(data['departs']);
+              _isLoading = false;
+            });
+          }
+        }
+      }
     } catch (e) {
-      yield [];
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -65,134 +95,103 @@ class _DepartsPlacesAssicesPourBtFlottantState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        iconTheme: IconThemeData(
-          color: Config.colors.bleuFonce2,
-        ),
-        title: Text(
-          'Places occupées',
-          style: TextStyle(
-              color: Config.colors.bleuFonce2, fontWeight: FontWeight.bold),
-        ),
+        iconTheme: IconThemeData(color: Config.colors.authCardBackground),
+        title: Text('Places occupées',
+            style: TextStyle(
+                color: Config.colors.authCardBackground, fontWeight: FontWeight.bold)),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh, color: Config.colors.authCardBackground),
+            onPressed: _chargerDeparts,
+          ),
+        ],
       ),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: recupererLesTicketsScannes(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                'Vérifier la connexion',
-                style: TextStyle(
-                    color: Config.colors.bleuFonce2,
-                    fontWeight: FontWeight.bold),
-              ),
-            );
-          }
-
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(4.0),
-                child: Text(
-                  'Aucun ticket pris pour le départ du ${widget.dateNormale}',
-                  style: TextStyle(
-                      color: Config.colors.bleuFonce2,
-                      fontWeight: FontWeight.bold),
-                ),
-              ),
-            );
-          }
-
-          final heuresEtTickets = snapshot.data!;
-
-          return Column(
-            children: [
-              // Zone fixe au dessus de la liste
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(8),
-                  color: Colors.blueGrey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Le ${widget.dateNormale} ",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white70,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        "Nombre de départs: ${heuresEtTickets.length}",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : departs.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(4.0),
+                    child: Text(
+                      'Aucun ticket pris pour le départ du ${widget.dateNormale}',
+                      style: TextStyle(
+                          color: Config.colors.authCardBackground,
+                          fontWeight: FontWeight.bold),
+                    ),
                   ),
-                ),
-              ),
-              SizedBox(
-                height: 4,
-              ),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: heuresEtTickets.length,
-                  itemBuilder: (context, index) {
-                    return Padding(
+                )
+              : Column(
+                  children: [
+                    Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: SizedBox(
-                        width: MediaQuery.of(context).size.width * .85,
-                        height: 50,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(32.0),
-                            ),
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => PlacesAssises(
-                                  documentId: heuresEtTickets[index]
-                                      ['documentId'],
-                                  depart: heuresEtTickets[index]['depart'],
-                                  destination: heuresEtTickets[index]
-                                      ['destination'],
-                                  heure: heuresEtTickets[index]['heure'],
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(8),
+                        color: Colors.blueGrey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Le ${widget.dateNormale}",
+                                style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white70)),
+                            const SizedBox(height: 4),
+                            Text("Nombre de départs: ${departs.length}",
+                                style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: departs.length,
+                        itemBuilder: (context, index) {
+                          return Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: SizedBox(
+                              height: 50,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(32.0),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => PlacesAssises(
+                                        documentId: departs[index]
+                                            ['documentId'],
+                                        depart: departs[index]['depart'],
+                                        destination: departs[index]
+                                            ['destination'],
+                                        heure: departs[index]['heureDeDepart'],
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  "Départ de ${departs[index]['heureDeDepart']} h",
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      color: Config.colors.bleuClaire),
                                 ),
                               ),
-                            );
-                          },
-                          child: Text(
-                            "Départ de ${heuresEtTickets[index]['heure']} h",
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Config.colors.bleuClaire,
                             ),
-                          ),
-                        ),
+                          );
+                        },
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          );
-        },
-      ),
     );
   }
 }

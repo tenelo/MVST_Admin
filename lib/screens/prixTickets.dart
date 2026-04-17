@@ -1,8 +1,8 @@
-import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
-import 'package:mysql1/mysql1.dart';
 
 class PrixTickets extends StatefulWidget {
   const PrixTickets({super.key});
@@ -15,68 +15,89 @@ class _PrixTicketsState extends State<PrixTickets> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _axeController = TextEditingController();
   final TextEditingController _prixController = TextEditingController();
-  List<Map<String, dynamic>> _ticketsList = [];
-  MySqlConnection? _connection;
-  final StreamController<List<Map<String, dynamic>>> _streamController =
-      StreamController();
-  bool _isLoading = true; // Indicateur de chargement
+  List<Map<String, dynamic>> _prixList = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _initialiserDB();
+    _rafraichirDonnees();
   }
 
-  // Initialise la connexion à la base de données MySQL
-  Future<void> _initialiserDB() async {
-    _connection = await Connexion.connexionDB();
-    await verifEtCreationDeTable();
-    await rafraichirDonnees();
+  @override
+  void dispose() {
+    _axeController.dispose();
+    _prixController.dispose();
+    super.dispose();
   }
 
-  // Vérifie et ouvre la connexion si elle est fermée
-  Future<void> _verifierEtOuvrirConnexion() async {
-    _connection = await Connexion.connexionDB();
-  }
-
-  // Vérifie si la table existe et la crée si nécessaire
-  Future<void> verifEtCreationDeTable() async {
-    await _verifierEtOuvrirConnexion();
-    if (_connection != null) {
-      var result =
-          await _connection!.query("SHOW TABLES LIKE 'PrixDesTickets'");
-
-      // Si la table n'existe pas, la créer
-      if (result.isEmpty) {
-        await _connection!.query('''CREATE TABLE PrixDesTickets (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          axe VARCHAR(50),
-          prix INT
-        )''');
+  // ── Charger les prix ───────────────────────────────────────────────────────
+  Future<void> _rafraichirDonnees() async {
+    if (mounted) setState(() => _isLoading = true);
+    try {
+      final response = await http.get(
+        Uri.parse('https://mvst.tenelo.cloud/prixTickets.php'),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && mounted) {
+          setState(() {
+            _prixList = List<Map<String, dynamic>>.from(
+              data['prix'],
+            ).where((p) => p['type']?.toString() == 'standard').toList();
+            _isLoading = false;
+          });
+        }
       }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // Récupère les données de la table PrixDesTickets
-  Future<void> rafraichirDonnees() async {
-    setState(() {
-      _isLoading = true; // Commencer le chargement
-    });
-    await _verifierEtOuvrirConnexion();
-    if (_connection != null) {
-      var results = await _connection!.query('SELECT * FROM PrixDesTickets');
-      _ticketsList = results
-          .map((row) => {
-                'id': row['id'],
-                'axe': row['axe'],
-                'prix': row['prix'],
-              })
-          .toList();
-      _streamController.add(_ticketsList); // Envoie les données dans le stream
-    }
-    setState(() {
-      _isLoading = false; // Fin du chargement
-    });
+  // ── Ajouter ───────────────────────────────────────────────────────────────
+  Future<void> _ajouter(String axe, int prix) async {
+    try {
+      await http.post(
+        Uri.parse('https://mvst.tenelo.cloud/prixTickets.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'ajouter',
+          'axe': axe,
+          'prix': prix,
+          'type': 'standard',
+        }),
+      );
+      await _rafraichirDonnees();
+    } catch (e) {}
+  }
+
+  // ── Modifier ──────────────────────────────────────────────────────────────
+  Future<void> _modifier(int id, String axe, int prix) async {
+    try {
+      await http.post(
+        Uri.parse('https://mvst.tenelo.cloud/prixTickets.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'modifier',
+          'id': id,
+          'axe': axe,
+          'prix': prix,
+        }),
+      );
+      await _rafraichirDonnees();
+    } catch (e) {}
+  }
+
+  // ── Supprimer ─────────────────────────────────────────────────────────────
+  Future<void> _supprimer(int id) async {
+    try {
+      await http.post(
+        Uri.parse('https://mvst.tenelo.cloud/prixTickets.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'action': 'supprimer', 'id': id}),
+      );
+      await _rafraichirDonnees();
+    } catch (e) {}
   }
 
   @override
@@ -84,282 +105,219 @@ class _PrixTicketsState extends State<PrixTickets> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(93, 12, 134, 195),
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-        ),
+        iconTheme: const IconThemeData(color: Colors.white),
         centerTitle: true,
         title: const Text(
           'Prix des Tickets',
           style: TextStyle(color: Colors.white),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: _rafraichirDonnees,
+          ),
+        ],
       ),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: _streamController.stream,
-        builder: (context, snapshot) {
-          if (_isLoading) {
-            return Center(
-              child: CircularProgressIndicator(), // Indicateur de chargement
-            );
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _prixList.isEmpty
+          ? Center(
               child: Text(
                 'Aucune donnée disponible',
                 style: TextStyle(
-                  color: Config.colors.bleuFonce2,
+                  color: Config.colors.authCardBackground,
                   fontFamily: 'Lobster',
                 ),
               ),
-            );
-          }
-
-          return ListView.builder(
-            itemCount: snapshot.data!.length,
-            itemBuilder: (context, index) {
-              final ticket = snapshot.data![index];
-              return Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                child: Card(
-                  margin: const EdgeInsets.all(4),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(ticket['axe']),
-                            Text(ticket['prix'].toString()),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit),
-                              onPressed: () =>
-                                  _modifierPrixDesTickets(context, ticket),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.delete),
-                              onPressed: () async {
-                                final bool? confirm = await showDialog<bool>(
-                                  context: context,
-                                  builder: (context) {
-                                    return AlertDialog(
-                                      title: Text('Confirmer la suppression'),
-                                      content: Text(
-                                          'Voulez-vous vraiment supprimer cette entrée ?'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.of(context).pop(false);
-                                          },
-                                          child: Text('Annuler'),
-                                        ),
-                                        TextButton(
-                                          onPressed: () {
-                                            Navigator.of(context).pop(true);
-                                          },
-                                          child: Text('Supprimer'),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-
-                                if (confirm == true) {
-                                  await _supprimerPrixDesTickets(ticket['id']);
-                                }
-                              },
-                            ),
-                          ],
-                        )
-                      ],
+            )
+          : ListView.builder(
+              itemCount: _prixList.length,
+              itemBuilder: (context, index) {
+                final ticket = _prixList[index];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  child: Card(
+                    margin: const EdgeInsets.all(4),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(ticket['axe'].toString()),
+                              Text('${ticket['prix']} f'),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit),
+                                onPressed: () =>
+                                    _afficherModalModifier(context, ticket),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete),
+                                onPressed: () async {
+                                  final confirm = await _confirmerSuppression(
+                                    context,
+                                  );
+                                  if (confirm == true) {
+                                    await _supprimer(ticket['id']);
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
-          );
-        },
-      ),
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _ajouterPrixDesTickets(context),
+        onPressed: () => _afficherModalAjouter(context),
         child: const Icon(Icons.add),
       ),
     );
   }
 
-  // Ajout de prix des tickets
-  void _ajouterPrixDesTickets(BuildContext context) async {
-    await _verifierEtOuvrirConnexion();
+  void _afficherModalAjouter(BuildContext context) {
+    _axeController.clear();
+    _prixController.clear();
     showModalBottomSheet(
       isScrollControlled: true,
-      isDismissible: true,
       context: context,
-      builder: (BuildContext ctx) {
-        return Wrap(
-          children: [
-            Padding(
-              padding: EdgeInsets.only(
-                top: 20,
-                left: 20,
-                right: 20,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          top: 20,
+          left: 20,
+          right: 20,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _axeController,
+                decoration: const InputDecoration(labelText: 'Axe'),
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Veuillez entrer un axe' : null,
               ),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: _axeController,
-                      decoration: const InputDecoration(labelText: 'Axe'),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Veuillez entrer un axe.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _prixController,
-                      decoration: const InputDecoration(labelText: 'Prix'),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Veuillez entrer un prix.';
-                        }
-                        if (int.tryParse(value) == null) {
-                          return 'Veuillez entrer un nombre valide.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () async {
-                        if (_formKey.currentState!.validate()) {
-                          final axe = _axeController.text.trim();
-                          final prix = int.parse(_prixController.text.trim());
-                          await _verifierEtOuvrirConnexion();
-                          await _connection!.query(
-                              'INSERT INTO PrixDesTickets (axe, prix) VALUES (?, ?)',
-                              [axe, prix]);
-
-                          _axeController.clear();
-                          _prixController.clear();
-                          Navigator.of(context).pop();
-                          rafraichirDonnees(); // Rafraîchir les données
-                        }
-                      },
-                      child: const Text('Ajouter'),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _prixController,
+                decoration: const InputDecoration(labelText: 'Prix'),
+                keyboardType: TextInputType.number,
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Veuillez entrer un prix';
+                  if (int.tryParse(v) == null) return 'Entrer un nombre valide';
+                  return null;
+                },
               ),
-            ),
-          ],
-        );
-      },
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () async {
+                  if (_formKey.currentState!.validate()) {
+                    await _ajouter(
+                      _axeController.text.trim(),
+                      int.parse(_prixController.text.trim()),
+                    );
+                    Navigator.of(context).pop();
+                  }
+                },
+                child: const Text('Ajouter'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  // Modification du prix des tickets
-  void _modifierPrixDesTickets(
-      BuildContext context, Map<String, dynamic> ticket) async {
-    await _verifierEtOuvrirConnexion();
-    _axeController.text = ticket['axe'];
+  void _afficherModalModifier(
+    BuildContext context,
+    Map<String, dynamic> ticket,
+  ) {
+    _axeController.text = ticket['axe'].toString();
     _prixController.text = ticket['prix'].toString();
-
     showModalBottomSheet(
       isScrollControlled: true,
-      isDismissible: true,
       context: context,
-      builder: (BuildContext ctx) {
-        return Wrap(
-          children: [
-            Padding(
-              padding: EdgeInsets.only(
-                top: 20,
-                left: 20,
-                right: 20,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          top: 20,
+          left: 20,
+          right: 20,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _axeController,
+                decoration: const InputDecoration(labelText: 'Axe'),
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Veuillez entrer un axe' : null,
               ),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: _axeController,
-                      decoration: const InputDecoration(labelText: 'Axe'),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Veuillez entrer un axe.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _prixController,
-                      decoration: const InputDecoration(labelText: 'Prix'),
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Veuillez entrer un prix.';
-                        }
-                        if (int.tryParse(value) == null) {
-                          return 'Veuillez entrer un nombre valide.';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () async {
-                        if (_formKey.currentState!.validate()) {
-                          final axe = _axeController.text.trim();
-                          final prix = int.parse(_prixController.text.trim());
-                          await _verifierEtOuvrirConnexion();
-                          await _connection!.query(
-                              'UPDATE PrixDesTickets SET axe = ?, prix = ? WHERE id = ?',
-                              [axe, prix, ticket['id']]);
-
-                          _axeController.clear();
-                          _prixController.clear();
-                          Navigator.of(context).pop();
-                          rafraichirDonnees(); // Rafraîchir les données
-                        }
-                      },
-                      child: const Text('Modifier'),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _prixController,
+                decoration: const InputDecoration(labelText: 'Prix'),
+                keyboardType: TextInputType.number,
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Veuillez entrer un prix';
+                  if (int.tryParse(v) == null) return 'Entrer un nombre valide';
+                  return null;
+                },
               ),
-            ),
-          ],
-        );
-      },
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () async {
+                  if (_formKey.currentState!.validate()) {
+                    await _modifier(
+                      ticket['id'],
+                      _axeController.text.trim(),
+                      int.parse(_prixController.text.trim()),
+                    );
+                    Navigator.of(context).pop();
+                  }
+                },
+                child: const Text('Modifier'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  // Suppression du prix des tickets
-  Future<void> _supprimerPrixDesTickets(int id) async {
-    await _verifierEtOuvrirConnexion();
-    await _connection!.query('DELETE FROM PrixDesTickets WHERE id = ?', [id]);
-    rafraichirDonnees(); // Rafraîchir les données
-  }
-
-  @override
-  void dispose() {
-    _streamController.close();
-    _axeController.dispose();
-    _prixController.dispose();
-    super.dispose();
+  Future<bool?> _confirmerSuppression(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmer la suppression'),
+        content: const Text('Voulez-vous vraiment supprimer cette entrée ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
   }
 }

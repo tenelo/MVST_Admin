@@ -1,8 +1,8 @@
-import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
-import 'package:mysql1/mysql1.dart';
 
 class Informations extends StatefulWidget {
   @override
@@ -13,350 +13,16 @@ class _InformationsState extends State<Informations> {
   final TextEditingController villeController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
   final TextEditingController telephoneController = TextEditingController();
-  final TextEditingController confirmTelephoneController =
-      TextEditingController();
-
+  final TextEditingController confirmTelController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  MySqlConnection? _connection;
 
-  final StreamController<List<Map<String, dynamic>>> _streamController =
-      StreamController.broadcast();
+  List<Map<String, dynamic>> _infos = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _initialiserDB(); // Initialiser la connexion à la BD lors du démarrage
-    _chargerDonnees(); // Charger initialement les données dans le stream
-  }
-
-  Future<void> _initialiserDB() async {
-    try {
-      _connection = await Connexion.connexionDB();
-    } catch (e) {
-      print('Erreur lors de la connexion à la base de données: $e');
-      _connection = null; // Marquer la connexion comme échouée
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-        ),
-        title: Text(
-          "Informations Gares",
-          style: TextStyle(color: Colors.white),
-        ),
-        centerTitle: true,
-        backgroundColor: const Color.fromARGB(93, 12, 134, 195),
-      ),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: _streamController.stream, // Utilisation du Stream
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Erreur: ${snapshot.error}'));
-          } else if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-            final data = snapshot.data!;
-            return ListView.builder(
-              itemCount: data.length,
-              itemBuilder: (context, index) {
-                final row = data[index];
-                return ListTile(
-                  title: Text(row['ville']),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(row['description']),
-                      SizedBox(height: 5),
-                      Text("Télephone : ${row['telephone']}"),
-                    ],
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(Icons.edit),
-                        onPressed: () => _showBottomSheet(row: row),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.delete),
-                        onPressed: () async {
-                          final bool? confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (context) {
-                              return AlertDialog(
-                                title: Text('Confirmer la suppression'),
-                                content: Text(
-                                    'Voulez-vous vraiment supprimer cette entrée ?'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.of(context).pop(false);
-                                    },
-                                    child: Text('Annuler'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.of(context).pop(true);
-                                    },
-                                    child: Text('Supprimer'),
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-
-                          if (confirm == true) {
-                            await _supprimer(row['id']);
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          } else {
-            return Center(
-              child: Text(
-                'Aucune donnée disponible.',
-                style: TextStyle(
-                  color: Config.colors.bleuFonce2,
-                  fontFamily: 'Lobster',
-                ),
-              ),
-            );
-          }
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showBottomSheet(),
-        child: Icon(Icons.add),
-      ),
-    );
-  }
-
-  // Charger les données initiales dans le Stream
-  Future<void> _chargerDonnees() async {
-    List<Map<String, dynamic>> data = await _recupDonnees();
-    _streamController.add(data); // Ajouter les données au flux
-  }
-
-  Future<List<Map<String, dynamic>>> _recupDonnees() async {
-    try {
-      await _initialiserDB(); // Assurez-vous d'avoir une connexion
-
-      if (_connection != null) {
-        var results = await _connection!.query('SELECT * FROM InfosGares');
-        return results
-            .map((row) => {
-                  'id': row['id'],
-                  'ville': row['ville'],
-                  'description': row['description'],
-                  'telephone': row['telephone'],
-                })
-            .toList();
-      } else {
-        throw Exception(
-            "Impossible d'établir une connexion à la base de données.");
-      }
-    } catch (e) {
-      print('Erreur lors de la récupération des données: $e');
-      return [];
-    }
-  }
-
-  Future<void> _ajouterInformations() async {
-    final conn = await Connexion.connexionDB();
-
-    try {
-      await conn.query('''
-      CREATE TABLE IF NOT EXISTS InfosGares (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        ville VARCHAR(50),
-        description VARCHAR(255),
-        telephone VARCHAR(15)
-      )
-    ''');
-
-      await conn.query(
-        'INSERT INTO InfosGares (ville, description, telephone) VALUES (?, ?, ?)',
-        [
-          villeController.text,
-          descriptionController.text,
-          telephoneController.text
-        ],
-      );
-
-      _chargerDonnees(); // Recharger les données après ajout
-    } catch (error) {
-      print('Erreur lors de l\'ajout des informations: $error');
-    } finally {
-      await conn.close();
-    }
-  }
-
-  void _showBottomSheet({Map<String, dynamic>? row}) {
-    if (row != null) {
-      villeController.text = row['ville'];
-      descriptionController.text = row['description'];
-      telephoneController.text = row['telephone'];
-      confirmTelephoneController.text = row['telephone'];
-    } else {
-      villeController.clear();
-      descriptionController.clear();
-      telephoneController.clear();
-      confirmTelephoneController.clear();
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: villeController,
-                  decoration: InputDecoration(
-                    labelText: 'Ville',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Entrer la ville';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 8),
-                TextFormField(
-                  maxLines: 5,
-                  controller: descriptionController,
-                  decoration: InputDecoration(
-                    labelText: 'Description',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Entrer la description';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 8),
-                TextFormField(
-                  controller: telephoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: 'Téléphone',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Entrer numéro de téléphone';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 8),
-                TextFormField(
-                  controller: confirmTelephoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(
-                    labelText: 'Confirmer Téléphone',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Confirmer numéro de téléphone';
-                    }
-                    if (value != telephoneController.text) {
-                      return 'Les numéros de téléphone ne correspondent pas';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () async {
-                    if (_formKey.currentState!.validate()) {
-                      if (row == null) {
-                        await _ajouterInformations();
-                      } else {
-                        await _modifierInformations(row['id']);
-                      }
-                      Navigator.of(context).pop(); // Fermer la modal
-                    }
-                  },
-                  child: Text(row == null ? 'Ajouter' : 'Modifier'),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _modifierInformations(int id) async {
-    final _conn = await Connexion.connexionDB();
-    try {
-      // Vérifiez la connexion
-      var result = await _conn.query(
-        'UPDATE InfosGares SET ville = ?, description = ?, telephone = ? WHERE id = ?',
-        [
-          villeController.text,
-          descriptionController.text,
-          telephoneController.text,
-          id,
-        ],
-      );
-
-      // Vérifier si la mise à jour a été effectuée
-      if (result.affectedRows == 0) {
-        print('Aucune ligne mise à jour. Vérifiez si l\'ID est correct.');
-      } else {
-        print('Mise à jour réussie de l\'enregistrement.');
-        await _chargerDonnees(); // Recharger les données après modification
-      }
-    } catch (error) {
-      print('Erreur lors de la modification ');
-    } finally {
-      await _conn.close();
-    }
-  }
-
-  Future<void> _supprimer(int id) async {
-    try {
-      if (_connection == null) {
-        _connection = await Connexion.connexionDB();
-      }
-      var result =
-          await _connection!.query('DELETE FROM InfosGares WHERE id = ?', [id]);
-
-      // Vérifier si la suppression a bien été effectuée
-      if (result.affectedRows == 0) {
-        print('Aucune ligne supprimée. Vérifiez si l\'ID est correct.');
-      } else {
-        print('Suppression réussie.');
-        await _chargerDonnees(); // Recharger les données après suppression
-      }
-    } catch (error) {
-      print('Erreur lors de la supression ');
-    } finally {
-      if (_connection != null) {
-        await _connection!.close();
-      }
-    }
+    _chargerDonnees();
   }
 
   @override
@@ -364,11 +30,353 @@ class _InformationsState extends State<Informations> {
     villeController.dispose();
     descriptionController.dispose();
     telephoneController.dispose();
-    confirmTelephoneController.dispose();
-    _streamController.close(); // Fermer le stream
-    if (_connection != null) {
-      _connection?.close();
-    }
+    confirmTelController.dispose();
     super.dispose();
+  }
+
+  // ── Charger les infos ──────────────────────────────────────────────────────
+  Future<void> _chargerDonnees() async {
+    if (mounted) setState(() => _isLoading = true);
+    try {
+      final response = await http.get(
+        Uri.parse('https://mvst.tenelo.cloud/infosGares.php'),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && mounted) {
+          setState(() {
+            _infos = List<Map<String, dynamic>>.from(data['infos']);
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // ── Ajouter ───────────────────────────────────────────────────────────────
+  Future<void> _ajouter() async {
+    try {
+      await http.post(
+        Uri.parse('https://mvst.tenelo.cloud/infosGares.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'ajouter',
+          'ville': villeController.text,
+          'description': descriptionController.text,
+          'telephone': telephoneController.text,
+        }),
+      );
+      await _chargerDonnees();
+    } catch (e) {}
+  }
+
+  // ── Modifier ──────────────────────────────────────────────────────────────
+  Future<void> _modifier(int id) async {
+    try {
+      await http.post(
+        Uri.parse('https://mvst.tenelo.cloud/infosGares.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'modifier',
+          'id': id,
+          'ville': villeController.text,
+          'description': descriptionController.text,
+          'telephone': telephoneController.text,
+        }),
+      );
+      await _chargerDonnees();
+    } catch (e) {}
+  }
+
+  // ── Supprimer ─────────────────────────────────────────────────────────────
+  Future<void> _supprimer(int id) async {
+    try {
+      await http.post(
+        Uri.parse('https://mvst.tenelo.cloud/infosGares.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'action': 'supprimer', 'id': id}),
+      );
+      await _chargerDonnees();
+    } catch (e) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          "Informations Gares",
+          style: TextStyle(color: Colors.white),
+        ),
+        centerTitle: true,
+        backgroundColor: const Color.fromARGB(93, 12, 134, 195),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: _chargerDonnees,
+          ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _infos.isEmpty
+          ? Center(
+              child: Text(
+                'Aucune donnée disponible.',
+                style: TextStyle(
+                  color: Config.colors.authCardBackground,
+                  fontFamily: 'Lobster',
+                ),
+              ),
+            )
+          : ListView.builder(
+              itemCount: _infos.length,
+              itemBuilder: (context, index) {
+                final row = _infos[index];
+                return Container(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color.fromARGB(93, 12, 134, 195),
+                      width: 1.2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.lightBlue.withOpacity(0.12),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ── Icône gare ─────────────────────────────────────────
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color.fromARGB(93, 12, 134, 195),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.location_city,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // ── Infos ──────────────────────────────────────────────
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                row['ville'],
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Color.fromARGB(255, 12, 134, 195),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                row['description'],
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.phone,
+                                    size: 14,
+                                    color: Colors.grey,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    row['telephone'],
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        // ── Boutons ────────────────────────────────────────────
+                        Column(
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.edit,
+                                color: Color.fromARGB(255, 12, 134, 195),
+                              ),
+                              onPressed: () => _afficherBottomSheet(row: row),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.delete,
+                                color: Color.fromARGB(255, 233, 75, 64),
+                              ),
+                              onPressed: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text(
+                                      'Confirmer la suppression',
+                                    ),
+                                    content: const Text(
+                                      'Voulez-vous vraiment supprimer ?',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(false),
+                                        child: const Text('Annuler'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(true),
+                                        child: const Text(
+                                          'Supprimer',
+                                          style: TextStyle(
+                                            color: Color.fromARGB(
+                                              255,
+                                              233,
+                                              75,
+                                              64,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirm == true)
+                                  await _supprimer(row['id']);
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _afficherBottomSheet(),
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  void _afficherBottomSheet({Map<String, dynamic>? row}) {
+    if (row != null) {
+      villeController.text = row['ville'];
+      descriptionController.text = row['description'];
+      telephoneController.text = row['telephone'];
+      confirmTelController.text = row['telephone'];
+    } else {
+      villeController.clear();
+      descriptionController.clear();
+      telephoneController.clear();
+      confirmTelController.clear();
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          top: 16,
+          left: 16,
+          right: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: villeController,
+                decoration: const InputDecoration(
+                  labelText: 'Ville',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Entrer la ville' : null,
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                maxLines: 5,
+                controller: descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Entrer la description' : null,
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: telephoneController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Téléphone',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Entrer le téléphone' : null,
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: confirmTelController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                  labelText: 'Confirmer Téléphone',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Confirmer le téléphone';
+                  if (v != telephoneController.text)
+                    return 'Les numéros ne correspondent pas';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () async {
+                  if (_formKey.currentState!.validate()) {
+                    if (row == null) {
+                      await _ajouter();
+                    } else {
+                      await _modifier(row['id']);
+                    }
+                    Navigator.of(context).pop();
+                  }
+                },
+                child: Text(row == null ? 'Ajouter' : 'Modifier'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
