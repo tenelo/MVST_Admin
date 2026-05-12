@@ -94,8 +94,7 @@ class _GaresState extends State<Gares> {
         backgroundColor: const Color.fromARGB(93, 12, 134, 195),
         iconTheme: const IconThemeData(color: Colors.white),
         centerTitle: true,
-        title:
-            const Text("Gare d'origine", style: TextStyle(color: Colors.white)),
+        title: const Text("Gares", style: TextStyle(color: Colors.white)),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
@@ -106,52 +105,59 @@ class _GaresState extends State<Gares> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _garesList.isEmpty
-              ? Center(
-                  child: Text('Aucune donnée disponible',
-                      style: TextStyle(
-                          color: Config.colors.authCardBackground,
-                          fontFamily: 'Lobster')))
-              : ListView.builder(
-                  itemCount: _garesList.length,
-                  itemBuilder: (context, index) {
-                    final gare = _garesList[index];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
-                      child: Card(
-                        margin: const EdgeInsets.all(4),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          ? Center(
+              child: Text(
+                'Aucune donnée disponible',
+                style: TextStyle(
+                  color: Config.colors.authCardBackground,
+                  fontFamily: 'Lobster',
+                ),
+              ),
+            )
+          : ListView.builder(
+              itemCount: _garesList.length,
+              itemBuilder: (context, index) {
+                final gare = _garesList[index];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  child: Card(
+                    margin: const EdgeInsets.all(4),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(gare['gare'].toString()),
+                          Row(
                             children: [
-                              Text(gare['gare'].toString()),
-                              Row(
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.edit),
-                                    onPressed: () =>
-                                        _afficherModalModifier(context, gare),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete),
-                                    onPressed: () async {
-                                      final confirm =
-                                          await _confirmerSuppression(context);
-                                      if (confirm == true) {
-                                        await _supprimerGare(gare['id']);
-                                      }
-                                    },
-                                  ),
-                                ],
+                              IconButton(
+                                icon: const Icon(Icons.edit),
+                                onPressed: () =>
+                                    _afficherModalModifier(context, gare),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete),
+                                onPressed: () async {
+                                  final confirm = await _confirmerSuppression(
+                                    context,
+                                  );
+                                  if (confirm == true) {
+                                    await _supprimerGare(gare['id']);
+                                  }
+                                },
                               ),
                             ],
                           ),
-                        ),
+                        ],
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  ),
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _afficherModalAjouter(context),
         child: const Icon(Icons.add),
@@ -166,10 +172,11 @@ class _GaresState extends State<Gares> {
       context: context,
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(
-            top: 20,
-            left: 20,
-            right: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20),
+          top: 20,
+          left: 20,
+          right: 20,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+        ),
         child: Form(
           key: _formKey,
           child: Column(
@@ -205,10 +212,11 @@ class _GaresState extends State<Gares> {
       context: context,
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(
-            top: 20,
-            left: 20,
-            right: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20),
+          top: 20,
+          left: 20,
+          right: 20,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+        ),
         child: Form(
           key: _formKey,
           child: Column(
@@ -225,7 +233,9 @@ class _GaresState extends State<Gares> {
                 onPressed: () async {
                   if (_formKey.currentState!.validate()) {
                     await _modifierGare(
-                        gare['id'], _gareController.text.trim());
+                      gare['id'],
+                      _gareController.text.trim(),
+                    );
                     Navigator.of(context).pop();
                   }
                 },
@@ -246,11 +256,13 @@ class _GaresState extends State<Gares> {
         content: const Text('Voulez-vous vraiment supprimer cette entrée ?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Annuler')),
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
           TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Supprimer')),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Supprimer'),
+          ),
         ],
       ),
     );

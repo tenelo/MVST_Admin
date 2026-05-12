@@ -28,41 +28,43 @@ class ImageModel {
 }
 
 Widget porte() {
-  return Row(children: [
-    Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[300],
-        border: Border.all(
-          color: const Color.fromARGB(255, 89, 87, 87),
-          width: 1,
+  return Row(
+    children: [
+      Container(
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          border: Border.all(
+            color: const Color.fromARGB(255, 89, 87, 87),
+            width: 1,
+          ),
         ),
+        height: 23,
+        width: 8,
       ),
-      height: 23,
-      width: 8,
-    ),
-    Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[300],
-        border: Border.all(
-          color: const Color.fromARGB(255, 89, 87, 87),
-          width: 1,
+      Container(
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          border: Border.all(
+            color: const Color.fromARGB(255, 89, 87, 87),
+            width: 1,
+          ),
         ),
+        height: 24,
+        width: 10,
       ),
-      height: 24,
-      width: 10,
-    ),
-    Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[300],
-        border: Border.all(
-          color: const Color.fromARGB(255, 89, 87, 87),
-          width: 1,
+      Container(
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          border: Border.all(
+            color: const Color.fromARGB(255, 89, 87, 87),
+            width: 1,
+          ),
         ),
+        height: 25,
+        width: 12,
       ),
-      height: 25,
-      width: 12,
-    ),
-  ]);
+    ],
+  );
 }
 
 // Classe pour représenter un ticket

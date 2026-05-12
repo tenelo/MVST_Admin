@@ -55,7 +55,7 @@ class _DetailsTickets2State extends State<DetailsTickets2> {
   Future<void> genererPDF(BuildContext context) async {
     // Générer QrCode
     final qrData =
-        "${widget.idUtilisateur} \n${widget.idTicket} \n${widget.nom} \n${widget.contact} \n${widget.date} \n${widget.heure} \n${widget.place} \n${widget.depart}->${widget.destination} ";
+        "${widget.idUtilisateur} \n${widget.idTicket} \n${widget.nom} \n${widget.contact} \n${widget.date} \n${widget.heure} \n${widget.place} \n${widget.depart}->${widget.destination} \n${widget.prixTicket} \n${widget.etatScann} \n${widget.datePourCalcule}";
 
     // Générer le QR Code en tant qu'image
     final QrPainter qrPainter = QrPainter(

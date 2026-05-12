@@ -141,12 +141,12 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: Colors.blueGrey[900],
+      backgroundColor: c.authBackground,
       appBar: AppBar(
         iconTheme: IconThemeData(color: c.jauneBlanc),
-        backgroundColor: Colors.blueGrey[900],
+        backgroundColor: c.authBackground,
         title: Text(
-          'Vérification billets',
+          'Vérification Tickets',
           style: TextStyle(
             color: c.jauneBlanc,
             fontFamily: 'Lobster',
@@ -186,11 +186,11 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
         children: [
           // ── Zone scanner ──────────────────────────────────────────────────
           SizedBox(
-            height: size.height * .55,
+            height: size.height * .45,
             child: Stack(
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(24.0),
+                  padding: const EdgeInsets.all(32.0),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
                     child: MobileScanner(
@@ -326,11 +326,11 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
             ),
           ),
 
-          const Spacer(),
+          //const Spacer(),
 
           // ── Bouton Pause / Reprendre ──────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 70),
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -389,7 +389,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
             _continuerScan();
           },
           child: const Text(
-            'OK — Suivant',
+            'OK',
             style: TextStyle(
               color: Colors.green,
               fontWeight: FontWeight.bold,
@@ -416,7 +416,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
             _continuerScan();
           },
           child: const Text(
-            'OK — Suivant',
+            'OK',
             style: TextStyle(
               color: Colors.blue,
               fontWeight: FontWeight.bold,
@@ -444,7 +444,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
             _continuerScan();
           },
           child: const Text(
-            'OK — Suivant',
+            'OK',
             style: TextStyle(
               color: couleur,
               fontWeight: FontWeight.bold,
@@ -459,7 +459,11 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
   Widget _dialogInvalide(BuildContext context, TicketData ticketData) {
     const couleur = Color.fromARGB(255, 193, 27, 15);
     return AlertDialog(
-      title: _dialogTitre('assets/images/invalide2.png', 'TICKET INVALIDE', couleur),
+      title: _dialogTitre(
+        'assets/images/invalide2.png',
+        'TICKET INVALIDE',
+        couleur,
+      ),
       content: const SizedBox.shrink(),
       actions: [
         TextButton(
@@ -468,7 +472,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
             _continuerScan();
           },
           child: const Text(
-            'OK — Suivant',
+            'OK',
             style: TextStyle(
               color: couleur,
               fontWeight: FontWeight.bold,
@@ -486,11 +490,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Center(
-          child: SizedBox(
-            height: 80,
-            width: 80,
-            child: Image.asset(asset),
-          ),
+          child: SizedBox(height: 80, width: 80, child: Image.asset(asset)),
         ),
         const SizedBox(height: 10),
         Center(

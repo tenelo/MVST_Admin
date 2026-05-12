@@ -30,7 +30,7 @@ class CreationQrCode {
     final FutureBuilder<ui.Image> qrFutureBuilder = FutureBuilder<ui.Image>(
       future: _loadOverlayImage(),
       builder: (BuildContext ctx, AsyncSnapshot<ui.Image> snapshot) {
-        const double size = 250.0;
+        const double size = 400.0;
         if (snapshot.hasData) {
           if (etatScann == "scanné") {
             couleurA = Config.colors.bleuA;
@@ -46,10 +46,7 @@ class CreationQrCode {
           painter: QrPainter(
             data: message,
             version: QrVersions.auto,
-            eyeStyle: QrEyeStyle(
-              eyeShape: QrEyeShape.square,
-              color: couleurA,
-            ),
+            eyeStyle: QrEyeStyle(eyeShape: QrEyeShape.square, color: couleurA),
             dataModuleStyle: QrDataModuleStyle(
               dataModuleShape: QrDataModuleShape.square,
               color: couleurB,
@@ -57,7 +54,7 @@ class CreationQrCode {
             embeddedImage: snapshot.data,
             // taille de l'image dans le qrcode
             embeddedImageStyle: const QrEmbeddedImageStyle(
-              size: Size.square(52),
+              size: Size.square(70),
             ),
           ),
         );

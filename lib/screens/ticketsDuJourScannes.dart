@@ -26,6 +26,7 @@ class TicketsDuJourScannes extends StatefulWidget {
 class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
   int _rowsPerPage = 20;
   bool _isLoading = true;
+  int _activeTab = 0; // 0=Tous, 1=Standard, 2=VIP
   List<Map<String, dynamic>> donnees = [];
   List<Map<String, dynamic>> _filtre = [];
   final TextEditingController _rechercheParDate = TextEditingController();
@@ -120,7 +121,12 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
 
     setState(() {
       donnees = _filtre.where((data) {
-        return data['date'].toString().toLowerCase().contains(searchDate) &&
+        final type = data['typeVoyage']?.toString().toLowerCase() ?? 'standard';
+        final matchType = _activeTab == 0 ||
+            (_activeTab == 1 && type != 'vip') ||
+            (_activeTab == 2 && type == 'vip');
+        return matchType &&
+            data['date'].toString().toLowerCase().contains(searchDate) &&
             data['destination'].toString().toLowerCase().contains(
               searchDestination,
             ) &&
@@ -217,6 +223,43 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
                 ],
               ),
             ),
+            // ── Filtres VIP / Standard ────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ChoiceChip(
+                    label: const Text('Tous'),
+                    selected: _activeTab == 0,
+                    onSelected: (_) {
+                      setState(() => _activeTab = 0);
+                      _filtrerDonnees();
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('Standard'),
+                    selected: _activeTab == 1,
+                    selectedColor: Colors.blue.shade100,
+                    onSelected: (_) {
+                      setState(() => _activeTab = 1);
+                      _filtrerDonnees();
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('VIP'),
+                    selected: _activeTab == 2,
+                    selectedColor: const Color(0xFFFFD700).withValues(alpha: 0.4),
+                    onSelected: (_) {
+                      setState(() => _activeTab = 2);
+                      _filtrerDonnees();
+                    },
+                  ),
+                ],
+              ),
+            ),
             // ── Tableau ───────────────────────────────────────────────────
             Expanded(
               child: _isLoading
@@ -301,6 +344,15 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
                                   ),
                                 ),
                               ),
+                              DataColumn(
+                                label: Text(
+                                  'Type',
+                                  style: TextStyle(
+                                    color: Color.fromARGB(255, 9, 15, 123),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                             ],
                             rowsPerPage: _rowsPerPage,
                             availableRowsPerPage: const [10, 20, 50],
@@ -338,8 +390,12 @@ class TicketDataSource extends DataTableSource {
     final date = parseDate(ticket['date'].toString());
     final formattedDate = DateFormat('dd MMMM yyyy', 'fr_FR').format(date);
 
+    final isVip =
+        ticket['typeVoyage']?.toString().toLowerCase() == 'vip';
     return DataRow.byIndex(
       index: index,
+      color: WidgetStateProperty.resolveWith<Color?>((states) =>
+          isVip ? const Color(0xFFFFD700).withValues(alpha: 0.08) : null),
       cells: [
         DataCell(
           Text(formattedDate, style: const TextStyle(fontSize: 13)),
@@ -372,6 +428,10 @@ class TicketDataSource extends DataTableSource {
         ),
         DataCell(
           Text(ticket['nom'].toString(), style: const TextStyle(fontSize: 13)),
+          onTap: () => _onTapRow(ticket),
+        ),
+        DataCell(
+          _TypeBadge(type: ticket['typeVoyage']?.toString() ?? 'standard'),
           onTap: () => _onTapRow(ticket),
         ),
       ],
@@ -412,4 +472,34 @@ class TicketDataSource extends DataTableSource {
 
   @override
   int get selectedRowCount => 0;
+}
+
+// ── Badge VIP / Standard ──────────────────────────────────────────────────────
+class _TypeBadge extends StatelessWidget {
+  final String type;
+  const _TypeBadge({required this.type});
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isVip = type.toLowerCase() == 'vip';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: isVip ? const Color(0xFFFFD700).withValues(alpha: 0.15) : Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isVip ? const Color(0xFFB8860B) : Colors.blue.shade200,
+          width: 1,
+        ),
+      ),
+      child: Text(
+        isVip ? 'VIP' : 'Standard',
+        style: TextStyle(
+          color: isVip ? const Color(0xFFB8860B) : Colors.blue.shade700,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
 }

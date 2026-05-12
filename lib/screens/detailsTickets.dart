@@ -53,11 +53,9 @@ class DetailsTickets extends StatefulWidget {
 class _DetailsTicketsState extends State<DetailsTickets> {
   // GENERER PDF
   Future<void> genererPDF(BuildContext context) async {
-    // Générer QrCode
     final qrData =
-        "${widget.idUtilisateur} \n${widget.idTicket} \n${widget.nom} \n${widget.contact} \n${widget.date} \n${widget.heure} \n${widget.place} \n${widget.depart}->${widget.destination} ";
+        "${widget.idUtilisateur} \n${widget.idTicket} \n${widget.nom} \n${widget.contact} \n${widget.date} \n${widget.heure} \n${widget.place} \n${widget.depart}->${widget.destination} \n${widget.prixTicket} \n${widget.etatScann} \n${widget.datePourCalcule}";
 
-    // Générer le QR Code en tant qu'image
     final QrPainter qrPainter = QrPainter(
       data: qrData,
       version: QrVersions.auto,
@@ -67,38 +65,29 @@ class _DetailsTicketsState extends State<DetailsTickets> {
         color: couleurB,
       ),
     );
-    final qrImage = await qrPainter.toImage(280); // Taille du QR Code (200x200)
+    final qrImage = await qrPainter.toImage(280);
 
-    // Convertir l'image en bytes
     final ByteData? byteData = await qrImage.toByteData(
       format: ImageByteFormat.png,
     );
     final Uint8List imageData = byteData!.buffer.asUint8List();
 
-    // Enregistrer l'image du QR Code en tant que fichier temporaire
     final tempDir = await getTemporaryDirectory();
     final tempPath = tempDir.path;
     final qrImagePath = '$tempPath/qr_code.png';
-
     final qrImageFile = File(qrImagePath);
     await qrImageFile.writeAsBytes(imageData);
 
-    // Créer un nouveau document PDF
     final pdf = pw.Document();
 
-    // Ajouter une page au document
     pdf.addPage(
       pw.Page(
         build: (pw.Context context) {
-          // Ajout de la ligne pour créer l'image QR Code
           final pdfImage = pw.MemoryImage(imageData);
-          // Contenu de la page PDF
           return pw.Center(
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                // les éléments du ticket
-                // première ligne (MVST)
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
@@ -121,35 +110,26 @@ class _DetailsTicketsState extends State<DetailsTickets> {
                         ),
                       ),
                     ),
-                    pw.Row(
-                      children: [
-                        pw.Text(
-                          'MVST',
-                          style: pw.TextStyle(
-                            fontSize: 20.0,
-                            fontWeight: pw.FontWeight.bold,
-                            color: PdfColors.blue,
-                          ),
-                        ),
-                      ],
+                    pw.Text(
+                      'MVST',
+                      style: pw.TextStyle(
+                        fontSize: 20.0,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.blue,
+                      ),
                     ),
                   ],
                 ),
                 pw.Padding(
                   padding: const pw.EdgeInsets.all(8.0),
-                  child: pw.Row(
-                    children: [
-                      pw.Text(
-                        "Ticket Ref° ${widget.idTicket.toUpperCase()}",
-                        style: const pw.TextStyle(
-                          fontSize: 7,
-                          color: PdfColors.grey,
-                        ),
-                      ),
-                    ],
+                  child: pw.Text(
+                    "Ticket Ref° ${widget.idTicket.toUpperCase()}",
+                    style: const pw.TextStyle(
+                      fontSize: 7,
+                      color: PdfColors.grey,
+                    ),
                   ),
                 ),
-                // deuxième ligne (depart / destination)
                 pw.Padding(
                   padding: const pw.EdgeInsets.only(top: 20.0),
                   child: pw.Center(
@@ -165,7 +145,6 @@ class _DetailsTicketsState extends State<DetailsTickets> {
                 ),
                 pw.Padding(
                   padding: const pw.EdgeInsets.only(top: 25.0),
-                  //Ligne A
                   child: pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
@@ -186,7 +165,6 @@ class _DetailsTicketsState extends State<DetailsTickets> {
                     ],
                   ),
                 ),
-                // Ligne B
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
@@ -290,15 +268,13 @@ class _DetailsTicketsState extends State<DetailsTickets> {
                     ),
                   ],
                 ),
-
                 pw.SizedBox(height: 20),
-                // QR CODE
                 pw.Center(
                   child: pw.Padding(
                     padding: const pw.EdgeInsets.only(top: 8.0),
                     child: pw.SizedBox(
-                      width: 200,
-                      height: 200,
+                      width: 250,
+                      height: 250,
                       child: pw.Image(pdfImage),
                     ),
                   ),
@@ -320,7 +296,6 @@ class _DetailsTicketsState extends State<DetailsTickets> {
       ),
     );
 
-    // SAUVEGARDE
     Uint8List pdfData = await pdf.save();
     sauvegarderPdf(
       pdfData,
@@ -329,23 +304,18 @@ class _DetailsTicketsState extends State<DetailsTickets> {
   }
 
   Future<void> sauvegarderPdf(Uint8List pdfData, String nomDuFichier) async {
-    // Demander les permissions de stockage
     var status = await Permission.storage.status;
     if (!status.isGranted) {
       await Permission.storage.request();
     }
 
-    // Obtenir le répertoire de stockage externe
     final directory = await getExternalStorageDirectory();
     final mvstDirectory = Directory('${directory!.path}/TICKETS MVST');
-    //final mvstDirectory = Directory('${directory!.path}/TICKETS MVST');
 
-    // Créer le répertoire s'il n'existe pas
     if (!await mvstDirectory.exists()) {
       await mvstDirectory.create(recursive: true);
     }
 
-    // Créer un nouveau nom de fichier unique
     var fichier = nomDuFichier;
     var file = File('${mvstDirectory.path}/$fichier');
     int count = 1;
@@ -355,20 +325,18 @@ class _DetailsTicketsState extends State<DetailsTickets> {
       file = File('${mvstDirectory.path}/$fichier');
       count++;
     }
-    // Définir le chemin du fichier
-    final cheminFichier = '${mvstDirectory.path}/$fichier';
 
-    // Enregistrer le fichier PDF
+    final cheminFichier = '${mvstDirectory.path}/$fichier';
     final fic = File(cheminFichier);
     await fic.writeAsBytes(pdfData);
-    // Ouvrir le fichier PDF
     OpenFile.open(cheminFichier);
+
     // ignore: use_build_context_synchronously
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: Colors.blue,
         content: Text(
-          'PDF du ticket créé avec succès dans le repertoir : $cheminFichier',
+          'PDF créé avec succès : $cheminFichier',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
@@ -377,14 +345,16 @@ class _DetailsTicketsState extends State<DetailsTickets> {
 
   @override
   Widget build(BuildContext context) {
+    final double w = MediaQuery.of(context).size.width;
     return Scaffold(
-      backgroundColor: Colors.blueGrey,
+      backgroundColor: const Color.fromARGB(255, 96, 125, 139),
       appBar: AppBar(
+        toolbarHeight: MediaQuery.of(context).size.height * 0.06,
         title: const Text(
           'Details du ticket',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.blueGrey,
+        backgroundColor: const Color.fromARGB(255, 96, 125, 139),
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -395,8 +365,8 @@ class _DetailsTicketsState extends State<DetailsTickets> {
           children: [
             Center(
               child: TicketWidget(
-                width: MediaQuery.of(context).size.width * 0.84,
-                height: MediaQuery.of(context).size.height * 0.75,
+                width: w * 0.90,
+                height: MediaQuery.of(context).size.height * 0.78,
                 padding: const EdgeInsets.all(16),
                 child: TicketData(
                   idUtilisateur: widget.idUtilisateur,
@@ -411,6 +381,7 @@ class _DetailsTicketsState extends State<DetailsTickets> {
                   prixTicket: widget.prixTicket,
                   etatScann: widget.etatScann,
                   dateCalcule: widget.datePourCalcule,
+                  typeVoyage: widget.typeVoyage,
                 ),
               ),
             ),
@@ -446,7 +417,9 @@ class TicketData extends StatelessWidget {
     required this.etatScann,
     required this.prixTicket,
     required this.dateCalcule,
+    required this.typeVoyage,
   });
+
   final String idUtilisateur;
   final String idTicket;
   final int place;
@@ -459,39 +432,77 @@ class TicketData extends StatelessWidget {
   final String prixTicket;
   final String etatScann;
   final DateTime dateCalcule;
+  final String typeVoyage;
 
   @override
   Widget build(BuildContext context) {
+    final double w = MediaQuery.of(context).size.width;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // première ligne (MVST)
+        // ── Première ligne (MVST + badge VIP) ─────────────────────────────────
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Container(
-              height: 25.0,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(30.0),
-                border: Border.all(width: 1.0, color: Colors.green),
-              ),
-              child: const Padding(
-                padding: EdgeInsets.all(2.0),
-                child: Center(
-                  child: Text(
-                    ' Mieux Vous Servir Transport ',
-                    style: TextStyle(color: Colors.green),
+            Flexible(
+              child: Container(
+                height: 25.0,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30.0),
+                  border: Border.all(width: 1.0, color: Colors.green),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(2.0),
+                  child: Center(
+                    child: Text(
+                      ' Mieux Vous Servir Transport ',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: w * 0.027,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
               ),
             ),
-            const Row(
+            const SizedBox(width: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
+                if (typeVoyage == 'vip') ...[
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: w * 0.020,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFD700),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 3,
+                          offset: Offset(1, 1),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      '★ VIP',
+                      style: TextStyle(
+                        color: Colors.black87,
+                        fontWeight: FontWeight.bold,
+                        fontSize: w * 0.023,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 Text(
                   'MVST',
                   style: TextStyle(
                     color: Color.fromARGB(255, 10, 127, 229),
-                    fontSize: 20.0,
+                    fontSize: w * 0.051,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -499,35 +510,31 @@ class TicketData extends StatelessWidget {
             ),
           ],
         ),
-        // deuxième ligne
+        // ── Référence ticket ───────────────────────────────────────────────
         Padding(
-          padding: EdgeInsets.all(8.0),
-          child: Row(
-            children: [
-              Text(
-                "Ticket Ref ${idTicket.toUpperCase()}",
-                style: TextStyle(fontSize: 7, color: Colors.grey),
-              ),
-            ],
+          padding: const EdgeInsets.all(8.0),
+          child: Text(
+            "Ticket Ref ${idTicket.toUpperCase()}",
+            style: const TextStyle(fontSize: 6, color: Colors.grey),
           ),
         ),
-        // deuxième ligne (depart / destination)
+        // ── Départ / Destination ───────────────────────────────────────────
         Padding(
           padding: const EdgeInsets.only(top: 20.0),
           child: Center(
             child: Text(
               '$depart -> $destination',
-              style: const TextStyle(
+              style: TextStyle(
                 color: Color.fromARGB(255, 9, 15, 123),
-                fontSize: 20.0,
+                fontSize: w * 0.046,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
         ),
+        // ── Passager / Contact ─────────────────────────────────────────────
         const Padding(
           padding: EdgeInsets.only(top: 25.0),
-          //Ligne A
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -548,7 +555,6 @@ class TicketData extends StatelessWidget {
             ],
           ),
         ),
-        // Ligne B
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -556,6 +562,7 @@ class TicketData extends StatelessWidget {
             Text(contact, style: const TextStyle(fontFamily: 'Lobster')),
           ],
         ),
+        // ── Date / Heure ───────────────────────────────────────────────────
         const Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -600,20 +607,21 @@ class TicketData extends StatelessWidget {
             ),
           ],
         ),
+        // ── Tarif / Siège ──────────────────────────────────────────────────
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Padding(
-              padding: EdgeInsets.only(left: 8, top: 16.0),
+              padding: const EdgeInsets.only(left: 8, top: 16.0),
               child: Text(
                 'Tarif : $prixTicket f',
-                style: TextStyle(
+                style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Colors.grey,
                 ),
               ),
             ),
-            Padding(
+            const Padding(
               padding: EdgeInsets.only(top: 16.0, right: 10),
               child: Text(
                 'Siège',
@@ -640,15 +648,14 @@ class TicketData extends StatelessWidget {
             ),
           ],
         ),
-
         const SizedBox(height: 5),
-        // QR CODE
+        // ── QR Code ────────────────────────────────────────────────────────
         Center(
           child: Padding(
             padding: const EdgeInsets.only(top: 1.0),
             child: SizedBox(
-              width: 180,
-              height: 180,
+              width: w * 0.46,
+              height: w * 0.46,
               child: FittedBox(
                 child: CreationQrCode.buildQrCode(
                   idUtilisateur,

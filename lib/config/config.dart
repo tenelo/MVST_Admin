@@ -34,6 +34,26 @@ class _Color {
   final couleurIcone = const Color.fromARGB(255, 3, 57, 183);
   final couleurDefondPrincipale = const Color.fromARGB(172, 54, 148, 241);
   final couleurOmbreCarte = const Color.fromARGB(144, 0, 174, 255);
+
+  // ── Home ─────────────────────────────────────────────────────────────────
+  final homeBackground = const Color(0xFFF4F7FB);
+  final homeCardBackground = const Color(0xFFFFFFFF);
+  final homeBordurePetiteCarte = const Color.fromARGB(255, 149, 202, 255);
+  final homeAccent = const Color(0xFFFFE082);
+  final homeTextPrimary = const Color(0xFF1A2D3E);
+  final homeTabSelected = const Color(0xFF1565C0);
+  final homeTabUnselected = const Color(0xFF90A4AE);
+  final homeDrawerBackground = const Color(0xFF0D47A1);
+  final homeBandeauBackground = const Color(0xFFE3F2FD);
+  final homeBandeauBorder = const Color(0xFFBBDEFB);
+
+  // ── V2 ───────────────────────────────────────────────────────────────────
+  final homeHeaderTop = const Color(0xFF1565C0);
+  final homeHeaderBottom = const Color(0xFF1E88E5);
+  final homeGrandeCarte = const Color.fromARGB(92, 216, 231, 251);
+  final homeButtonPrimary = const Color(0xFF1565C0);
+  final couleurTicket = const Color.fromARGB(255, 135, 213, 241);
+  final couleurInitiales = const Color.fromARGB(255, 11, 150, 242);
 }
 
 // class Connexion {

@@ -105,7 +105,21 @@ class MyApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('fr', '')],
-      home: const Accueil(),
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (snapshot.hasData) {
+            return const Accueil();
+          } else {
+            return const PageDAuthentification();
+          }
+        },
+      ),
     );
   }
 }
@@ -148,7 +162,12 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
     });
   }
 
-  static const _titres = ['CONTROLEURS MVST', 'PARAMÈTRES'];
+  static const _titres = [
+    'CONTROLEURS MVST',
+    'PARAMÈTRES',
+    'TABLEAU',
+    'PASSAGERS',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -373,15 +392,15 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                     scannQrCode(context, setLoadingState),
                     ticketsScannes(context, setLoadingState),
                     graphiques(context, setLoadingState),
-                    tableau(context, setLoadingState),
                     placesOccupees(context, setLoadingState),
-                    listePassagers(context, setLoadingState),
                     suppressionTickets(context, setLoadingState),
                     suggestions(context, setLoadingState),
                   ],
                 ),
               ),
               const ParametresBody(),
+              tableau(context, setLoadingState),
+              listePassagers(context, setLoadingState),
             ],
           ),
         ),
@@ -421,6 +440,12 @@ class _BottomNav extends StatelessWidget {
       activeIcon: Icons.settings,
       label: 'Paramètres',
     ),
+    (
+      icon: Icons.table_chart_outlined,
+      activeIcon: Icons.table_chart,
+      label: 'Tableau',
+    ),
+    (icon: Icons.people_outlined, activeIcon: Icons.people, label: 'Passagers'),
   ];
 
   @override

@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/graphiques/graphiqueJourDepart/graphiqueJourDepart.dart';
-import 'package:mvst_admin/screens/placesAssisesPE.dart';
+import 'package:mvst_admin/screens/placesAssisesStandard.dart';
 import 'package:mvst_admin/screens/ticketsDuJour.dart';
+import 'package:mvst_admin/screens/vip/placesAssisesVIP.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 List<String> listeDesHeures = [];
@@ -33,6 +34,23 @@ class TousLesDepartsDuJour extends StatefulWidget {
 class _TousLesDepartsDuJourState extends State<TousLesDepartsDuJour> {
   List<Map<String, dynamic>> departs = [];
   bool _isLoading = true;
+  int _activeTab = 0; // 0=Tous, 1=Standard, 2=VIP
+
+  List<Map<String, dynamic>> get _departsFiltres {
+    if (_activeTab == 0) return departs;
+    if (_activeTab == 1) {
+      return departs
+          .where(
+            (d) =>
+                (d['typeVoyage']?.toString().toLowerCase() ?? 'standard') !=
+                'vip',
+          )
+          .toList();
+    }
+    return departs
+        .where((d) => d['typeVoyage']?.toString().toLowerCase() == 'vip')
+        .toList();
+  }
 
   // ── Socket.IO ──────────────────────────────────────────────────────────────
   late IO.Socket socket;
@@ -85,10 +103,13 @@ class _TousLesDepartsDuJourState extends State<TousLesDepartsDuJour> {
           final liste = List<Map<String, dynamic>>.from(data['departs']);
 
           // Calculer les heures formatées
-          listeDesHeures =
-              liste.map((d) => '${d['heureDeDepart']} h').toSet().toList();
-          heuresFormattees =
-              liste.map((d) => d['heureDeDepart'].toString()).join(' | ');
+          listeDesHeures = liste
+              .map((d) => '${d['heureDeDepart']} h')
+              .toSet()
+              .toList();
+          heuresFormattees = liste
+              .map((d) => d['heureDeDepart'].toString())
+              .join(' | ');
 
           if (mounted) {
             setState(() {
@@ -108,9 +129,13 @@ class _TousLesDepartsDuJourState extends State<TousLesDepartsDuJour> {
     return Scaffold(
       appBar: AppBar(
         iconTheme: IconThemeData(color: Config.colors.authCardBackground),
-        title: Text('Départs',
-            style: TextStyle(
-                color: Config.colors.authCardBackground, fontWeight: FontWeight.bold)),
+        title: Text(
+          'Départs',
+          style: TextStyle(
+            color: Config.colors.authCardBackground,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         centerTitle: true,
         actions: [
           IconButton(
@@ -122,103 +147,193 @@ class _TousLesDepartsDuJourState extends State<TousLesDepartsDuJour> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : departs.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(4.0),
-                    child: Text(
-                      'Aucun ticket pris pour le départ du ${widget.dateNormale}',
-                      style: TextStyle(
-                          color: Config.colors.authCardBackground,
-                          fontWeight: FontWeight.bold),
-                    ),
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: Text(
+                  'Aucun ticket pris pour le départ du ${widget.dateNormale}',
+                  style: TextStyle(
+                    color: Config.colors.authCardBackground,
+                    fontWeight: FontWeight.bold,
                   ),
-                )
-              : Column(
-                  children: [
-                    // ── Résumé du jour ──────────────────────────────────
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(8),
-                        color: Colors.blueGrey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+              ),
+            )
+          : Column(
+              children: [
+                // ── Résumé du jour ──────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(8),
+                    color: Colors.blueGrey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Le ${widget.dateNormale}",
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white70,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
                           children: [
-                            Text("Le ${widget.dateNormale}",
-                                style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white70)),
-                            const SizedBox(height: 4),
-                            Text("Nombre de départs: ${departs.length}",
-                                style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white)),
-                            const SizedBox(height: 4),
-                            Text("Heures de départs: $heuresFormattees",
-                                style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white)),
+                            Text(
+                              "Départs: ${departs.length}",
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _buildTypeChip(
+                              'Std ${departs.where((d) => (d['typeVoyage']?.toString().toLowerCase() ?? '') != 'vip').length}',
+                              false,
+                            ),
+                            const SizedBox(width: 4),
+                            _buildTypeChip(
+                              'VIP ${departs.where((d) => d['typeVoyage']?.toString().toLowerCase() == 'vip').length}',
+                              true,
+                            ),
                           ],
                         ),
-                      ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Heures: $heuresFormattees",
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.only(
-                            left: 4, top: 2, right: 2, bottom: 4),
-                        itemCount: departs.length,
-                        itemBuilder: (context, index) {
-                          return (widget.tailleEcran <= 6)
-                              ? _CartePetitEcran(
-                                  context,
-                                  widget.gare,
-                                  widget.uid,
-                                  departs[index]['heureDeDepart'],
-                                  departs[index]['nombreDePlacesChoisies'] ?? 0,
-                                  departs[index]['documentId'],
-                                  departs[index]['depart'],
-                                  departs[index]['destination'],
-                                  departs[index]['dateDeDepart'],
-                                  widget.dateNormale,
-                                )
-                              : _CarteGrandEcran(
-                                  context,
-                                  widget.gare,
-                                  widget.uid,
-                                  departs[index]['heureDeDepart'],
-                                  departs[index]['nombreDePlacesChoisies'] ?? 0,
-                                  departs[index]['documentId'],
-                                  departs[index]['depart'],
-                                  departs[index]['destination'],
-                                  departs[index]['dateDeDepart'],
-                                  widget.dateNormale,
-                                );
-                        },
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
+                // ── Filtre VIP / Standard ───────────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('Tous'),
+                        selected: _activeTab == 0,
+                        onSelected: (_) => setState(() => _activeTab = 0),
+                      ),
+                      const SizedBox(width: 8),
+                      ChoiceChip(
+                        label: const Text('Standard'),
+                        selected: _activeTab == 1,
+                        selectedColor: Colors.blue.shade100,
+                        onSelected: (_) => setState(() => _activeTab = 1),
+                      ),
+                      const SizedBox(width: 8),
+                      ChoiceChip(
+                        label: const Text('VIP'),
+                        selected: _activeTab == 2,
+                        selectedColor: const Color(
+                          0xFFFFD700,
+                        ).withValues(alpha: 0.4),
+                        onSelected: (_) => setState(() => _activeTab = 2),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.only(
+                      left: 4,
+                      top: 2,
+                      right: 2,
+                      bottom: 4,
+                    ),
+                    itemCount: _departsFiltres.length,
+                    itemBuilder: (context, index) {
+                      final typeVoyage =
+                          _departsFiltres[index]['typeVoyage']?.toString() ??
+                          'standard';
+                      return (widget.tailleEcran <= 6)
+                          ? _CartePetitEcran(
+                              context,
+                              widget.gare,
+                              widget.uid,
+                              _departsFiltres[index]['heureDeDepart'],
+                              _departsFiltres[index]['nombreDePlacesChoisies'] ??
+                                  0,
+                              _departsFiltres[index]['documentId'],
+                              _departsFiltres[index]['depart'],
+                              _departsFiltres[index]['destination'],
+                              _departsFiltres[index]['dateDeDepart'],
+                              widget.dateNormale,
+                              typeVoyage,
+                            )
+                          : _CarteGrandEcran(
+                              context,
+                              widget.gare,
+                              widget.uid,
+                              _departsFiltres[index]['heureDeDepart'],
+                              _departsFiltres[index]['nombreDePlacesChoisies'] ??
+                                  0,
+                              _departsFiltres[index]['documentId'],
+                              _departsFiltres[index]['depart'],
+                              _departsFiltres[index]['destination'],
+                              _departsFiltres[index]['dateDeDepart'],
+                              widget.dateNormale,
+                              typeVoyage,
+                            );
+                    },
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildTypeChip(String label, bool isVip) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: isVip
+            ? const Color(0xFFFFD700).withValues(alpha: 0.2)
+            : Colors.blue.shade700.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isVip ? const Color(0xFFFFD700) : Colors.blue.shade200,
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: isVip ? const Color(0xFFFFD700) : Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 }
 
 // ── Carte petit écran ─────────────────────────────────────────────────────────
 Widget _CartePetitEcran(
-    BuildContext context,
-    String gare,
-    String uid,
-    String heures,
-    int nombrePlacesChoisies,
-    String documentId,
-    String depart,
-    String destination,
-    String idDate,
-    String date) {
+  BuildContext context,
+  String gare,
+  String uid,
+  String heures,
+  int nombrePlacesChoisies,
+  String documentId,
+  String depart,
+  String destination,
+  String idDate,
+  String date,
+  String typeVoyage,
+) {
+  final bool isVip = typeVoyage.toLowerCase() == 'vip';
   return Card(
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     elevation: 5,
@@ -240,60 +355,125 @@ Widget _CartePetitEcran(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Départ de : $heures h",
-              style: const TextStyle(
+          Row(
+            children: [
+              Text(
+                "Départ de : $heures h",
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white)),
+                  color: Colors.white,
+                ),
+              ),
+              const Spacer(),
+              if (isVip)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFD700).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFFFFD700),
+                      width: 1,
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.star_rounded,
+                        color: Color(0xFFFFD700),
+                        size: 12,
+                      ),
+                      SizedBox(width: 3),
+                      Text(
+                        'VIP',
+                        style: TextStyle(
+                          color: Color(0xFFFFD700),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
           const SizedBox(height: 10),
           RichText(
-            text: TextSpan(children: [
-              const TextSpan(
+            text: TextSpan(
+              children: [
+                const TextSpan(
                   text: "Nombre de passagers : ",
                   style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.white)),
-              TextSpan(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.white,
+                  ),
+                ),
+                TextSpan(
                   text: "$nombrePlacesChoisies",
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.white)),
-            ]),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 8),
           Column(
             children: [
               _bouton(context, "Les destinations", Icons.bar_chart_sharp, () {
                 Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => GraphiqueJourDepart(
-                          documentId: documentId,
-                          date: date,
-                          gare: gare,
-                          uid: uid),
-                    ));
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => GraphiqueJourDepart(
+                      documentId: documentId,
+                      date: date,
+                      gare: gare,
+                      uid: uid,
+                    ),
+                  ),
+                );
               }),
               _bouton(context, "Les tickets", Icons.receipt_outlined, () {
                 Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TicketsDuJour(
-                          date: date, idDoc: documentId, gare: gare, uid: uid),
-                    ));
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TicketsDuJour(
+                      date: date,
+                      idDoc: documentId,
+                      gare: gare,
+                      uid: uid,
+                      typeDepart: typeVoyage,
+                    ),
+                  ),
+                );
               }),
               _bouton(context, "Les Places", Icons.event_seat, () {
                 Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PlacesAssises(
-                          documentId: documentId,
-                          depart: depart,
-                          destination: destination,
-                          heure: heures),
-                    ));
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => isVip
+                        ? PlacesAssisesVIP(
+                            documentId: documentId,
+                            depart: depart,
+                            destination: destination,
+                            heure: heures,
+                          )
+                        : PlacesAssises(
+                            documentId: documentId,
+                            depart: depart,
+                            destination: destination,
+                            heure: heures,
+                          ),
+                  ),
+                );
               }),
             ],
           ),
@@ -305,16 +485,19 @@ Widget _CartePetitEcran(
 
 // ── Carte grand écran ─────────────────────────────────────────────────────────
 Widget _CarteGrandEcran(
-    BuildContext context,
-    String gare,
-    String uid,
-    String heures,
-    int nombrePlacesChoisies,
-    String documentId,
-    String depart,
-    String destination,
-    String idDate,
-    String date) {
+  BuildContext context,
+  String gare,
+  String uid,
+  String heures,
+  int nombrePlacesChoisies,
+  String documentId,
+  String depart,
+  String destination,
+  String idDate,
+  String date,
+  String typeVoyage,
+) {
+  final bool isVip = typeVoyage.toLowerCase() == 'vip';
   return Card(
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     elevation: 5,
@@ -336,27 +519,75 @@ Widget _CarteGrandEcran(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Départ de : $heures h",
-              style: const TextStyle(
+          Row(
+            children: [
+              Text(
+                "Départ de : $heures h",
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white)),
+                  color: Colors.white,
+                ),
+              ),
+              const Spacer(),
+              if (isVip)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFD700).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFFFFD700),
+                      width: 1,
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.star_rounded,
+                        color: Color(0xFFFFD700),
+                        size: 12,
+                      ),
+                      SizedBox(width: 3),
+                      Text(
+                        'VIP',
+                        style: TextStyle(
+                          color: Color(0xFFFFD700),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
           const SizedBox(height: 10),
           RichText(
-            text: TextSpan(children: [
-              const TextSpan(
+            text: TextSpan(
+              children: [
+                const TextSpan(
                   text: "Nombre de passagers : ",
                   style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.white)),
-              TextSpan(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.white,
+                  ),
+                ),
+                TextSpan(
                   text: "$nombrePlacesChoisies",
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.white)),
-            ]),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 8),
           Row(
@@ -364,33 +595,43 @@ Widget _CarteGrandEcran(
             children: [
               _bouton(context, "Les destinations", Icons.bar_chart_sharp, () {
                 Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => GraphiqueJourDepart(
-                          documentId: documentId,
-                          date: date,
-                          gare: gare,
-                          uid: uid),
-                    ));
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => GraphiqueJourDepart(
+                      documentId: documentId,
+                      date: date,
+                      gare: gare,
+                      uid: uid,
+                    ),
+                  ),
+                );
               }),
               _bouton(context, "Places occupées", Icons.event_seat, () {
                 Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PlacesAssises(
-                          documentId: documentId,
-                          depart: depart,
-                          destination: destination,
-                          heure: heures),
-                    ));
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PlacesAssises(
+                      documentId: documentId,
+                      depart: depart,
+                      destination: destination,
+                      heure: heures,
+                    ),
+                  ),
+                );
               }),
               _bouton(context, "Les tickets", Icons.receipt_outlined, () {
                 Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TicketsDuJour(
-                          date: date, idDoc: documentId, gare: gare, uid: uid),
-                    ));
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TicketsDuJour(
+                      date: date,
+                      idDoc: documentId,
+                      gare: gare,
+                      uid: uid,
+                      typeDepart: typeVoyage,
+                    ),
+                  ),
+                );
               }),
             ],
           ),
@@ -402,11 +643,15 @@ Widget _CarteGrandEcran(
 
 // ── Bouton réutilisable ───────────────────────────────────────────────────────
 Widget _bouton(
-    BuildContext context, String label, IconData icon, VoidCallback onPressed) {
+  BuildContext context,
+  String label,
+  IconData icon,
+  VoidCallback onPressed,
+) {
   return ElevatedButton(
     onPressed: onPressed,
     style: ElevatedButton.styleFrom(
-      backgroundColor: Colors.white.withOpacity(0.8),
+      backgroundColor: Colors.white.withValues(alpha: 0.8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
     child: Row(

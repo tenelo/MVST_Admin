@@ -5,8 +5,10 @@ import 'package:mvst_admin/screens/ajoutDimages.dart';
 import 'package:mvst_admin/screens/gare.dart';
 import 'package:mvst_admin/screens/heuresDeparts.dart';
 import 'package:mvst_admin/screens/infosGare.dart';
+import 'package:mvst_admin/screens/lignesStandard.dart';
 import 'package:mvst_admin/screens/prixTickets.dart';
 import 'package:mvst_admin/screens/vip/heureDepartVip.dart';
+import 'package:mvst_admin/screens/vip/lignesVip.dart';
 import 'package:mvst_admin/screens/vip/prixTicketsVip.dart';
 
 // Corps réutilisable (embarqué dans le bottom nav ou dans Parametres standalone)
@@ -39,7 +41,7 @@ class ParametresBody extends StatelessWidget {
                       );
                     },
                     child: Text(
-                      "GARE D'ORIGINE",
+                      "GARES",
                       style: TextStyle(
                         fontSize: 16,
                         color: Config.colors.bleuClaire,
@@ -67,7 +69,7 @@ class ParametresBody extends StatelessWidget {
                       );
                     },
                     child: Text(
-                      "HEURE DEPART",
+                      "HEURES DE DEPART",
                       style: TextStyle(
                         fontSize: 16,
                         color: Config.colors.bleuClaire,
@@ -105,7 +107,7 @@ class ParametresBody extends StatelessWidget {
                         Icon(Icons.star, color: Color(0xFFFFD700), size: 16),
                         SizedBox(width: 8),
                         Text(
-                          'HEURE DEPART VIP',
+                          'HEURES DE DEPART VIP',
                           style: TextStyle(
                             fontSize: 16,
                             color: Color(0xFFFFD700),
@@ -174,6 +176,74 @@ class ParametresBody extends StatelessWidget {
                         SizedBox(width: 8),
                         Text(
                           'PRIX DES TICKETS VIP',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFFFFD700),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width * .85,
+                  height: 50,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(32.0),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LignesStandard(),
+                        ),
+                      );
+                    },
+                    child: Text(
+                      "CRÉATION DE LIGNES STANDARD",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Config.colors.bleuClaire,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width * .85,
+                  height: 50,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color.fromARGB(255, 57, 57, 240),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(32.0),
+                        side: const BorderSide(
+                          color: Color(0xFFFFD700),
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LignesVip(),
+                        ),
+                      );
+                    },
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.star, color: Color(0xFFFFD700), size: 16),
+                        SizedBox(width: 8),
+                        Text(
+                          'CRÉATION DE LIGNES VIP',
                           style: TextStyle(
                             fontSize: 16,
                             color: Color(0xFFFFD700),

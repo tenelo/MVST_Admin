@@ -16,11 +16,13 @@ class TicketsDuJour extends StatefulWidget {
     required this.uid,
     required this.date,
     required this.idDoc,
+    this.typeDepart = '',
   });
   final String gare;
   final String uid;
   final String date;
   final String idDoc;
+  final String typeDepart;
 
   @override
   State<TicketsDuJour> createState() => _TicketsDuJourState();
@@ -231,13 +233,23 @@ class _TicketsDuJourState extends State<TicketsDuJour> {
                           ),
                           child: PaginatedDataTable(
                             header: Center(
-                              child: Text(
-                                "NOMBRE TOTAL DE TICKETS : ${donnees.length}",
-                                style: TextStyle(
-                                  color: Config.colors.authCardBackground,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (widget.typeDepart.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: _TypeBadge(type: widget.typeDepart),
+                                    ),
+                                  Text(
+                                    "NOMBRE TOTAL DE TICKETS : ${donnees.length}",
+                                    style: TextStyle(
+                                      color: Config.colors.authCardBackground,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             horizontalMargin: 5,
@@ -307,6 +319,15 @@ class _TicketsDuJourState extends State<TicketsDuJour> {
                                   ),
                                 ),
                               ),
+                              DataColumn(
+                                label: Text(
+                                  'Type',
+                                  style: TextStyle(
+                                    color: Color.fromARGB(255, 9, 15, 123),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                             ],
                             rowsPerPage: _rowsPerPage,
                             availableRowsPerPage: const [10, 20, 50],
@@ -344,8 +365,12 @@ class TicketDataSource extends DataTableSource {
     final date = parseDate(ticket['date'].toString());
     final formattedDate = DateFormat('dd MMMM yyyy', 'fr_FR').format(date);
 
+    final isVip =
+        ticket['typeVoyage']?.toString().toLowerCase() == 'vip';
     return DataRow.byIndex(
       index: index,
+      color: WidgetStateProperty.resolveWith<Color?>((states) =>
+          isVip ? const Color(0xFFFFD700).withValues(alpha: 0.08) : null),
       cells: [
         DataCell(
           Text(formattedDate, style: const TextStyle(fontSize: 13)),
@@ -385,6 +410,10 @@ class TicketDataSource extends DataTableSource {
         ),
         DataCell(
           Text(ticket['nom'].toString(), style: const TextStyle(fontSize: 13)),
+          onTap: () => _onTapRow(ticket),
+        ),
+        DataCell(
+          _TypeBadge(type: ticket['typeVoyage']?.toString() ?? 'standard'),
           onTap: () => _onTapRow(ticket),
         ),
       ],
@@ -431,4 +460,34 @@ double calculeTailleEcran(BuildContext ctx) {
   double screenWidth = MediaQuery.of(ctx).size.width;
   double screenHeight = MediaQuery.of(ctx).size.height;
   return sqrt(pow(screenWidth, 2) + pow(screenHeight, 2)) / 160.0;
+}
+
+// ── Badge VIP / Standard ──────────────────────────────────────────────────────
+class _TypeBadge extends StatelessWidget {
+  final String type;
+  const _TypeBadge({required this.type});
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isVip = type.toLowerCase() == 'vip';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: isVip ? const Color(0xFFFFD700).withValues(alpha: 0.15) : Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isVip ? const Color(0xFFB8860B) : Colors.blue.shade200,
+          width: 1,
+        ),
+      ),
+      child: Text(
+        isVip ? 'VIP' : 'Standard',
+        style: TextStyle(
+          color: isVip ? const Color(0xFFB8860B) : Colors.blue.shade700,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
 }

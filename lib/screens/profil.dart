@@ -1,8 +1,12 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+const String _apiBase = 'https://mvst.tenelo.cloud';
 
 class Profil extends StatefulWidget {
   const Profil({super.key, required this.idUtilisateur, required this.userProfil});
@@ -30,24 +34,24 @@ class _ProfilState extends State<Profil> {
 
   Future<Map<String, dynamic>?> _chargerProfil() async {
     final results = await Future.wait([
-      FirebaseFirestore.instance
-          .collection('utilisateurs')
-          .where('id', isEqualTo: widget.idUtilisateur)
-          .limit(1)
-          .get(),
+      http.get(
+        Uri.parse('$_apiBase/get_utilisateur.php?id=${widget.idUtilisateur}'),
+      ).timeout(const Duration(seconds: 8)),
       SharedPreferences.getInstance(),
     ]);
 
-    final snap  = results[0] as QuerySnapshot;
+    final resp  = results[0] as http.Response;
     final prefs = results[1] as SharedPreferences;
 
-    if (snap.docs.isEmpty) return null;
-    final data = Map<String, dynamic>.from(
-        snap.docs.first.data() as Map<String, dynamic>);
+    if (resp.statusCode != 200) return null;
+    final body = jsonDecode(resp.body);
+    if (body['success'] != true || body['utilisateur'] == null) return null;
+
+    final data = Map<String, dynamic>.from(body['utilisateur'] as Map<String, dynamic>);
 
     // La gare est stockée dans les SharedPreferences (définie dans Paramètres)
     final garePrefs = prefs.getString('gare') ?? '';
-    if (data['gare'] == null || (data['gare'] as String).isEmpty) {
+    if (data['gare'] == null || (data['gare'] as String? ?? '').isEmpty) {
       data['gare'] = garePrefs;
     }
     return data;
@@ -60,7 +64,7 @@ class _ProfilState extends State<Profil> {
   }
 
   void _ouvrirEdition(Map<String, dynamic> data) {
-    final id = data['id'] as String? ?? widget.idUtilisateur;
+    final id = widget.idUtilisateur;
     _nomCtrl.text       = data['nom']       ?? '';
     _prenomsCtrl.text   = data['prenoms']   ?? '';
     _telCtrl.text       = data['telephone'] ?? '';
@@ -92,24 +96,29 @@ class _ProfilState extends State<Profil> {
     );
   }
 
-  Future<void> _sauvegarder(String docId, String nom, String prenoms,
+  Future<void> _sauvegarder(String idUtilisateur, String nom, String prenoms,
       String telephone, String residence) async {
     try {
-      await FirebaseFirestore.instance
-          .collection('utilisateurs')
-          .doc(docId)
-          .update({
-        'nom': nom,
-        'prenoms': prenoms,
-        'telephone': telephone,
-        'residence': residence,
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          backgroundColor: Config.colors.authCardBackground,
-          content: const Text('Profil mis à jour',
-              style: TextStyle(color: Colors.white)),
-        ));
+      final resp = await http.post(
+        Uri.parse('$_apiBase/update_utilisateur.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'idUtilisateur': idUtilisateur,
+          'nom': nom,
+          'prenoms': prenoms,
+          'telephone': telephone,
+          'residence': residence,
+        }),
+      ).timeout(const Duration(seconds: 8));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body);
+        if (data['success'] == true && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            backgroundColor: Config.colors.authCardBackground,
+            content: const Text('Profil mis à jour',
+                style: TextStyle(color: Colors.white)),
+          ));
+        }
       }
     } catch (_) {}
   }
