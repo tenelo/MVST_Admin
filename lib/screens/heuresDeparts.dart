@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 
 class HeureDepart extends StatefulWidget {
   const HeureDepart({Key? key}) : super(key: key);
@@ -36,7 +37,7 @@ class _HeureDepartState extends State<HeureDepart> {
     if (mounted) setState(() => _isLoading = true);
     try {
       final response = await http.get(
-        Uri.parse('https://mvst.tenelo.cloud/heuresDepart.php'),
+        apiUri('heuresDepart.php'),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -55,13 +56,13 @@ class _HeureDepartState extends State<HeureDepart> {
   }
 
   // ── Ajouter une heure ──────────────────────────────────────────────────────
-  Future<void> _ajouterHeure(TimeOfDay time) async {
+  Future<void> _ajouterHeure(TimeOfDay selectedTime) async {
     setState(() => _isSaving = true);
     try {
       final formattedTime =
-          '${time.hour}:${time.minute.toString().padLeft(2, '0')}';
+          '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
       await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/heuresDepart.php'),
+        apiUri('heuresDepart.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'action': 'ajouter',
@@ -95,7 +96,7 @@ class _HeureDepartState extends State<HeureDepart> {
 
   // ── Modifier une heure ─────────────────────────────────────────────────────
   Future<void> _modifierHeure(int id, String heureActuelle) async {
-    final time = await showTimePicker(
+    final selectedTime = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(
         hour: int.parse(heureActuelle.split(':')[0]),
@@ -103,12 +104,12 @@ class _HeureDepartState extends State<HeureDepart> {
       ),
     );
 
-    if (time != null) {
+    if (selectedTime != null) {
       final formattedTime =
-          '${time.hour}:${time.minute.toString().padLeft(2, '0')}';
+          '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
       try {
         await http.post(
-          Uri.parse('https://mvst.tenelo.cloud/heuresDepart.php'),
+          apiUri('heuresDepart.php'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'action': 'modifier',
@@ -152,7 +153,7 @@ class _HeureDepartState extends State<HeureDepart> {
     if (confirm == true) {
       try {
         await http.post(
-          Uri.parse('https://mvst.tenelo.cloud/heuresDepart.php'),
+          apiUri('heuresDepart.php'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'action': 'supprimer', 'id': id}),
         );
@@ -205,12 +206,15 @@ class _HeureDepartState extends State<HeureDepart> {
                     ? 'Veuillez choisir une heure'
                     : null,
                 onTap: () async {
-                  selectedTime = await showTimePicker(
+                  final picked = await showTimePicker(
                     context: context,
                     initialTime: TimeOfDay.now(),
                   );
-                  if (selectedTime != null) {
-                    _timeController.text = selectedTime!.format(context);
+                  if (picked != null) {
+                    setState(() {
+                      selectedTime = picked;
+                      _timeController.text = picked.format(context);
+                    });
                   }
                 },
               ),
@@ -219,7 +223,8 @@ class _HeureDepartState extends State<HeureDepart> {
                 onPressed: _isSaving
                     ? null
                     : () {
-                        if (_formKey.currentState!.validate()) {
+                        if (_formKey.currentState!.validate() &&
+                            selectedTime != null) {
                           _ajouterHeure(selectedTime!);
                         }
                       },
@@ -241,8 +246,10 @@ class _HeureDepartState extends State<HeureDepart> {
                           final timeParts = heure['heure'].toString().split(
                             ':',
                           );
+                          final hour = int.tryParse(timeParts[0]) ?? 0;
+                          final minute = int.tryParse(timeParts[1]) ?? 0;
                           final formattedTime =
-                              '${timeParts[0]}:${timeParts[1].padLeft(2, '0')}';
+                              '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
 
                           return ListTile(
                             title: Text(formattedTime),

@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 
 class HeureDepartVip extends StatefulWidget {
   const HeureDepartVip({Key? key}) : super(key: key);
@@ -38,7 +38,7 @@ class _HeureDepartVipState extends State<HeureDepartVip> {
     if (mounted) setState(() => _isLoading = true);
     try {
       final response = await http.get(
-        Uri.parse('https://mvst.tenelo.cloud/heuresDepart.php?type=vip'),
+        apiUri('heuresDepart.php?type=vip'),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -56,13 +56,13 @@ class _HeureDepartVipState extends State<HeureDepartVip> {
     }
   }
 
-  Future<void> _ajouterHeure(TimeOfDay time) async {
+  Future<void> _ajouterHeure(TimeOfDay selectedTime) async {
     setState(() => _isSaving = true);
     try {
       final formattedTime =
-          '${time.hour}:${time.minute.toString().padLeft(2, '0')}';
+          '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
       await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/heuresDepart.php'),
+        apiUri('heuresDepart.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'action': 'ajouter',
@@ -71,7 +71,7 @@ class _HeureDepartVipState extends State<HeureDepartVip> {
         }),
       );
       _timeController.clear();
-      selectedTime = null;
+      // selectedTime = null;  // ← SUPPRIME OU COMMENTE CETTE LIGNE
       await _chargerHeures();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -99,19 +99,19 @@ class _HeureDepartVipState extends State<HeureDepartVip> {
   }
 
   Future<void> _modifierHeure(int id, String heureActuelle) async {
-    final time = await showTimePicker(
+    final selectedTime = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(
         hour: int.parse(heureActuelle.split(':')[0]),
         minute: int.parse(heureActuelle.split(':')[1]),
       ),
     );
-    if (time != null) {
+    if (selectedTime != null) {
       final formattedTime =
-          '${time.hour}:${time.minute.toString().padLeft(2, '0')}';
+          '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
       try {
         await http.post(
-          Uri.parse('https://mvst.tenelo.cloud/heuresDepart.php'),
+          apiUri('heuresDepart.php'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'action': 'modifier',
@@ -167,7 +167,7 @@ class _HeureDepartVipState extends State<HeureDepartVip> {
     if (confirm == true) {
       try {
         await http.post(
-          Uri.parse('https://mvst.tenelo.cloud/heuresDepart.php'),
+          apiUri('heuresDepart.php'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'action': 'supprimer', 'id': id}),
         );
@@ -300,8 +300,11 @@ class _HeureDepartVipState extends State<HeureDepartVip> {
                           final timeParts = heure['heure'].toString().split(
                             ':',
                           );
+                          final hour = int.tryParse(timeParts[0]) ?? 0;
+                          final minute = int.tryParse(timeParts[1]) ?? 0;
                           final formattedTime =
-                              '${timeParts[0]}:${timeParts[1].padLeft(2, '0')}';
+                              '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+
                           return Container(
                             margin: const EdgeInsets.symmetric(vertical: 4),
                             decoration: BoxDecoration(

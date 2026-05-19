@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 
 class PrixTickets extends StatefulWidget {
   const PrixTickets({super.key});
@@ -36,7 +37,7 @@ class _PrixTicketsState extends State<PrixTickets> {
     if (mounted) setState(() => _isLoading = true);
     try {
       final response = await http.get(
-        Uri.parse('https://mvst.tenelo.cloud/prixTickets.php'),
+        apiUri('prixTickets.php'),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -58,7 +59,7 @@ class _PrixTicketsState extends State<PrixTickets> {
   Future<void> _ajouter(String axe, int prix) async {
     try {
       await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/prixTickets.php'),
+        apiUri('prixTickets.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'action': 'ajouter',
@@ -75,7 +76,7 @@ class _PrixTicketsState extends State<PrixTickets> {
   Future<void> _modifier(int id, String axe, int prix) async {
     try {
       await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/prixTickets.php'),
+        apiUri('prixTickets.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'action': 'modifier',
@@ -92,7 +93,7 @@ class _PrixTicketsState extends State<PrixTickets> {
   Future<void> _supprimer(int id) async {
     try {
       await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/prixTickets.php'),
+        apiUri('prixTickets.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'action': 'supprimer', 'id': id}),
       );

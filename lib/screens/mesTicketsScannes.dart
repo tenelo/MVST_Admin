@@ -70,7 +70,7 @@ class _MesTicketsScannesState extends State<MesTicketsScannes> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/mesTicketsScannes.php'),
+        apiUri('mesTicketsScannes.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'documentId': widget.documentId}),
       );

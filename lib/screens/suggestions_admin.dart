@@ -4,11 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 // ── Constantes ────────────────────────────────────────────────────────────────
-const String _apiUrl     = 'https://mvst.tenelo.cloud/api_suggestions.php';
+const String _apiUrl     = '$baseUrl/api_suggestions.php';
 const String _prefsMasqueKey = 'suggestions_masquees';
 
 // ── Catégories ────────────────────────────────────────────────────────────────

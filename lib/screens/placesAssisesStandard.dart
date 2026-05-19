@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/models/models.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
@@ -56,7 +57,7 @@ class _PlacesAssisesState extends State<PlacesAssises> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/placesAssises.php'),
+        apiUri('placesAssises.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'documentId': widget.documentId}),
       );

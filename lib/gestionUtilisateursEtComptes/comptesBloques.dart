@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 
 class GestionComptesBloques extends StatefulWidget {
   const GestionComptesBloques({super.key});
@@ -15,28 +16,59 @@ class _GestionComptesBloquesState extends State<GestionComptesBloques> {
   List<Map<String, dynamic>> _comptesBloques = [];
   bool _isLoading = true;
   final TextEditingController _rechercheController = TextEditingController();
+  int _currentPage = 1;
+  int _totalPages = 1;
+  int _total = 0;
+  final int _limit = 100;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _chargerComptesBloques();
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _rechercheController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
-  // ── Charger tous les comptes bloqués ──────────────────────────────────
-  Future<void> _chargerComptesBloques() async {
-    setState(() => _isLoading = true);
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      if (!_isLoading && _currentPage < _totalPages) {
+        _chargerComptesBloques(page: _currentPage + 1, isLoadMore: true);
+      }
+    }
+  }
+
+  Future<void> _chargerComptesBloques({
+    int page = 1,
+    bool isLoadMore = false,
+  }) async {
+    if (isLoadMore) {
+      setState(() => _isLoading = true);
+    } else {
+      setState(() {
+        _isLoading = true;
+        _comptesBloques = [];
+        _currentPage = page;
+      });
+    }
+
     try {
       final response = await http
           .post(
-            Uri.parse('https://mvst.tenelo.cloud/reinitialiserPoints.php'),
+            apiUri('reinitialiserPoints.php'),
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'action': 'lister_bloques'}),
+            body: jsonEncode({
+              'action': 'lister_bloques',
+              'page': page,
+              'limit': _limit,
+            }),
           )
           .timeout(const Duration(seconds: 10));
 
@@ -44,7 +76,18 @@ class _GestionComptesBloquesState extends State<GestionComptesBloques> {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
           setState(() {
-            _comptesBloques = List<Map<String, dynamic>>.from(data['bloques']);
+            if (isLoadMore) {
+              _comptesBloques.addAll(
+                List<Map<String, dynamic>>.from(data['bloques']),
+              );
+            } else {
+              _comptesBloques = List<Map<String, dynamic>>.from(
+                data['bloques'],
+              );
+            }
+            _total = data['total'] ?? 0;
+            _totalPages = data['totalPages'] ?? 1;
+            _currentPage = page;
             _isLoading = false;
           });
         }
@@ -54,7 +97,6 @@ class _GestionComptesBloquesState extends State<GestionComptesBloques> {
     }
   }
 
-  // ── Rechercher par numéro ─────────────────────────────────────────────
   Future<void> _rechercherParNumero() async {
     final numero = _rechercheController.text.trim();
     if (numero.isEmpty) {
@@ -66,7 +108,7 @@ class _GestionComptesBloquesState extends State<GestionComptesBloques> {
     try {
       final response = await http
           .post(
-            Uri.parse('https://mvst.tenelo.cloud/reinitialiserPoints.php'),
+            apiUri('reinitialiserPoints.php'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({'action': 'verifier', 'telephone': numero}),
           )
@@ -104,7 +146,6 @@ class _GestionComptesBloquesState extends State<GestionComptesBloques> {
     }
   }
 
-  // ── Débloquer ─────────────────────────────────────────────────────────
   Future<void> _debloquerCompte(Map<String, dynamic> compte) async {
     final pointsController = TextEditingController(text: '3');
     final motifController = TextEditingController();
@@ -189,7 +230,7 @@ class _GestionComptesBloquesState extends State<GestionComptesBloques> {
       try {
         final response = await http
             .post(
-              Uri.parse('https://mvst.tenelo.cloud/reinitialiserPoints.php'),
+              apiUri('reinitialiserPoints.php'),
               headers: {'Content-Type': 'application/json'},
               body: jsonEncode({
                 'action': 'reinitialiser',
@@ -223,7 +264,6 @@ class _GestionComptesBloquesState extends State<GestionComptesBloques> {
     }
   }
 
-  // ── Formater la date ──────────────────────────────────────────────────
   String _formaterDate(String? dateStr) {
     if (dateStr == null || dateStr.isEmpty) return '';
     try {
@@ -234,11 +274,9 @@ class _GestionComptesBloquesState extends State<GestionComptesBloques> {
     }
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final c = Config.colors;
-    final sw = MediaQuery.of(context).size.width;
 
     return Scaffold(
       backgroundColor: c.authBackground,
@@ -256,7 +294,7 @@ class _GestionComptesBloquesState extends State<GestionComptesBloques> {
         actions: [
           IconButton(
             icon: Icon(Icons.refresh, color: c.authCardBackground),
-            onPressed: _chargerComptesBloques,
+            onPressed: () => _chargerComptesBloques(),
           ),
         ],
       ),
@@ -267,7 +305,6 @@ class _GestionComptesBloquesState extends State<GestionComptesBloques> {
         ),
         child: Column(
           children: [
-            // Barre de recherche
             Row(
               children: [
                 Expanded(
@@ -316,7 +353,7 @@ class _GestionComptesBloquesState extends State<GestionComptesBloques> {
             ),
             const SizedBox(height: 10),
             Text(
-              '${_comptesBloques.length} résultat(s)',
+              '$_total résultat(s) - Page $_currentPage/$_totalPages',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: c.authTextPrimary,
@@ -324,7 +361,7 @@ class _GestionComptesBloquesState extends State<GestionComptesBloques> {
             ),
             const SizedBox(height: 8),
             Expanded(
-              child: _isLoading
+              child: _isLoading && _comptesBloques.isEmpty
                   ? Center(
                       child: CircularProgressIndicator(
                         color: c.authCardBackground,
@@ -353,8 +390,15 @@ class _GestionComptesBloquesState extends State<GestionComptesBloques> {
                       ),
                     )
                   : ListView.builder(
-                      itemCount: _comptesBloques.length,
+                      controller: _scrollController,
+                      itemCount: _comptesBloques.length + (_isLoading ? 1 : 0),
                       itemBuilder: (context, index) {
+                        if (index == _comptesBloques.length && _isLoading) {
+                          return const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
                         final compte = _comptesBloques[index];
                         final points =
                             int.tryParse(compte['points']?.toString() ?? '0') ??

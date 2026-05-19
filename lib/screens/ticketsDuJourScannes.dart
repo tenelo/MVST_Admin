@@ -91,7 +91,7 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
       final String dateDuJour = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
       final response = await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/ticketsDuJourScannes.php'),
+        apiUri('ticketsDuJourScannes.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'date': dateDuJour, 'gare': widget.gare}),
       );

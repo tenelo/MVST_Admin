@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
 class GraphiqueJourDepart extends StatefulWidget {
@@ -44,7 +45,7 @@ class _GraphiqueJourDepartState extends State<GraphiqueJourDepart> {
     if (mounted) setState(() => _isLoading = true);
     try {
       final response = await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/ticketsDuJour.php'),
+        apiUri('ticketsDuJour.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'documentId': widget.documentId,

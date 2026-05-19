@@ -85,7 +85,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
     // Fallback : requête directe par idUtilisateur
     try {
       final response = await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/recuperation_mes_tickets.php'),
+        apiUri('recuperation_mes_tickets.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'idUtilisateur': ticketData.idUtilisateur}),
       );

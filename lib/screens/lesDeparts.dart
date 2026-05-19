@@ -4,11 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/screens/placesAssisesStandard.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
-class DepartsPlacesAssicesPourBtFlottant extends StatefulWidget {
-  const DepartsPlacesAssicesPourBtFlottant({
+class LesDeparts extends StatefulWidget {
+  const LesDeparts({
     super.key,
     required this.gare,
     required this.uid,
@@ -23,12 +24,12 @@ class DepartsPlacesAssicesPourBtFlottant extends StatefulWidget {
   final int tailleEcran;
 
   @override
-  State<DepartsPlacesAssicesPourBtFlottant> createState() =>
-      _DepartsPlacesAssicesPourBtFlottantState();
+  State<LesDeparts> createState() =>
+      _LesDepartsState();
 }
 
-class _DepartsPlacesAssicesPourBtFlottantState
-    extends State<DepartsPlacesAssicesPourBtFlottant> {
+class _LesDepartsState
+    extends State<LesDeparts> {
   List<Map<String, dynamic>> departs = [];
   bool _isLoading = true;
   late DateTime _dateSelectionnee;
@@ -47,13 +48,14 @@ class _DepartsPlacesAssicesPourBtFlottantState
 
   DateTime _parseDate(String s) {
     try {
-      return DateFormat('yyyy-MM-dd').parse(s);
+      return DateFormat('EEEE_d_MMMM_y', 'fr_FR').parse(s);
     } catch (_) {
       return DateTime.now();
     }
   }
 
-  String get _dateApi => DateFormat('yyyy-MM-dd').format(_dateSelectionnee);
+  String get _dateApi =>
+      DateFormat('EEEE_d_MMMM_y', 'fr_FR').format(_dateSelectionnee);
 
   @override
   void dispose() {
@@ -80,7 +82,7 @@ class _DepartsPlacesAssicesPourBtFlottantState
     if (mounted) setState(() => _isLoading = true);
     try {
       final response = await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/departsParGare.php'),
+        apiUri('departsParGare.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'date': _dateApi, 'gare': widget.gare}),
       );
@@ -246,13 +248,16 @@ class _DepartsPlacesAssicesPourBtFlottantState
                                           color: Color(0xFFFFD700), size: 16),
                                       const SizedBox(width: 6),
                                     ],
-                                    Text(
-                                      "Départ de ${d['heureDeDepart']} h",
-                                      style: TextStyle(
-                                          fontSize: 16,
-                                          color: isVip
-                                              ? const Color(0xFFFFD700)
-                                              : Config.colors.bleuClaire),
+                                    Flexible(
+                                      child: Text(
+                                        "Départ de ${d['heureDeDepart']} h",
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                            fontSize: 16,
+                                            color: isVip
+                                                ? const Color(0xFFFFD700)
+                                                : Config.colors.bleuClaire),
+                                      ),
                                     ),
                                     if (isVip) ...[
                                       const SizedBox(width: 8),

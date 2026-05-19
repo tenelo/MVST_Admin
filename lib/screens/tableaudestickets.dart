@@ -53,7 +53,7 @@ class _TableauDeTicketsState extends State<TableauDeTickets> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/tableauAdmin.php'),
+        apiUri('tableauAdmin.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'annee': widget.date, 'gare': widget.gare}),
       );

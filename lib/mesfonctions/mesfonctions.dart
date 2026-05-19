@@ -13,6 +13,10 @@ List<MonTicket> monTicket = [];
 List<Map<String, dynamic>> listeDesTicketsScannes = [];
 List<int> listeDesPlacesOccupees = [];
 
+// ─── API base URL ─────────────────────────────────────────────────────────────
+const String baseUrl = 'https://mvst.tenelo.cloud';
+Uri apiUri(String path) => Uri.parse('$baseUrl/$path');
+
 // ─── Tickets à scanner ────────────────────────────────────────────────────────
 class ListesDesTickets {
   // Récupérer tous les tickets dont la date >= aujourd'hui
@@ -21,12 +25,12 @@ class ListesDesTickets {
     String profil,
   ) async {
     try {
-      final String url = profil == 'superadmin'
-          ? 'https://mvst.tenelo.cloud/superadmin_ticketsAscanner.php'
-          : 'https://mvst.tenelo.cloud/ticketsAscanner.php';
+      final Uri uri = profil == 'superadmin'
+          ? apiUri('superadmin_ticketsAscanner.php')
+          : apiUri('ticketsAscanner.php');
 
       final response = await http.post(
-        Uri.parse(url),
+        uri,
         headers: {'Content-Type': 'application/json'},
         body: profil == 'superadmin' ? null : jsonEncode({'gare': gare}),
       );
@@ -52,7 +56,7 @@ class ListesDesTickets {
   ) async {
     try {
       final response = await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/ticketsAscanner.php'),
+        apiUri('ticketsAscanner.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'date': date, 'etatScanne': 'scanné'}),
       );
@@ -91,7 +95,7 @@ Future<void> misAjourEtatScanne(
 ) async {
   try {
     final response = await http.post(
-      Uri.parse('https://mvst.tenelo.cloud/misAjourEtatScanne.php'),
+      apiUri('misAjourEtatScanne.php'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'documentId': documentId,
@@ -178,13 +182,23 @@ Future<void> supprimerGareEtUid() async {
     await prefs.remove('gare');
     await prefs.remove('uid');
     await prefs.remove('profil');
+    await prefs.remove('role');
   } catch (e) {}
+}
+
+Future<String?> recupererRole() async {
+  try {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString('role') ?? 'admin';
+  } catch (e) {
+    return 'admin';
+  }
 }
 
 Future<String?> recupererGare(String idUtilisateur) async {
   try {
     final response = await http.post(
-      Uri.parse('https://mvst.tenelo.cloud/recupererGare.php'),
+      apiUri('recupererGare.php'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'idUtilisateur': idUtilisateur}),
     );

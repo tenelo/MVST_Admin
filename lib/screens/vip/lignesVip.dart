@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 
 class LignesVip extends StatefulWidget {
   const LignesVip({super.key});
@@ -47,9 +48,9 @@ class _LignesVipState extends State<LignesVip> {
     setState(() => _isLoading = true);
     try {
       final results = await Future.wait([
-        http.get(Uri.parse('https://mvst.tenelo.cloud/gares.php')),
+        http.get(apiUri('gares.php')),
         http.get(
-          Uri.parse('https://mvst.tenelo.cloud/api_lignes.php?type=vip'),
+          apiUri('api_lignes.php?type=vip'),
         ),
       ]);
       if (!mounted) return;
@@ -79,7 +80,7 @@ class _LignesVipState extends State<LignesVip> {
   Future<void> _rafraichirLignes() async {
     try {
       final response = await http.get(
-        Uri.parse('https://mvst.tenelo.cloud/api_lignes.php?type=vip'),
+        apiUri('api_lignes.php?type=vip'),
       );
       if (response.statusCode == 200 && mounted) {
         final data = jsonDecode(response.body);
@@ -101,7 +102,7 @@ class _LignesVipState extends State<LignesVip> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/api_lignes.php'),
+        apiUri('api_lignes.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'action': 'ajouter',
@@ -141,7 +142,7 @@ class _LignesVipState extends State<LignesVip> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/api_lignes.php'),
+        apiUri('api_lignes.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'action': 'modifier',
@@ -178,7 +179,7 @@ class _LignesVipState extends State<LignesVip> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/api_lignes.php'),
+        apiUri('api_lignes.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'action': 'supprimer', 'id': id}),
       );

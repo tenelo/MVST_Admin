@@ -22,7 +22,7 @@ class ImageModel {
       titre: json['titre'],
       description: json['description'],
       statut: json['statut'],
-      lien_image: json['lien_image'],
+      lien_image: json['lien_image'] ?? '',
     );
   }
 }

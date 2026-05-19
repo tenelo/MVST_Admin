@@ -13,16 +13,20 @@ import 'package:mvst_admin/firebase_options.dart';
 import 'package:mvst_admin/graphiques/diagrammeABarres.dart';
 import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/qrcode/lecteurQrCode.dart';
-import 'package:mvst_admin/screens/boutonFlottant/departsBtFlottant.dart';
-import 'package:mvst_admin/screens/boutonFlottant/listePassagersBtFlottant.dart';
-import 'package:mvst_admin/screens/menulateral.dart';
+import 'package:mvst_admin/screens/lesDeparts.dart';
+import 'package:mvst_admin/screens/listeDesPassagers.dart';
 import 'package:mvst_admin/screens/parametres.dart';
+import 'package:mvst_admin/screens/ticketsDuJourScannes.dart';
+import 'package:mvst_admin/screens/tousLesDepartsDuJour.dart';
 import 'package:mvst_admin/screens/profil.dart';
 import 'package:mvst_admin/screens/suppression/suppression.dart';
 import 'package:mvst_admin/screens/tableaudestickets.dart';
 import 'package:mvst_admin/screens/suggestions_admin.dart';
+import 'package:mvst_admin/gestionUtilisateursEtComptes/comptesBloques.dart';
+import 'package:mvst_admin/gestionUtilisateursEtComptes/listeDesUtilisateurs.dart';
 import 'package:mvst_admin/verifTickets/verifierticket.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mvst_admin/authentification/gestion_admins.dart';
 
 DateTime? dateActuelle = DateTime.now();
 
@@ -116,7 +120,7 @@ class MyApp extends StatelessWidget {
           if (snapshot.hasData) {
             return const Accueil();
           } else {
-            return const PageDAuthentification();
+            return const Login();
           }
         },
       ),
@@ -134,11 +138,28 @@ class Accueil extends StatefulWidget {
 class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
   bool isLoading = false;
   int _selectedIndex = 0;
+  String? _gare;
+  String? _uid;
+  String? _role;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final u = FirebaseAuth.instance.currentUser;
+    if (u == null) return;
+    final gare = await recupererGare(u.uid);
+    final role = await recupererRole();
+    if (mounted)
+      setState(() {
+        _uid = u.uid;
+        _gare = gare;
+        _role = role;
+      });
   }
 
   @override
@@ -162,33 +183,28 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
     });
   }
 
-  static const _titres = [
-    'CONTROLEURS MVST',
-    'PARAMÈTRES',
-    'TABLEAU',
-    'PASSAGERS',
-  ];
-
   @override
   Widget build(BuildContext context) {
     final c = Config.colors;
     return Stack(
       children: [
         Scaffold(
-          appBar: AppBar(
-            iconTheme: IconThemeData(color: c.jauneBlanc),
-            backgroundColor: c.authCardBackground,
-            title: Text(
-              _titres[_selectedIndex],
-              style: TextStyle(
-                color: c.jauneBlanc,
-                fontSize: 22,
-                fontWeight: FontWeight.w500,
-                letterSpacing: 0.5,
-              ),
-            ),
-            centerTitle: true,
-          ),
+          appBar: _selectedIndex == 0
+              ? AppBar(
+                  iconTheme: IconThemeData(color: c.jauneBlanc),
+                  backgroundColor: c.authCardBackground,
+                  title: Text(
+                    'CONTROLEURS MVST',
+                    style: TextStyle(
+                      color: c.jauneBlanc,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  centerTitle: true,
+                )
+              : null,
           bottomNavigationBar: _BottomNav(
             selectedIndex: _selectedIndex,
             onTap: (i) => setState(() => _selectedIndex = i),
@@ -263,8 +279,7 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>
-                                    const PageDAuthentification(),
+                                builder: (context) => const Login(),
                               ),
                             );
                           }
@@ -341,6 +356,30 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                           );
                         },
                       ),
+                      //  Visible uniquement pour superadmin
+                      if (_role == 'superadmin')
+                        ListTile(
+                          leading: Icon(
+                            Icons.admin_panel_settings_outlined,
+                            color: c.bleuClaire,
+                          ),
+                          title: Text(
+                            'Gestion des Admins',
+                            style: TextStyle(
+                              color: c.bleuClaire,
+                              fontFamily: 'Lobster',
+                            ),
+                          ),
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const GestionAdmins(),
+                              ),
+                            );
+                          },
+                        ),
                       ListTile(
                         leading: Icon(
                           Icons.power_settings_new,
@@ -391,16 +430,37 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                   children: [
                     scannQrCode(context, setLoadingState),
                     ticketsScannes(context, setLoadingState),
-                    graphiques(context, setLoadingState),
+                    departsDuJour(context, setLoadingState),
                     placesOccupees(context, setLoadingState),
                     suppressionTickets(context, setLoadingState),
+                    listeUtilisateurs(context, setLoadingState),
+                    comptesBloques(context, setLoadingState),
                     suggestions(context, setLoadingState),
+                    parametresCard(context, setLoadingState),
                   ],
                 ),
               ),
-              const ParametresBody(),
-              tableau(context, setLoadingState),
-              listePassagers(context, setLoadingState),
+              _gare != null && _uid != null
+                  ? GraphiquesABarres(
+                      gare: _gare!,
+                      uid: _uid!,
+                      date: idDate,
+                      moisAnnee: idMoisAnnee,
+                      annee: idAnnee,
+                    )
+                  : const Center(child: CircularProgressIndicator()),
+              _gare != null && _uid != null
+                  ? TableauDeTickets(gare: _gare!, uid: _uid!, date: idAnnee)
+                  : const Center(child: CircularProgressIndicator()),
+              _gare != null && _gare!.isNotEmpty && _uid != null
+                  ? ListeDesPassagers(
+                      gare: _gare!,
+                      uid: _uid!,
+                      date: idDate,
+                      dateNormale: dateNormale,
+                      tailleEcran: tailleEcran!,
+                    )
+                  : const Center(child: CircularProgressIndicator()),
             ],
           ),
         ),
@@ -436,9 +496,9 @@ class _BottomNav extends StatelessWidget {
       label: 'Accueil',
     ),
     (
-      icon: Icons.settings_outlined,
-      activeIcon: Icons.settings,
-      label: 'Paramètres',
+      icon: Icons.bar_chart_outlined,
+      activeIcon: Icons.bar_chart,
+      label: 'Graphiques',
     ),
     (
       icon: Icons.table_chart_outlined,
@@ -635,13 +695,8 @@ Widget ticketsScannes(BuildContext ctx, Function setLoadingState) {
         Navigator.push(
           ctx,
           MaterialPageRoute(
-            builder: (_) => MenuLateral(
-              gare: _gare!,
-              uid: _uid,
-              tailleEcran: tailleEcran!,
-              date: idDate,
-              dateNormale: dateNormale,
-            ),
+            builder: (_) =>
+                TicketsDuJourScannes(gare: _gare!, uid: _uid, date: idDate),
           ),
         ).then((_) => setLoadingState(false));
       } else {
@@ -674,6 +729,61 @@ Widget graphiques(BuildContext ctx, Function setLoadingState) {
               date: idDate,
               moisAnnee: idMoisAnnee,
               annee: idAnnee,
+            ),
+          ),
+        ).then((_) => setLoadingState(false));
+      } else {
+        Navigator.pushReplacement(
+          ctx,
+          MaterialPageRoute(builder: (_) => const Login()),
+        ).then((_) => setLoadingState(false));
+      }
+    },
+  );
+}
+
+Widget parametresCard(BuildContext ctx, Function setLoadingState) {
+  return _carteMenu(
+    ctx: ctx,
+    setLoadingState: setLoadingState,
+    icon: Icons.settings_outlined,
+    label: 'PARAMÈTRES',
+    onTap: () async {
+      if (FirebaseAuth.instance.currentUser != null) {
+        Navigator.push(
+          ctx,
+          MaterialPageRoute(builder: (_) => Parametres()),
+        ).then((_) => setLoadingState(false));
+      } else {
+        Navigator.pushReplacement(
+          ctx,
+          MaterialPageRoute(builder: (_) => const Login()),
+        ).then((_) => setLoadingState(false));
+      }
+    },
+  );
+}
+
+Widget departsDuJour(BuildContext ctx, Function setLoadingState) {
+  return _carteMenu(
+    ctx: ctx,
+    setLoadingState: setLoadingState,
+    icon: Icons.bar_chart,
+    label: 'DÉPARTS DU JOUR',
+    onTap: () async {
+      if (FirebaseAuth.instance.currentUser != null) {
+        user = FirebaseAuth.instance.currentUser;
+        final String _uid = user!.uid;
+        final String? _gare = await recupererGare(_uid);
+        Navigator.push(
+          ctx,
+          MaterialPageRoute(
+            builder: (_) => TousLesDepartsDuJour(
+              gare: _gare!,
+              uid: _uid,
+              date: idDate,
+              dateNormale: dateNormale,
+              tailleEcran: tailleEcran!,
             ),
           ),
         ).then((_) => setLoadingState(false));
@@ -729,7 +839,7 @@ Widget placesOccupees(BuildContext ctx, Function setLoadingState) {
         Navigator.push(
           ctx,
           MaterialPageRoute(
-            builder: (_) => DepartsPlacesAssicesPourBtFlottant(
+            builder: (_) => LesDeparts(
               gare: _gare!,
               uid: _uid,
               date: idDate,
@@ -762,7 +872,7 @@ Widget listePassagers(BuildContext ctx, Function setLoadingState) {
         Navigator.push(
           ctx,
           MaterialPageRoute(
-            builder: (_) => DepartsListePassagersPourBtFlottant(
+            builder: (_) => ListeDesPassagers(
               gare: _gare!,
               uid: _uid,
               date: idDate,
@@ -800,6 +910,51 @@ Widget suppressionTickets(BuildContext ctx, Function setLoadingState) {
               apresDemain: dateNormaleApresdemain,
             ),
           ),
+        ).then((_) => setLoadingState(false));
+      } else {
+        Navigator.pushReplacement(
+          ctx,
+          MaterialPageRoute(builder: (_) => const Login()),
+        ).then((_) => setLoadingState(false));
+      }
+    },
+  );
+}
+
+Widget listeUtilisateurs(BuildContext ctx, Function setLoadingState) {
+  return _carteMenu(
+    ctx: ctx,
+    setLoadingState: setLoadingState,
+    icon: Icons.people_alt_outlined,
+    label: 'UTILISATEURS',
+    onTap: () async {
+      if (FirebaseAuth.instance.currentUser != null) {
+        Navigator.push(
+          ctx,
+          MaterialPageRoute(builder: (_) => const ListeDesUtilisateurs()),
+        ).then((_) => setLoadingState(false));
+      } else {
+        Navigator.pushReplacement(
+          ctx,
+          MaterialPageRoute(builder: (_) => const Login()),
+        ).then((_) => setLoadingState(false));
+      }
+    },
+  );
+}
+
+Widget comptesBloques(BuildContext ctx, Function setLoadingState) {
+  return _carteMenu(
+    ctx: ctx,
+    setLoadingState: setLoadingState,
+    icon: Icons.block_rounded,
+    label: 'COMPTES BLOQUÉS',
+    iconColor: Colors.red[400]!,
+    onTap: () async {
+      if (FirebaseAuth.instance.currentUser != null) {
+        Navigator.push(
+          ctx,
+          MaterialPageRoute(builder: (_) => const GestionComptesBloques()),
         ).then((_) => setLoadingState(false));
       } else {
         Navigator.pushReplacement(

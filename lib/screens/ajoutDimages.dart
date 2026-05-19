@@ -138,57 +138,52 @@ class _ListeImagesState extends State<ListeImages> {
                 Padding(
                   padding: const EdgeInsets.all(2.0),
                   child: Container(
+                    width: 120,
+                    height: 110,
                     decoration: BoxDecoration(
+                      color: isActif
+                          ? Colors.blue.withValues(alpha: 0.07)
+                          : Colors.grey.withValues(alpha: 0.07),
                       border: Border.all(
                         color: isActif ? Colors.blue : Colors.grey,
                         width: 1.0,
                       ),
                       borderRadius: BorderRadius.circular(8.0),
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8.0),
-                      child: ColorFiltered(
-                        colorFilter: isActif
-                            ? const ColorFilter.mode(
-                                Colors.transparent,
-                                BlendMode.multiply,
-                              )
-                            : const ColorFilter.matrix([
-                                0.2126,
-                                0.7152,
-                                0.0722,
-                                0,
-                                0,
-                                0.2126,
-                                0.7152,
-                                0.0722,
-                                0,
-                                0,
-                                0.2126,
-                                0.7152,
-                                0.0722,
-                                0,
-                                0,
-                                0,
-                                0,
-                                0,
-                                1,
-                                0,
-                              ]),
-                        child: Image.network(
-                          lienImage,
-                          width: 120,
-                          height: 110,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(
-                                Icons.error_outline_outlined,
-                                color: Colors.blue,
-                                size: 50,
+                    child: image.lien_image.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8.0),
+                            child: ColorFiltered(
+                              colorFilter: isActif
+                                  ? const ColorFilter.mode(
+                                      Colors.transparent,
+                                      BlendMode.multiply,
+                                    )
+                                  : const ColorFilter.matrix([
+                                      0.2126, 0.7152, 0.0722, 0, 0,
+                                      0.2126, 0.7152, 0.0722, 0, 0,
+                                      0.2126, 0.7152, 0.0722, 0, 0,
+                                      0, 0, 0, 1, 0,
+                                    ]),
+                              child: Image.network(
+                                lienImage,
+                                width: 120,
+                                height: 110,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(
+                                      Icons.error_outline_outlined,
+                                      color: Colors.blue,
+                                      size: 50,
+                                    ),
                               ),
-                        ),
-                      ),
-                    ),
+                            ),
+                          )
+                        : Icon(
+                            Icons.campaign_rounded,
+                            color: isActif ? Colors.blue : Colors.grey,
+                            size: 40,
+                          ),
                   ),
                 ),
                 Expanded(
@@ -574,7 +569,8 @@ class _AjouterImagesState extends State<AjouterImages> {
   final List<String> options = ['Actif', 'Inactif'];
   File? _image;
   bool isLoading = false;
-  late IO.Socket _socket; // ← AJOUTÉ
+  bool _avecImage = true;
+  late IO.Socket _socket;
 
   @override
   void initState() {
@@ -607,12 +603,69 @@ class _AjouterImagesState extends State<AjouterImages> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              GestureDetector(
-                onTap: _image == null ? _selectImage : null,
-                child: _buildImagePreview(),
+              // ── Switch type ────────────────────────────────────────────
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.blue.withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  children: [
+                    const Text(
+                      'Type :',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Wrap(
+                        spacing: 8,
+                        children: [
+                          ChoiceChip(
+                            label: const Text('Avec image'),
+                            selected: _avecImage,
+                            selectedColor: Colors.blue,
+                            labelStyle: TextStyle(
+                              color: _avecImage ? Colors.white : Colors.blue,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            onSelected: (_) => setState(() {
+                              _avecImage = true;
+                              _image = null;
+                            }),
+                          ),
+                          ChoiceChip(
+                            label: const Text('Information seule'),
+                            selected: !_avecImage,
+                            selectedColor: Colors.blue,
+                            labelStyle: TextStyle(
+                              color: !_avecImage ? Colors.white : Colors.blue,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            onSelected: (_) => setState(() {
+                              _avecImage = false;
+                              _image = null;
+                            }),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 4),
-              _buildTextField(titreImage, "Titre de l'image"),
+              const SizedBox(height: 10),
+
+              // ── Sélection image (uniquement si "Avec image") ────────────
+              if (_avecImage) ...[
+                GestureDetector(
+                  onTap: _image == null ? _selectImage : null,
+                  child: _buildImagePreview(),
+                ),
+                const SizedBox(height: 4),
+              ],
+
+              _buildTextField(titreImage, _avecImage ? "Titre de l'image" : "Titre de l'information"),
               const SizedBox(height: 4),
               _buildDropdown(
                 label: 'Sélectionner statut',
@@ -624,7 +677,11 @@ class _AjouterImagesState extends State<AjouterImages> {
                     : null,
               ),
               const SizedBox(height: 4),
-              _buildTextField(detailsImage, "Détails de l'image", maxLines: 10),
+              _buildTextField(
+                detailsImage,
+                _avecImage ? "Détails de l'image" : "Contenu de l'information",
+                maxLines: 10,
+              ),
               const SizedBox(height: 10),
               ElevatedButton(
                 onPressed: isLoading ? null : _uploadData,
@@ -753,14 +810,16 @@ class _AjouterImagesState extends State<AjouterImages> {
   Future<void> _uploadData() async {
     if (titreImage.text.isEmpty ||
         detailsImage.text.isEmpty ||
-        _image == null ||
-        selectedOption == null) {
+        selectedOption == null ||
+        (_avecImage && _image == null)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Color.fromARGB(255, 35, 113, 177),
+        SnackBar(
+          backgroundColor: const Color.fromARGB(255, 35, 113, 177),
           content: Text(
-            "Veuillez remplir tous les champs",
-            style: TextStyle(color: Colors.white),
+            _avecImage && _image == null
+                ? "Veuillez sélectionner une image"
+                : "Veuillez remplir tous les champs",
+            style: const TextStyle(color: Colors.white),
           ),
         ),
       );
@@ -774,13 +833,16 @@ class _AjouterImagesState extends State<AjouterImages> {
         'POST',
         Uri.parse('$_baseUrl/gestionImages.php'),
       );
-      request.files.add(
-        await http.MultipartFile.fromPath('lien_image', _image!.path),
-      );
+      if (_avecImage && _image != null) {
+        request.files.add(
+          await http.MultipartFile.fromPath('lien_image', _image!.path),
+        );
+      }
       request.fields['action'] = 'ajouter';
       request.fields['titre'] = titreImage.text;
       request.fields['description'] = detailsImage.text;
       request.fields['statut'] = selectedOption!;
+      if (!_avecImage) request.fields['sans_image'] = '1';
 
       final response = await request.send();
       final body = await response.stream.bytesToString();

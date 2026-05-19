@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/graphiques/graphiqueJourDepart/graphiqueJourDepart.dart';
 import 'package:mvst_admin/screens/placesAssisesStandard.dart';
 import 'package:mvst_admin/screens/ticketsDuJour.dart';
@@ -92,7 +93,7 @@ class _TousLesDepartsDuJourState extends State<TousLesDepartsDuJour> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/departsParGare.php'),
+        apiUri('departsParGare.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'date': widget.date, 'gare': widget.gare}),
       );

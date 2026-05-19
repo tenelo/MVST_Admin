@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 
 class Informations extends StatefulWidget {
   @override
@@ -39,7 +40,7 @@ class _InformationsState extends State<Informations> {
     if (mounted) setState(() => _isLoading = true);
     try {
       final response = await http.get(
-        Uri.parse('https://mvst.tenelo.cloud/infosGares.php'),
+        apiUri('infosGares.php'),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -59,7 +60,7 @@ class _InformationsState extends State<Informations> {
   Future<void> _ajouter() async {
     try {
       await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/infosGares.php'),
+        apiUri('infosGares.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'action': 'ajouter',
@@ -76,7 +77,7 @@ class _InformationsState extends State<Informations> {
   Future<void> _modifier(int id) async {
     try {
       await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/infosGares.php'),
+        apiUri('infosGares.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'action': 'modifier',
@@ -94,7 +95,7 @@ class _InformationsState extends State<Informations> {
   Future<void> _supprimer(int id) async {
     try {
       await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/infosGares.php'),
+        apiUri('infosGares.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'action': 'supprimer', 'id': id}),
       );

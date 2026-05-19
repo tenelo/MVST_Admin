@@ -54,7 +54,7 @@ class _SuppressionState extends State<Suppression> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/suppressionTickets.php'),
+        apiUri('suppressionTickets.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'dates': [
@@ -384,8 +384,7 @@ class TicketDataSource extends DataTableSource {
                     try {
                       // ── Supprimer via PHP ──────────────────────────────
                       await http.post(
-                        Uri.parse(
-                            'https://mvst.tenelo.cloud/suppressionTickets.php'),
+                        apiUri('suppressionTickets.php'),
                         headers: {'Content-Type': 'application/json'},
                         body: jsonEncode({'action': 'supprimer', 'id': id}),
                       );
@@ -418,7 +417,7 @@ class TicketDataSource extends DataTableSource {
   Future<void> _decrementerPoints(String idUtilisateur) async {
     try {
       await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/decrementerPoints.php'),
+        apiUri('decrementerPoints.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'idUtilisateur': idUtilisateur}),
       );

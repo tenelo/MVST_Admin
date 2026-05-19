@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/graphiques/diagrammeABarres.dart';
 import 'package:mvst_admin/graphiques/graphiqueAnnee.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
@@ -62,7 +63,7 @@ class _GraphiquesABarresMoisAnneeState
     if (mounted) setState(() => _isLoading = true);
     try {
       final response = await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/graphiques.php'),
+        apiUri('graphiques.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'type': 'moisAnnee',

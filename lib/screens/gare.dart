@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 
 class Gares extends StatefulWidget {
   const Gares({super.key});
@@ -35,7 +36,7 @@ class _GaresState extends State<Gares> {
     if (mounted) setState(() => _isLoading = true);
     try {
       final response = await http.get(
-        Uri.parse('https://mvst.tenelo.cloud/gares.php'),
+        apiUri('gares.php'),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -55,7 +56,7 @@ class _GaresState extends State<Gares> {
   Future<void> _ajouterGare(String gare) async {
     try {
       await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/gares.php'),
+        apiUri('gares.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'action': 'ajouter', 'gare': gare}),
       );
@@ -67,7 +68,7 @@ class _GaresState extends State<Gares> {
   Future<void> _modifierGare(int id, String gare) async {
     try {
       await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/gares.php'),
+        apiUri('gares.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'action': 'modifier', 'id': id, 'gare': gare}),
       );
@@ -79,7 +80,7 @@ class _GaresState extends State<Gares> {
   Future<void> _supprimerGare(int id) async {
     try {
       await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/gares.php'),
+        apiUri('gares.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'action': 'supprimer', 'id': id}),
       );

@@ -90,7 +90,7 @@ class _TicketsDuJourState extends State<TicketsDuJour> {
 
     try {
       final response = await http.post(
-        Uri.parse('https://mvst.tenelo.cloud/ticketsDuJour.php'),
+        apiUri('ticketsDuJour.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'documentId': widget.idDoc, 'gare': widget.gare}),
       );
