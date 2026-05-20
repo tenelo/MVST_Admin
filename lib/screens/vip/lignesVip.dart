@@ -89,7 +89,7 @@ class _LignesVipState extends State<LignesVip> {
             _lignesList = List<Map<String, dynamic>>.from(data['lignes']);
           });
         }
-      }
+      } 
     } catch (e) {
       if (mounted) _afficherMessage('Erreur de rafraîchissement: $e');
     }

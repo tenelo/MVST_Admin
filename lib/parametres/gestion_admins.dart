@@ -120,6 +120,259 @@ class _GestionAdminsState extends State<GestionAdmins> {
     if (mounted) setState(() => _isLoading = false);
   }
 
+  Future<void> _modifierNumero(Map<String, dynamic> admin) async {
+    final telephoneCtrl = TextEditingController(text: admin['telephone'] ?? '');
+    String roleSelectionne = admin['role'] ?? 'admin';
+    String? gareSelectionnee = admin['gare'];
+    final formKey = GlobalKey<FormState>();
+    String? erreurModal;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Config.colors.authCardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx2, setModalState) {
+          final c = Config.colors;
+          final sw = MediaQuery.of(ctx2).size.width;
+          return Padding(
+            padding: EdgeInsets.only(
+              top: 20,
+              left: sw * 0.06,
+              right: sw * 0.06,
+              bottom: MediaQuery.of(ctx2).viewInsets.bottom + 20,
+            ),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Modifier les informations',
+                    style: TextStyle(
+                      color: c.authTextPrimary,
+                      fontSize: sw * 0.045,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Champ téléphone
+                  Container(
+                    decoration: BoxDecoration(
+                      color: c.authBackground,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: c.authBorder, width: 1.5),
+                    ),
+                    child: TextFormField(
+                      controller: telephoneCtrl,
+                      maxLength: 10,
+                      keyboardType: TextInputType.phone,
+                      cursorColor: c.authAccent,
+                      style: TextStyle(color: c.authTextPrimary),
+                      decoration: InputDecoration(
+                        counterText: '',
+                        border: InputBorder.none,
+                        hintText: 'Ex: 0505050505',
+                        hintStyle: TextStyle(color: c.authTextSecondary),
+                        prefixIcon: Icon(
+                          Icons.phone_outlined,
+                          color: c.authAccent,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                        ),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) {
+                          return 'Veuillez entrer un numéro';
+                        }
+                        if (!RegExp(r'^\d{10}$').hasMatch(v)) {
+                          return 'Numéro invalide (10 chiffres)';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Dropdown rôle
+                  Container(
+                    decoration: BoxDecoration(
+                      color: c.authBackground,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: c.authBorder, width: 1.5),
+                    ),
+                    child: DropdownButtonFormField<String>(
+                      value: roleSelectionne,
+                      dropdownColor: c.authCardBackground,
+                      iconEnabledColor: c.authAccent,
+                      style: TextStyle(color: c.authTextPrimary),
+                      items: const [
+                        DropdownMenuItem(value: 'admin', child: Text('Admin')),
+                        DropdownMenuItem(
+                          value: 'superadmin',
+                          child: Text('Super Admin'),
+                        ),
+                      ],
+                      onChanged: (value) =>
+                          setModalState(() => roleSelectionne = value!),
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        labelText: 'Rôle',
+                        labelStyle: TextStyle(color: c.authTextSecondary),
+                        prefixIcon: Icon(
+                          Icons.admin_panel_settings_outlined,
+                          color: c.authAccent,
+                          size: 20,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                          horizontal: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Dropdown gare
+                  Container(
+                    decoration: BoxDecoration(
+                      color: c.authBackground,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: c.authBorder, width: 1.5),
+                    ),
+                    child: DropdownButtonFormField<String>(
+                      value: _listeGares.contains(gareSelectionnee)
+                          ? gareSelectionnee
+                          : null,
+                      dropdownColor: c.authCardBackground,
+                      iconEnabledColor: c.authAccent,
+                      style: TextStyle(color: c.authTextPrimary),
+                      items: _listeGares.map((gare) {
+                        return DropdownMenuItem<String>(
+                          value: gare,
+                          child: Text(
+                            gare,
+                            style: TextStyle(color: c.authTextPrimary),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) =>
+                          setModalState(() => gareSelectionnee = value),
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        labelText: 'Gare',
+                        labelStyle: TextStyle(color: c.authTextSecondary),
+                        prefixIcon: Icon(
+                          Icons.location_city_outlined,
+                          color: c.authAccent,
+                          size: 20,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                          horizontal: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  if (erreurModal != null) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      erreurModal!,
+                      style: const TextStyle(color: Colors.red, fontSize: 13),
+                    ),
+                  ],
+
+                  const SizedBox(height: 16),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: c.authButton,
+                        foregroundColor: c.authTextPrimary,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () async {
+                        if (!formKey.currentState!.validate()) return;
+                        if (gareSelectionnee == null) {
+                          setModalState(
+                            () =>
+                                erreurModal = 'Veuillez sélectionner une gare.',
+                          );
+                          return;
+                        }
+
+                        try {
+                          final response = await http.post(
+                            apiUri('modifierNumeroAdmin.php'),
+                            headers: {'Content-Type': 'application/json'},
+                            body: jsonEncode({
+                              'id': admin['id'],
+                              'telephone': telephoneCtrl.text.trim(),
+                              'role': roleSelectionne,
+                              'gare': gareSelectionnee,
+                            }),
+                          );
+
+                          if (response.statusCode == 200) {
+                            final data = jsonDecode(response.body);
+                            if (data['success'] == true) {
+                              Navigator.pop(ctx);
+                              await _recupererListeAdmins();
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    backgroundColor: Colors.green,
+                                    content: Text(
+                                      'Informations modifiées avec succès.',
+                                    ),
+                                  ),
+                                );
+                              }
+                            } else {
+                              setModalState(
+                                () => erreurModal =
+                                    data['message'] ?? 'Erreur inconnue.',
+                              );
+                            }
+                          }
+                        } catch (e) {
+                          setModalState(
+                            () => erreurModal = 'Erreur réseau. Réessayez.',
+                          );
+                        }
+                      },
+                      child: const Text(
+                        'Enregistrer',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    telephoneCtrl.dispose();
+  }
+
   Future<void> _supprimerNumero(String telephone) async {
     final confirmer = await showDialog<bool>(
       context: context,
@@ -233,7 +486,6 @@ class _GestionAdminsState extends State<GestionAdmins> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Formulaire ajout ────────────────────────────────────
             Text(
               'Ajouter un numéro',
               style: TextStyle(
@@ -248,7 +500,6 @@ class _GestionAdminsState extends State<GestionAdmins> {
               key: _formKey,
               child: Column(
                 children: [
-                  // Champ téléphone
                   Container(
                     decoration: BoxDecoration(
                       color: c.authCardBackground,
@@ -291,7 +542,6 @@ class _GestionAdminsState extends State<GestionAdmins> {
 
                   SizedBox(height: sh * 0.015),
 
-                  // Dropdown rôle
                   Container(
                     decoration: BoxDecoration(
                       color: c.authCardBackground,
@@ -331,7 +581,6 @@ class _GestionAdminsState extends State<GestionAdmins> {
 
                   SizedBox(height: sh * 0.015),
 
-                  // Dropdown gare
                   Container(
                     decoration: BoxDecoration(
                       color: c.authCardBackground,
@@ -373,7 +622,6 @@ class _GestionAdminsState extends State<GestionAdmins> {
 
                   SizedBox(height: sh * 0.015),
 
-                  // Messages erreur / succès
                   if (_erreur != null)
                     Text(
                       _erreur!,
@@ -387,7 +635,6 @@ class _GestionAdminsState extends State<GestionAdmins> {
 
                   SizedBox(height: sh * 0.015),
 
-                  // Bouton ajouter
                   SizedBox(
                     width: double.infinity,
                     height: sh * 0.058,
@@ -425,7 +672,6 @@ class _GestionAdminsState extends State<GestionAdmins> {
 
             SizedBox(height: sh * 0.04),
 
-            // ── Liste des admins ────────────────────────────────────
             Text(
               'Liste des admins autorisés',
               style: TextStyle(
@@ -505,13 +751,27 @@ class _GestionAdminsState extends State<GestionAdmins> {
                               ),
                             ],
                           ),
-                          trailing: IconButton(
-                            icon: const Icon(
-                              Icons.delete_outline,
-                              color: Colors.red,
-                            ),
-                            onPressed: () =>
-                                _supprimerNumero(admin['telephone'] ?? ''),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Bouton modifier visible uniquement si compte pas encore créé
+                              if (!compteExiste)
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.edit_outlined,
+                                    color: c.authAccent,
+                                  ),
+                                  onPressed: () => _modifierNumero(admin),
+                                ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () =>
+                                    _supprimerNumero(admin['telephone'] ?? ''),
+                              ),
+                            ],
                           ),
                         ),
                       );

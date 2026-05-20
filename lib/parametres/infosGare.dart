@@ -35,13 +35,10 @@ class _InformationsState extends State<Informations> {
     super.dispose();
   }
 
-  // ── Charger les infos ──────────────────────────────────────────────────────
   Future<void> _chargerDonnees() async {
     if (mounted) setState(() => _isLoading = true);
     try {
-      final response = await http.get(
-        apiUri('infosGares.php'),
-      );
+      final response = await http.get(apiUri('infosGares.php'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true && mounted) {
@@ -56,7 +53,6 @@ class _InformationsState extends State<Informations> {
     }
   }
 
-  // ── Ajouter ───────────────────────────────────────────────────────────────
   Future<void> _ajouter() async {
     try {
       await http.post(
@@ -73,7 +69,6 @@ class _InformationsState extends State<Informations> {
     } catch (e) {}
   }
 
-  // ── Modifier ──────────────────────────────────────────────────────────────
   Future<void> _modifier(int id) async {
     try {
       await http.post(
@@ -91,7 +86,6 @@ class _InformationsState extends State<Informations> {
     } catch (e) {}
   }
 
-  // ── Supprimer ─────────────────────────────────────────────────────────────
   Future<void> _supprimer(int id) async {
     try {
       await http.post(
@@ -105,112 +99,117 @@ class _InformationsState extends State<Informations> {
 
   @override
   Widget build(BuildContext context) {
+    final c = Config.colors;
+    final sw = MediaQuery.of(context).size.width;
+    final sh = MediaQuery.of(context).size.height;
+
     return Scaffold(
+      backgroundColor: c.authBackground,
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          "Informations Gares",
-          style: TextStyle(color: Colors.white),
+        backgroundColor: c.authCardBackground,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios_new,
+            color: c.authTextPrimary,
+            size: 20,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
         ),
         centerTitle: true,
-        backgroundColor: const Color.fromARGB(93, 12, 134, 195),
+        title: Text(
+          'Informations Gares',
+          style: TextStyle(
+            color: c.authTextPrimary,
+            fontWeight: FontWeight.bold,
+            fontSize: sw * 0.045,
+          ),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
+            icon: Icon(Icons.refresh, color: c.authTextPrimary),
             onPressed: _chargerDonnees,
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator(color: c.authAccent))
           : _infos.isEmpty
           ? Center(
               child: Text(
                 'Aucune donnée disponible.',
-                style: TextStyle(
-                  color: Config.colors.authCardBackground,
-                  fontFamily: 'Lobster',
-                ),
+                style: TextStyle(color: c.authTextSecondary, fontFamily: 'Lobster'),
               ),
             )
           : ListView.builder(
+              padding: EdgeInsets.symmetric(
+                horizontal: sw * 0.06,
+                vertical: sh * 0.02,
+              ),
               itemCount: _infos.length,
               itemBuilder: (context, index) {
                 final row = _infos[index];
                 return Container(
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
+                  margin: const EdgeInsets.only(bottom: 10),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: c.authCardBackground,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color.fromARGB(93, 12, 134, 195),
-                      width: 1.2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.lightBlue.withOpacity(0.12),
-                        blurRadius: 6,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
+                    border: Border.all(color: c.authBorder, width: 1),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // ── Icône gare ─────────────────────────────────────────
+                        // ── Icône gare ──────────────────────────────────────
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: const Color.fromARGB(93, 12, 134, 195),
+                            color: c.authAccent.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.location_city,
-                            color: Colors.white,
+                            color: c.authAccent,
                             size: 28,
                           ),
                         ),
                         const SizedBox(width: 12),
-                        // ── Infos ──────────────────────────────────────────────
+                        // ── Infos ────────────────────────────────────────────
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 row['ville'],
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
-                                  color: Color.fromARGB(255, 12, 134, 195),
+                                  color: c.authTextPrimary,
                                 ),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 row['description'],
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
-                                  color: Colors.black87,
+                                  color: c.authTextSecondary,
                                 ),
                               ),
                               const SizedBox(height: 6),
                               Row(
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.phone,
                                     size: 14,
-                                    color: Colors.grey,
+                                    color: c.authTextSecondary,
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
                                     row['telephone'],
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 13,
-                                      color: Colors.grey,
+                                      color: c.authTextSecondary,
                                     ),
                                   ),
                                 ],
@@ -218,57 +217,59 @@ class _InformationsState extends State<Informations> {
                             ],
                           ),
                         ),
-                        // ── Boutons ────────────────────────────────────────────
+                        // ── Boutons ──────────────────────────────────────────
                         Column(
                           children: [
                             IconButton(
-                              icon: const Icon(
-                                Icons.edit,
-                                color: Color.fromARGB(255, 12, 134, 195),
-                              ),
+                              icon: Icon(Icons.edit, color: c.authAccent),
                               onPressed: () => _afficherBottomSheet(row: row),
                             ),
                             IconButton(
-                              icon: const Icon(
-                                Icons.delete,
-                                color: Color.fromARGB(255, 233, 75, 64),
-                              ),
+                              icon: const Icon(Icons.delete, color: Colors.red),
                               onPressed: () async {
                                 final confirm = await showDialog<bool>(
                                   context: context,
                                   builder: (context) => AlertDialog(
-                                    title: const Text(
-                                      'Confirmer la suppression',
+                                    backgroundColor: c.authCardBackground,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
                                     ),
-                                    content: const Text(
+                                    title: Text(
+                                      'Confirmer la suppression',
+                                      style: TextStyle(
+                                        color: c.authTextPrimary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    content: Text(
                                       'Voulez-vous vraiment supprimer ?',
+                                      style: TextStyle(
+                                        color: c.authTextSecondary,
+                                      ),
                                     ),
                                     actions: [
                                       TextButton(
                                         onPressed: () =>
                                             Navigator.of(context).pop(false),
-                                        child: const Text('Annuler'),
+                                        child: Text(
+                                          'Annuler',
+                                          style: TextStyle(
+                                            color: c.authTextSecondary,
+                                          ),
+                                        ),
                                       ),
                                       TextButton(
                                         onPressed: () =>
                                             Navigator.of(context).pop(true),
                                         child: const Text(
                                           'Supprimer',
-                                          style: TextStyle(
-                                            color: Color.fromARGB(
-                                              255,
-                                              233,
-                                              75,
-                                              64,
-                                            ),
-                                          ),
+                                          style: TextStyle(color: Colors.red),
                                         ),
                                       ),
                                     ],
                                   ),
                                 );
-                                if (confirm == true)
-                                  await _supprimer(row['id']);
+                                if (confirm == true) await _supprimer(row['id']);
                               },
                             ),
                           ],
@@ -280,6 +281,8 @@ class _InformationsState extends State<Informations> {
               },
             ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: Config.colors.authButton,
+        foregroundColor: Config.colors.authTextPrimary,
         onPressed: () => _afficherBottomSheet(),
         child: const Icon(Icons.add),
       ),
@@ -287,6 +290,7 @@ class _InformationsState extends State<Informations> {
   }
 
   void _afficherBottomSheet({Map<String, dynamic>? row}) {
+    final c = Config.colors;
     if (row != null) {
       villeController.text = row['ville'];
       descriptionController.text = row['description'];
@@ -302,6 +306,10 @@ class _InformationsState extends State<Informations> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: c.authCardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (context) => Padding(
         padding: EdgeInsets.only(
           top: 16,
@@ -314,49 +322,51 @@ class _InformationsState extends State<Informations> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextFormField(
-                controller: villeController,
-                decoration: const InputDecoration(
-                  labelText: 'Ville',
-                  border: OutlineInputBorder(),
+              Text(
+                row == null ? 'Ajouter une gare' : 'Modifier la gare',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: c.authTextPrimary,
                 ),
+              ),
+              const SizedBox(height: 12),
+              _themedField(
+                controller: villeController,
+                hint: 'Ville',
+                c: c,
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Entrer la ville' : null,
               ),
               const SizedBox(height: 8),
-              TextFormField(
-                maxLines: 5,
+              _themedField(
                 controller: descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  border: OutlineInputBorder(),
-                ),
+                hint: 'Description',
+                c: c,
+                maxLines: 5,
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Entrer la description' : null,
               ),
               const SizedBox(height: 8),
-              TextFormField(
+              _themedField(
                 controller: telephoneController,
+                hint: 'Téléphone',
+                c: c,
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Téléphone',
-                  border: OutlineInputBorder(),
-                ),
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Entrer le téléphone' : null,
               ),
               const SizedBox(height: 8),
-              TextFormField(
+              _themedField(
                 controller: confirmTelController,
+                hint: 'Confirmer Téléphone',
+                c: c,
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Confirmer Téléphone',
-                  border: OutlineInputBorder(),
-                ),
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'Confirmer le téléphone';
-                  if (v != telephoneController.text)
+                  if (v != telephoneController.text) {
                     return 'Les numéros ne correspondent pas';
+                  }
                   return null;
                 },
               ),
@@ -372,11 +382,54 @@ class _InformationsState extends State<Informations> {
                     Navigator.of(context).pop();
                   }
                 },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: c.authButton,
+                  foregroundColor: c.authTextPrimary,
+                  elevation: 0,
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
                 child: Text(row == null ? 'Ajouter' : 'Modifier'),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _themedField({
+    required TextEditingController controller,
+    required String hint,
+    required dynamic c,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: c.authCardBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: c.authBorder, width: 1.5),
+      ),
+      child: TextFormField(
+        controller: controller,
+        cursorColor: c.authAccent,
+        style: TextStyle(color: c.authTextPrimary),
+        maxLines: maxLines,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
+          hintText: hint,
+          hintStyle: TextStyle(color: c.authTextSecondary),
+        ),
+        validator: validator,
       ),
     );
   }

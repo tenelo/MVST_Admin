@@ -19,23 +19,21 @@ class ListeImages extends StatefulWidget {
 class _ListeImagesState extends State<ListeImages> {
   bool isLoading = false;
   List<ImageModel> images = [];
-  late IO.Socket _socket; // ← AJOUTÉ
+  late IO.Socket _socket;
 
   @override
   void initState() {
     super.initState();
     _recupImages();
-    _connecterSocket(); // ← AJOUTÉ
+    _connecterSocket();
   }
 
   @override
   void dispose() {
-    _socket.disconnect(); // ← AJOUTÉ
-    _socket.dispose(); // ← AJOUTÉ
+    _socket.disconnect();
+    _socket.dispose();
     super.dispose();
   }
-
-  // ── Socket.IO ─────────────────────────────────────────────────────────────
 
   void _connecterSocket() {
     _socket = IO.io(
@@ -60,7 +58,8 @@ class _ListeImagesState extends State<ListeImages> {
   Future<void> _recupImages() async {
     setState(() => isLoading = true);
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/gestionImages.php'));
+      final response =
+          await http.get(Uri.parse('$_baseUrl/gestionImages.php'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
@@ -79,37 +78,57 @@ class _ListeImagesState extends State<ListeImages> {
 
   @override
   Widget build(BuildContext context) {
+    final c = Config.colors;
+    final sw = MediaQuery.of(context).size.width;
+    final sh = MediaQuery.of(context).size.height;
+
     return Scaffold(
+      backgroundColor: c.authBackground,
       appBar: AppBar(
-        backgroundColor: const Color.fromARGB(93, 12, 134, 195),
-        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: c.authCardBackground,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios_new,
+            color: c.authTextPrimary,
+            size: 20,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         centerTitle: true,
-        title: const Text(
+        title: Text(
           'Gestion des images',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(
+            color: c.authTextPrimary,
+            fontWeight: FontWeight.bold,
+            fontSize: sw * 0.045,
+          ),
         ),
       ),
       body: isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                color: Color.fromARGB(93, 12, 134, 195),
-              ),
-            )
+          ? Center(child: CircularProgressIndicator(color: c.authAccent))
           : images.isEmpty
-          ? const Center(
+          ? Center(
               child: Text(
                 'Aucune image disponible',
                 style: TextStyle(
-                  color: Color.fromARGB(93, 12, 134, 195),
+                  color: c.authTextSecondary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             )
           : ListView.builder(
+              padding: EdgeInsets.symmetric(
+                horizontal: sw * 0.06,
+                vertical: sh * 0.02,
+              ),
               itemCount: images.length,
-              itemBuilder: (context, index) => _buildImageCard(images[index]),
+              itemBuilder: (context, index) =>
+                  _buildImageCard(images[index], c),
             ),
       floatingActionButton: FloatingActionButton(
+        backgroundColor: c.authButton,
+        foregroundColor: c.authTextPrimary,
         onPressed: () => Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => AjouterImages()),
@@ -119,33 +138,36 @@ class _ListeImagesState extends State<ListeImages> {
     );
   }
 
-  Widget _buildImageCard(ImageModel image) {
+  Widget _buildImageCard(ImageModel image, dynamic c) {
     final String lienImage = '$_baseUrl/${image.lien_image}';
     final bool isActif = image.statut.toLowerCase() == 'actif';
 
     return GestureDetector(
       onTap: () =>
           _afficherImageEnGrand(lienImage, image.titre, image.description),
-      child: Card(
-        shadowColor: isActif ? Colors.lightBlueAccent : Colors.grey,
-        elevation: 4,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: c.authCardBackground,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: c.authBorder, width: 1),
+        ),
         child: Stack(
           children: [
-            // ── Contenu principal ──────────────────────────────────────
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(2.0),
+                  padding: const EdgeInsets.all(8.0),
                   child: Container(
-                    width: 120,
-                    height: 110,
+                    width: 110,
+                    height: 100,
                     decoration: BoxDecoration(
                       color: isActif
-                          ? Colors.blue.withValues(alpha: 0.07)
+                          ? c.authAccent.withValues(alpha: 0.07)
                           : Colors.grey.withValues(alpha: 0.07),
                       border: Border.all(
-                        color: isActif ? Colors.blue : Colors.grey,
+                        color: isActif ? c.authAccent : Colors.grey,
                         width: 1.0,
                       ),
                       borderRadius: BorderRadius.circular(8.0),
@@ -167,22 +189,22 @@ class _ListeImagesState extends State<ListeImages> {
                                     ]),
                               child: Image.network(
                                 lienImage,
-                                width: 120,
-                                height: 110,
+                                width: 110,
+                                height: 100,
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) =>
-                                    const Icon(
+                                    Icon(
                                       Icons.error_outline_outlined,
-                                      color: Colors.blue,
-                                      size: 50,
+                                      color: c.authAccent,
+                                      size: 40,
                                     ),
                               ),
                             ),
                           )
                         : Icon(
                             Icons.campaign_rounded,
-                            color: isActif ? Colors.blue : Colors.grey,
-                            size: 40,
+                            color: isActif ? c.authAccent : Colors.grey,
+                            size: 36,
                           ),
                   ),
                 ),
@@ -196,7 +218,7 @@ class _ListeImagesState extends State<ListeImages> {
                           image.titre,
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: isActif ? Colors.black : Colors.grey,
+                            color: isActif ? c.authTextPrimary : Colors.grey,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -205,22 +227,23 @@ class _ListeImagesState extends State<ListeImages> {
                           maxLines: 10,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: isActif ? Colors.black87 : Colors.grey,
+                            color: isActif ? c.authTextSecondary : Colors.grey,
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                _buildActionButtons(image),
+                _buildActionButtons(image, c),
               ],
             ),
-            // ── Badge statut ───────────────────────────────────────────
+            // ── Badge statut ─────────────────────────────────────────────
             Positioned(
               top: 6,
               left: 6,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 decoration: BoxDecoration(
                   color: isActif
                       ? const Color.fromARGB(255, 35, 177, 127)
@@ -259,12 +282,12 @@ class _ListeImagesState extends State<ListeImages> {
     String titre,
     String description,
   ) async {
+    final c = Config.colors;
     await showDialog(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.0),
-        ),
+        backgroundColor: c.authCardBackground,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -275,9 +298,9 @@ class _ListeImagesState extends State<ListeImages> {
                 child: Image.network(
                   imageUrl,
                   fit: BoxFit.cover,
-                  errorBuilder: (c, e, s) => const Icon(
+                  errorBuilder: (ctx, e, s) => Icon(
                     Icons.error_outline_outlined,
-                    color: Colors.blue,
+                    color: c.authAccent,
                     size: 50,
                   ),
                 ),
@@ -288,22 +311,27 @@ class _ListeImagesState extends State<ListeImages> {
               child: Text(
                 titre,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
+                  color: c.authTextPrimary,
                 ),
               ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Text(description, textAlign: TextAlign.justify),
+              child: Text(
+                description,
+                textAlign: TextAlign.justify,
+                style: TextStyle(color: c.authTextSecondary),
+              ),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
+              child: Text(
                 'Ok',
                 style: TextStyle(
-                  color: Colors.blue,
+                  color: c.authAccent,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -314,18 +342,15 @@ class _ListeImagesState extends State<ListeImages> {
     );
   }
 
-  Widget _buildActionButtons(ImageModel image) {
+  Widget _buildActionButtons(ImageModel image, dynamic c) {
     return Row(
       children: [
         IconButton(
-          icon: const Icon(Icons.edit, color: Colors.blue),
+          icon: Icon(Icons.edit, color: c.authAccent),
           onPressed: () => _showEditDialog(image),
         ),
         IconButton(
-          icon: const Icon(
-            Icons.delete,
-            color: Color.fromARGB(255, 233, 75, 64),
-          ),
+          icon: const Icon(Icons.delete, color: Colors.red),
           onPressed: () => _showDeleteDialog(image),
         ),
       ],
@@ -333,6 +358,7 @@ class _ListeImagesState extends State<ListeImages> {
   }
 
   Future<void> _showEditDialog(ImageModel image) async {
+    final c = Config.colors;
     final titreController = TextEditingController(text: image.titre);
     final descriptionController = TextEditingController(
       text: image.description,
@@ -346,10 +372,16 @@ class _ListeImagesState extends State<ListeImages> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Center(
+          backgroundColor: c.authCardBackground,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Center(
             child: Text(
               'Modifier les informations',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: c.authTextPrimary,
+              ),
             ),
           ),
           contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
@@ -357,30 +389,50 @@ class _ListeImagesState extends State<ListeImages> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(
+                _dialogField(
                   controller: titreController,
-                  decoration: const InputDecoration(labelText: 'Titre'),
+                  hint: 'Titre',
+                  c: c,
                 ),
-                TextField(
-                  maxLines: 5,
+                const SizedBox(height: 8),
+                _dialogField(
                   controller: descriptionController,
-                  decoration: const InputDecoration(labelText: 'Description'),
+                  hint: 'Description',
+                  c: c,
+                  maxLines: 5,
                 ),
                 const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  value: statutSelectionne,
-                  decoration: const InputDecoration(labelText: 'Statut'),
-                  items: statuts
-                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                      .toList(),
-                  onChanged: (val) {
-                    if (val != null) setState(() => statutSelectionne = val);
-                  },
+                Container(
+                  decoration: BoxDecoration(
+                    color: c.authCardBackground,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: c.authBorder, width: 1.5),
+                  ),
+                  child: DropdownButtonFormField<String>(
+                    value: statutSelectionne,
+                    dropdownColor: c.authCardBackground,
+                    iconEnabledColor: c.authAccent,
+                    style: TextStyle(color: c.authTextPrimary),
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
+                      hintStyle: TextStyle(color: c.authTextSecondary),
+                    ),
+                    items: statuts
+                        .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                        .toList(),
+                    onChanged: (val) {
+                      if (val != null) setState(() => statutSelectionne = val);
+                    },
+                  ),
                 ),
                 if (isUpdating)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 20),
-                    child: CircularProgressIndicator(),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 20),
+                    child: CircularProgressIndicator(color: c.authAccent),
                   ),
               ],
             ),
@@ -391,11 +443,11 @@ class _ListeImagesState extends State<ListeImages> {
               children: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text(
+                  child: Text(
                     'Annuler',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue,
+                      color: c.authTextSecondary,
                     ),
                   ),
                 ),
@@ -411,17 +463,47 @@ class _ListeImagesState extends State<ListeImages> {
                     setState(() => isUpdating = false);
                     Navigator.of(context).pop();
                   },
-                  child: const Text(
+                  child: Text(
                     'Enregistrer',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue,
+                      color: c.authAccent,
                     ),
                   ),
                 ),
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _dialogField({
+    required TextEditingController controller,
+    required String hint,
+    required dynamic c,
+    int maxLines = 1,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: c.authCardBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: c.authBorder, width: 1.5),
+      ),
+      child: TextField(
+        controller: controller,
+        cursorColor: c.authAccent,
+        style: TextStyle(color: c.authTextPrimary),
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
+          hintText: hint,
+          hintStyle: TextStyle(color: c.authTextSecondary),
         ),
       ),
     );
@@ -445,15 +527,15 @@ class _ListeImagesState extends State<ListeImages> {
         },
       );
       final data = jsonDecode(response.body);
-      if (data['success'] == true) _notifierClients(); // ← AJOUTÉ
+      if (data['success'] == true) _notifierClients();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: data['success'] == true
-              ? const Color.fromARGB(255, 35, 113, 177)
+              ? Config.colors.authCardBackground
               : Colors.red,
           content: Text(
             data['message'],
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: Config.colors.authTextPrimary),
           ),
         ),
       );
@@ -466,16 +548,20 @@ class _ListeImagesState extends State<ListeImages> {
   }
 
   Future<void> _showDeleteDialog(ImageModel image) async {
+    final c = Config.colors;
     bool isDeleting = false;
     await showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Center(
+          backgroundColor: c.authCardBackground,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Center(
             child: Text(
               'Suppression',
               style: TextStyle(
-                color: Color.fromARGB(255, 233, 75, 64),
+                color: Colors.red,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -483,11 +569,14 @@ class _ListeImagesState extends State<ListeImages> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Voulez-vous vraiment supprimer cette image ?'),
+              Text(
+                'Voulez-vous vraiment supprimer cette image ?',
+                style: TextStyle(color: c.authTextSecondary),
+              ),
               if (isDeleting)
-                const Padding(
-                  padding: EdgeInsets.only(top: 20),
-                  child: CircularProgressIndicator(),
+                Padding(
+                  padding: const EdgeInsets.only(top: 20),
+                  child: CircularProgressIndicator(color: c.authAccent),
                 ),
             ],
           ),
@@ -504,18 +593,18 @@ class _ListeImagesState extends State<ListeImages> {
                   child: const Text(
                     'Oui',
                     style: TextStyle(
-                      color: Color.fromARGB(255, 233, 75, 64),
+                      color: Colors.red,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text(
+                  child: Text(
                     'Non',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue,
+                      color: c.authTextSecondary,
                     ),
                   ),
                 ),
@@ -534,15 +623,15 @@ class _ListeImagesState extends State<ListeImages> {
         body: {'action': 'supprimer', 'id': id.toString()},
       );
       final data = jsonDecode(response.body);
-      if (data['success'] == true) _notifierClients(); // ← AJOUTÉ
+      if (data['success'] == true) _notifierClients();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: data['success'] == true
-              ? const Color.fromARGB(255, 35, 113, 177)
+              ? Config.colors.authCardBackground
               : Colors.red,
           content: Text(
             data['message'],
-            style: const TextStyle(color: Colors.white),
+            style: TextStyle(color: Config.colors.authTextPrimary),
           ),
         ),
       );
@@ -575,7 +664,6 @@ class _AjouterImagesState extends State<AjouterImages> {
   @override
   void initState() {
     super.initState();
-    // ── Socket.IO ────────────────────────────────────────────────────
     _socket = IO.io(
       'https://mvst.tenelo.cloud',
       IO.OptionBuilder()
@@ -595,27 +683,60 @@ class _AjouterImagesState extends State<AjouterImages> {
 
   @override
   Widget build(BuildContext context) {
+    final c = Config.colors;
+    final sw = MediaQuery.of(context).size.width;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Gestion d\'images'), centerTitle: true),
+      backgroundColor: c.authBackground,
+      appBar: AppBar(
+        backgroundColor: c.authCardBackground,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios_new,
+            color: c.authTextPrimary,
+            size: 20,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        centerTitle: true,
+        title: Text(
+          "Gestion d'images",
+          style: TextStyle(
+            color: c.authTextPrimary,
+            fontWeight: FontWeight.bold,
+            fontSize: sw * 0.045,
+          ),
+        ),
+      ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(12.0),
+          padding: EdgeInsets.symmetric(
+            horizontal: sw * 0.06,
+            vertical: 16,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ── Switch type ────────────────────────────────────────────
+              // ── Switch type ──────────────────────────────────────────────
               Container(
-                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 12,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.25)),
+                  color: c.authCardBackground,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: c.authBorder, width: 1.5),
                 ),
                 child: Row(
                   children: [
-                    const Text(
+                    Text(
                       'Type :',
-                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: c.authTextPrimary,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -625,9 +746,11 @@ class _AjouterImagesState extends State<AjouterImages> {
                           ChoiceChip(
                             label: const Text('Avec image'),
                             selected: _avecImage,
-                            selectedColor: Colors.blue,
+                            selectedColor: c.authButton,
                             labelStyle: TextStyle(
-                              color: _avecImage ? Colors.white : Colors.blue,
+                              color: _avecImage
+                                  ? c.authTextPrimary
+                                  : c.authTextSecondary,
                               fontWeight: FontWeight.bold,
                             ),
                             onSelected: (_) => setState(() {
@@ -638,9 +761,11 @@ class _AjouterImagesState extends State<AjouterImages> {
                           ChoiceChip(
                             label: const Text('Information seule'),
                             selected: !_avecImage,
-                            selectedColor: Colors.blue,
+                            selectedColor: c.authButton,
                             labelStyle: TextStyle(
-                              color: !_avecImage ? Colors.white : Colors.blue,
+                              color: !_avecImage
+                                  ? c.authTextPrimary
+                                  : c.authTextSecondary,
                               fontWeight: FontWeight.bold,
                             ),
                             onSelected: (_) => setState(() {
@@ -656,48 +781,64 @@ class _AjouterImagesState extends State<AjouterImages> {
               ),
               const SizedBox(height: 10),
 
-              // ── Sélection image (uniquement si "Avec image") ────────────
+              // ── Sélection image ──────────────────────────────────────────
               if (_avecImage) ...[
                 GestureDetector(
                   onTap: _image == null ? _selectImage : null,
-                  child: _buildImagePreview(),
+                  child: _buildImagePreview(c),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
               ],
 
-              _buildTextField(titreImage, _avecImage ? "Titre de l'image" : "Titre de l'information"),
-              const SizedBox(height: 4),
+              _buildTextField(
+                titreImage,
+                _avecImage
+                    ? "Titre de l'image"
+                    : "Titre de l'information",
+                c,
+              ),
+              const SizedBox(height: 8),
               _buildDropdown(
                 label: 'Sélectionner statut',
                 items: options,
                 selectedItem: selectedOption,
+                c: c,
                 onChanged: (value) => setState(() => selectedOption = value),
                 validator: (value) => value == null || value.isEmpty
                     ? 'Veuillez choisir le statut'
                     : null,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
               _buildTextField(
                 detailsImage,
-                _avecImage ? "Détails de l'image" : "Contenu de l'information",
+                _avecImage
+                    ? "Détails de l'image"
+                    : "Contenu de l'information",
+                c,
                 maxLines: 10,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: isLoading ? null : _uploadData,
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  backgroundColor: Colors.blue,
+                  backgroundColor: c.authButton,
+                  foregroundColor: c.authTextPrimary,
+                  elevation: 0,
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                        'Ajouter',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
+                    ? SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: c.authTextPrimary,
+                          strokeWidth: 2.5,
                         ),
-                      ),
+                      )
+                    : const Text('Ajouter'),
               ),
             ],
           ),
@@ -706,16 +847,17 @@ class _AjouterImagesState extends State<AjouterImages> {
     );
   }
 
-  Widget _buildImagePreview() {
+  Widget _buildImagePreview(dynamic c) {
     return Container(
       height: 200,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: c.authBorder, width: 1.5),
+        color: c.authCardBackground,
       ),
       child: _image != null
           ? ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
               child: Image.file(
                 _image!,
                 fit: BoxFit.cover,
@@ -728,14 +870,14 @@ class _AjouterImagesState extends State<AjouterImages> {
                 Icon(
                   Icons.photo_library_outlined,
                   size: 50,
-                  color: Config.colors.bleuA,
+                  color: c.authAccent,
                 ),
                 const SizedBox(width: 10),
                 Text(
                   'Sélectionner une image',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Config.colors.bleuA,
+                    color: c.authTextSecondary,
                   ),
                 ),
               ],
@@ -745,26 +887,29 @@ class _AjouterImagesState extends State<AjouterImages> {
 
   Widget _buildTextField(
     TextEditingController controller,
-    String label, {
+    String label,
+    dynamic c, {
     int maxLines = 1,
   }) {
-    return TextField(
-      controller: controller,
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(
-          color: Colors.blue,
-          fontWeight: FontWeight.bold,
-        ),
-        border: const OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.blue),
-        ),
-        focusedBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.blue, width: 2.0),
-        ),
-        enabledBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.blue, width: 1.5),
+    return Container(
+      decoration: BoxDecoration(
+        color: c.authCardBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: c.authBorder, width: 1.5),
+      ),
+      child: TextField(
+        controller: controller,
+        cursorColor: c.authAccent,
+        style: TextStyle(color: c.authTextPrimary),
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
+          hintText: label,
+          hintStyle: TextStyle(color: c.authTextSecondary),
         ),
       ),
     );
@@ -774,52 +919,58 @@ class _AjouterImagesState extends State<AjouterImages> {
     required String label,
     required List<T> items,
     required T? selectedItem,
+    required dynamic c,
     required void Function(T?) onChanged,
     String? Function(T?)? validator,
   }) {
-    return DropdownButtonFormField<T>(
-      value: selectedItem,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(
-          color: Colors.blue,
-          fontWeight: FontWeight.bold,
-        ),
-        border: const OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.blue),
-        ),
-        focusedBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.blue, width: 2.0),
-        ),
-        enabledBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.blue, width: 1.5),
-        ),
+    return Container(
+      decoration: BoxDecoration(
+        color: c.authCardBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: c.authBorder, width: 1.5),
       ),
-      iconEnabledColor: Colors.blue,
-      items: items
-          .map(
-            (item) =>
-                DropdownMenuItem<T>(value: item, child: Text(item.toString())),
-          )
-          .toList(),
-      onChanged: onChanged,
-      validator: validator,
+      child: DropdownButtonFormField<T>(
+        value: selectedItem,
+        dropdownColor: c.authCardBackground,
+        iconEnabledColor: c.authAccent,
+        style: TextStyle(color: c.authTextPrimary),
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 4,
+          ),
+          hintText: label,
+          hintStyle: TextStyle(color: c.authTextSecondary),
+        ),
+        items: items
+            .map(
+              (item) => DropdownMenuItem<T>(
+                value: item,
+                child: Text(item.toString()),
+              ),
+            )
+            .toList(),
+        onChanged: onChanged,
+        validator: validator,
+      ),
     );
   }
 
   Future<void> _uploadData() async {
+    final c = Config.colors;
     if (titreImage.text.isEmpty ||
         detailsImage.text.isEmpty ||
         selectedOption == null ||
         (_avecImage && _image == null)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color.fromARGB(255, 35, 113, 177),
+          backgroundColor: c.authCardBackground,
           content: Text(
             _avecImage && _image == null
-                ? "Veuillez sélectionner une image"
-                : "Veuillez remplir tous les champs",
-            style: const TextStyle(color: Colors.white),
+                ? 'Veuillez sélectionner une image'
+                : 'Veuillez remplir tous les champs',
+            style: TextStyle(color: c.authTextPrimary),
           ),
         ),
       );
@@ -874,7 +1025,7 @@ class _AjouterImagesState extends State<AjouterImages> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              backgroundColor: const Color.fromARGB(255, 213, 115, 66),
+              backgroundColor: Colors.red,
               content: Text(
                 data['message'],
                 style: const TextStyle(color: Colors.white),
@@ -887,10 +1038,10 @@ class _AjouterImagesState extends State<AjouterImages> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            "Erreur : $e",
+            'Erreur : $e',
             style: const TextStyle(color: Colors.white),
           ),
-          backgroundColor: const Color.fromARGB(255, 213, 76, 66),
+          backgroundColor: Colors.red,
         ),
       );
     } finally {

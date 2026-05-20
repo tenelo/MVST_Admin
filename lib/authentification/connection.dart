@@ -10,7 +10,7 @@ import 'package:mvst_admin/authentification/authentification.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/main.dart';
 import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
-import 'package:mvst_admin/models/clavier_numerique.dart';
+import 'package:mvst_admin/authentification/clavier_numerique.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Login extends StatefulWidget {

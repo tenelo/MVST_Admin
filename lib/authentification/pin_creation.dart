@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mvst_admin/config/config.dart';
-import 'package:mvst_admin/models/clavier_numerique.dart';
+import 'package:mvst_admin/authentification/clavier_numerique.dart';
 import 'package:mvst_admin/main.dart';
 
 class PinCreation extends StatefulWidget {

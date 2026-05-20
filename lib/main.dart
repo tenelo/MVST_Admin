@@ -15,18 +15,18 @@ import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/qrcode/lecteurQrCode.dart';
 import 'package:mvst_admin/screens/lesDeparts.dart';
 import 'package:mvst_admin/screens/listeDesPassagers.dart';
-import 'package:mvst_admin/screens/parametres.dart';
+import 'package:mvst_admin/parametres/parametres.dart';
 import 'package:mvst_admin/screens/ticketsDuJourScannes.dart';
 import 'package:mvst_admin/screens/tousLesDepartsDuJour.dart';
 import 'package:mvst_admin/screens/profil.dart';
-import 'package:mvst_admin/screens/suppression/suppression.dart';
+import 'package:mvst_admin/parametres/suppression/suppression.dart';
 import 'package:mvst_admin/screens/tableaudestickets.dart';
 import 'package:mvst_admin/screens/suggestions_admin.dart';
 import 'package:mvst_admin/gestionUtilisateursEtComptes/comptesBloques.dart';
 import 'package:mvst_admin/gestionUtilisateursEtComptes/listeDesUtilisateurs.dart';
 import 'package:mvst_admin/verifTickets/verifierticket.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:mvst_admin/authentification/gestion_admins.dart';
+import 'package:mvst_admin/parametres/gestion_admins.dart';
 
 DateTime? dateActuelle = DateTime.now();
 
@@ -436,7 +436,6 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                     listeUtilisateurs(context, setLoadingState),
                     comptesBloques(context, setLoadingState),
                     suggestions(context, setLoadingState),
-                    parametresCard(context, setLoadingState),
                   ],
                 ),
               ),
@@ -742,27 +741,6 @@ Widget graphiques(BuildContext ctx, Function setLoadingState) {
   );
 }
 
-Widget parametresCard(BuildContext ctx, Function setLoadingState) {
-  return _carteMenu(
-    ctx: ctx,
-    setLoadingState: setLoadingState,
-    icon: Icons.settings_outlined,
-    label: 'PARAMÈTRES',
-    onTap: () async {
-      if (FirebaseAuth.instance.currentUser != null) {
-        Navigator.push(
-          ctx,
-          MaterialPageRoute(builder: (_) => Parametres()),
-        ).then((_) => setLoadingState(false));
-      } else {
-        Navigator.pushReplacement(
-          ctx,
-          MaterialPageRoute(builder: (_) => const Login()),
-        ).then((_) => setLoadingState(false));
-      }
-    },
-  );
-}
 
 Widget departsDuJour(BuildContext ctx, Function setLoadingState) {
   return _carteMenu(

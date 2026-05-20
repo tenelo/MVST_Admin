@@ -3,7 +3,9 @@
     "allow": [
       "Bash(xargs sed *)",
       "Bash(flutter pub *)",
-      "Bash(dart analyze *)"
+      "Bash(dart analyze *)",
+      "Bash(Get-ChildItem -Path \"d:\\\\App\\\\mvst_admin\\\\lib\" -Recurse -Filter \"*.dart\")",
+      "Bash(Select-Object -ExpandProperty FullName)"
     ]
   }
 }
