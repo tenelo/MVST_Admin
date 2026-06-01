@@ -1,9 +1,14 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/qrcode/creationQrCode.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
@@ -11,7 +16,9 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:ticket_widget/ticket_widget.dart';
+import 'package:http/http.dart' as http;
 
 class DetailsTickets extends StatefulWidget {
   final String idTicket;
@@ -46,111 +53,209 @@ class DetailsTickets extends StatefulWidget {
     required this.datePourCalcule,
     required this.typeVoyage,
   });
+
   @override
   _DetailsTicketsState createState() => _DetailsTicketsState();
 }
 
 class _DetailsTicketsState extends State<DetailsTickets> {
-  // GENERER PDF
-  Future<void> genererPDF(BuildContext context) async {
-    final qrData =
-        "${widget.idUtilisateur} \n${widget.idTicket} \n${widget.nom} \n${widget.contact} \n${widget.date} \n${widget.heure} \n${widget.place} \n${widget.depart}->${widget.destination} \n${widget.prixTicket} \n${widget.etatScann} \n${widget.datePourCalcule}";
+  // ── Socket.IO ──────────────────────────────────────────────────────────────
+  late io.Socket socket;
+  late String etatScannActuel;
+  late StreamController<String> _etatScannController;
 
-    final QrPainter qrPainter = QrPainter(
-      data: qrData,
-      version: QrVersions.auto,
-      eyeStyle: QrEyeStyle(eyeShape: QrEyeShape.square, color: couleurA),
-      dataModuleStyle: QrDataModuleStyle(
-        dataModuleShape: QrDataModuleShape.square,
-        color: couleurB,
+  @override
+  void initState() {
+    super.initState();
+    etatScannActuel = widget.etatScann;
+    _etatScannController = StreamController<String>.broadcast();
+    _rafraichirEtat();
+    _connecterSocket();
+  }
+
+  @override
+  void dispose() {
+    _etatScannController.close();
+    socket.off('ticket_valide');
+    socket.offAny();
+    socket.disconnect();
+    socket.dispose();
+    super.dispose();
+  }
+
+  void _connecterSocket() {
+    socket = io.io(
+      baseUrl,
+      io.OptionBuilder()
+          .setTransports(['websocket', 'polling'])
+          .disableAutoConnect()
+          .build(),
+    );
+
+    socket.onConnect((_) {
+      final dateAvecUnderscores = widget.date.replaceAll(' ', '_');
+      socket.emit('rejoindre_room', {
+        'depart': widget.depart,
+        'destination': widget.destination,
+        'date': dateAvecUnderscores,
+        'heure': widget.heure,
+      });
+    });
+
+    socket.connect();
+
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      final dateAvecUnderscores = widget.date.replaceAll(' ', '_');
+      socket.emit('rejoindre_room', {
+        'depart': widget.depart,
+        'destination': widget.destination,
+        'date': dateAvecUnderscores,
+        'heure': widget.heure,
+      });
+    });
+
+    socket.on('ticket_valide', (data) {
+      if (data['idUtilisateur']?.toString() == widget.idUtilisateur &&
+          int.tryParse(data['place'].toString()) == widget.place) {
+        if (mounted) {
+          setState(() {
+            etatScannActuel = 'scanné';
+            _etatScannController.add('scanné');
+          });
+        }
+      }
+    });
+
+    socket.onDisconnect((_) {});
+  }
+
+  // ── GÉNÉRER PDF ────────────────────────────────────────────────────────────
+  Future<void> genererPDF(BuildContext context) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 14),
+                Text('Création du PDF...'),
+              ],
+            ),
+          ),
+        ),
       ),
     );
-    final qrImage = await qrPainter.toImage(280);
 
-    final ByteData? byteData = await qrImage.toByteData(
-      format: ImageByteFormat.png,
-    );
-    final Uint8List imageData = byteData!.buffer.asUint8List();
+    try {
+      final qrData =
+          "${widget.idUtilisateur}\n${widget.idTicket}\n${widget.nom}\n${widget.contact}\n${widget.date}\n${widget.heure}\n${widget.place}\n${widget.depart}->${widget.destination}\n${widget.prixTicket}\n${widget.etatScann}\n${widget.datePourCalcule.toIso8601String().split('T')[0]}";
 
-    final tempDir = await getTemporaryDirectory();
-    final tempPath = tempDir.path;
-    final qrImagePath = '$tempPath/qr_code.png';
-    final qrImageFile = File(qrImagePath);
-    await qrImageFile.writeAsBytes(imageData);
+      final QrPainter qrPainter = QrPainter(
+        data: qrData,
+        version: QrVersions.auto,
+        eyeStyle: QrEyeStyle(eyeShape: QrEyeShape.square, color: couleurA),
+        dataModuleStyle: QrDataModuleStyle(
+          dataModuleShape: QrDataModuleShape.square,
+          color: couleurB,
+        ),
+      );
 
-    final pdf = pw.Document();
+      final qrImage = await qrPainter.toImage(1024);
+      final ByteData? byteData = await qrImage.toByteData(
+        format: ImageByteFormat.png,
+      );
+      final Uint8List imageData = byteData!.buffer.asUint8List();
 
-    pdf.addPage(
-      pw.Page(
-        build: (pw.Context context) {
-          final pdfImage = pw.MemoryImage(imageData);
-          return pw.Center(
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Container(
-                      height: 25.0,
-                      decoration: pw.BoxDecoration(
-                        borderRadius: pw.BorderRadius.circular(10.0),
-                        border: pw.Border.all(
-                          width: 1.0,
-                          color: PdfColors.green,
+      final tempDir = await getTemporaryDirectory();
+      final qrImageFile = File('${tempDir.path}/qr_code.png');
+      await qrImageFile.writeAsBytes(imageData);
+
+      final pdf = pw.Document();
+
+      pdf.addPage(
+        pw.Page(
+          build: (pw.Context pdfContext) {
+            final pdfImage = pw.MemoryImage(imageData);
+            return pw.Center(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  // ── En-tête ──────────────────────────────────────────
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Container(
+                        height: 28,
+                        decoration: pw.BoxDecoration(
+                          borderRadius: pw.BorderRadius.circular(10),
+                          border: pw.Border.all(
+                            width: 1,
+                            color: PdfColors.green,
+                          ),
                         ),
-                      ),
-                      child: pw.Padding(
-                        padding: const pw.EdgeInsets.all(2.0),
-                        child: pw.Center(
+                        child: pw.Padding(
+                          padding: const pw.EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           child: pw.Text(
-                            ' Mieux Vous Servir Transport ',
-                            style: const pw.TextStyle(color: PdfColors.green),
+                            'Mieux Vous Servir Transport',
+                            textAlign: pw.TextAlign.center,
+                            style: pw.TextStyle(
+                              fontSize: 20,
+                              color: PdfColors.green,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    pw.Text(
-                      'MVST',
-                      style: pw.TextStyle(
-                        fontSize: 20.0,
-                        fontWeight: pw.FontWeight.bold,
-                        color: PdfColors.blue,
+                      pw.Text(
+                        'MVST',
+                        style: pw.TextStyle(
+                          fontSize: 24,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.indigo,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                pw.Padding(
-                  padding: const pw.EdgeInsets.all(8.0),
-                  child: pw.Text(
-                    "Ticket Ref° ${widget.idTicket.toUpperCase()}",
+                    ],
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Text(
+                    'Ticket Ref° ${widget.idTicket.toUpperCase()}',
                     style: const pw.TextStyle(
-                      fontSize: 7,
+                      fontSize: 12,
                       color: PdfColors.grey,
                     ),
                   ),
-                ),
-                pw.Padding(
-                  padding: const pw.EdgeInsets.only(top: 20.0),
-                  child: pw.Center(
+                  pw.SizedBox(height: 14),
+
+                  // ── Trajet ────────────────────────────────────────────
+                  pw.Center(
                     child: pw.Text(
-                      '${widget.depart} -> ${widget.destination}',
+                      '${widget.depart}  => ${widget.destination}',
                       style: pw.TextStyle(
-                        fontSize: 20.0,
+                        fontSize: 22,
                         fontWeight: pw.FontWeight.bold,
                         color: PdfColors.indigo,
                       ),
                     ),
                   ),
-                ),
-                pw.Padding(
-                  padding: const pw.EdgeInsets.only(top: 25.0),
-                  child: pw.Row(
+                  pw.SizedBox(height: 16),
+
+                  // ── Passager / Contact ────────────────────────────────
+                  pw.Row(
                     mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                     children: [
                       pw.Text(
                         'Passager',
                         style: pw.TextStyle(
+                          fontSize: 18,
                           fontWeight: pw.FontWeight.bold,
                           color: PdfColors.grey,
                         ),
@@ -158,149 +263,175 @@ class _DetailsTicketsState extends State<DetailsTickets> {
                       pw.Text(
                         'Contact',
                         style: pw.TextStyle(
+                          fontSize: 18,
                           fontWeight: pw.FontWeight.bold,
                           color: PdfColors.grey,
                         ),
                       ),
                     ],
                   ),
-                ),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text(
-                      widget.nom,
-                      style: pw.TextStyle(
-                        fontWeight: pw.FontWeight.bold,
-                        color: PdfColors.black,
-                      ),
-                    ),
-                    pw.Text(
-                      widget.contact,
-                      style: pw.TextStyle(
-                        fontWeight: pw.FontWeight.bold,
-                        color: PdfColors.black,
-                      ),
-                    ),
-                  ],
-                ),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.only(top: 16.0),
-                      child: pw.Text(
-                        'Date de voyage',
+                  pw.SizedBox(height: 2),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text(
+                        widget.nom,
                         style: pw.TextStyle(
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.grey,
-                        ),
-                      ),
-                    ),
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.only(top: 16.0),
-                      child: pw.Text(
-                        'Heure',
-                        style: pw.TextStyle(
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.grey,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text(
-                      widget.date,
-                      style: pw.TextStyle(
-                        fontWeight: pw.FontWeight.bold,
-                        color: PdfColors.black,
-                      ),
-                    ),
-                    pw.Text(
-                      widget.heure,
-                      style: pw.TextStyle(
-                        fontWeight: pw.FontWeight.bold,
-                        color: PdfColors.black,
-                      ),
-                    ),
-                  ],
-                ),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.only(left: 8, top: 16.0),
-                      child: pw.Text(
-                        'Tarif : ${widget.prixTicket} f',
-                        style: pw.TextStyle(
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.grey,
-                        ),
-                      ),
-                    ),
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.only(top: 16.0, right: 10),
-                      child: pw.Text(
-                        'Siège',
-                        style: pw.TextStyle(
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.grey,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.end,
-                  children: [
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.only(right: 18.0),
-                      child: pw.Text(
-                        widget.place.toString(),
-                        style: pw.TextStyle(
+                          fontSize: 20,
                           fontWeight: pw.FontWeight.bold,
                           color: PdfColors.black,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                pw.SizedBox(height: 20),
-                pw.Center(
-                  child: pw.Padding(
-                    padding: const pw.EdgeInsets.only(top: 8.0),
+                      pw.Text(
+                        widget.contact,
+                        style: pw.TextStyle(
+                          fontSize: 20,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.SizedBox(height: 10),
+
+                  // ── Date / Heure ──────────────────────────────────────
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text(
+                        'Date de voyage',
+                        style: pw.TextStyle(
+                          fontSize: 18,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.grey,
+                        ),
+                      ),
+                      pw.Text(
+                        'Heure',
+                        style: pw.TextStyle(
+                          fontSize: 18,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.SizedBox(height: 2),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text(
+                        widget.date,
+                        style: pw.TextStyle(
+                          fontSize: 20,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.black,
+                        ),
+                      ),
+                      pw.Text(
+                        widget.heure,
+                        style: pw.TextStyle(
+                          fontSize: 20,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.SizedBox(height: 10),
+
+                  // ── Tarif / Siège ─────────────────────────────────────
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text(
+                        'Tarif',
+                        style: pw.TextStyle(
+                          fontSize: 18,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.grey,
+                        ),
+                      ),
+                      pw.Text(
+                        'Siège',
+                        style: pw.TextStyle(
+                          fontSize: 18,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.SizedBox(height: 2),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text(
+                        '${widget.prixTicket} FCFA',
+                        style: pw.TextStyle(
+                          fontSize: 20,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.black,
+                        ),
+                      ),
+                      pw.Text(
+                        widget.place.toString(),
+                        style: pw.TextStyle(
+                          fontSize: 20,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.SizedBox(height: 16),
+
+                  // ── QR Code ───────────────────────────────────────────
+                  pw.Center(
                     child: pw.SizedBox(
-                      width: 250,
-                      height: 250,
+                      width: 380,
+                      height: 380,
                       child: pw.Image(pdfImage),
                     ),
                   ),
-                ),
-                pw.SizedBox(height: 40),
-                pw.Center(
-                  child: pw.Text(
-                    'La compagnie MVST vous souhaite bon voyage!',
-                    style: pw.TextStyle(
-                      font: pw.Font.courier(),
-                      fontItalic: pw.Font.timesItalic(),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
+                  pw.SizedBox(height: 16),
 
-    Uint8List pdfData = await pdf.save();
-    sauvegarderPdf(
-      pdfData,
-      'ticket_du_${widget.date}_Place_${widget.place}.pdf',
-    );
+                  // ── Pied de page ──────────────────────────────────────
+                  pw.Row(
+                    children: [
+                      pw.Text(
+                        'La compagnie MVST vous souhaite bon voyage !',
+                        style: pw.TextStyle(
+                          fontSize: 20,
+                          font: pw.Font.courier(),
+                          fontItalic: pw.Font.timesItalic(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+
+      final Uint8List pdfData = await pdf.save();
+
+      if (mounted) Navigator.pop(context);
+
+      await sauvegarderPdf(
+        pdfData,
+        'ticket_du_${widget.date}_Place_${widget.place}.pdf',
+      );
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(backgroundColor: Colors.red, content: Text('Erreur : $e')),
+        );
+      }
+    }
   }
 
   Future<void> sauvegarderPdf(Uint8List pdfData, String nomDuFichier) async {
@@ -343,18 +474,41 @@ class _DetailsTicketsState extends State<DetailsTickets> {
     );
   }
 
+  Future<void> _rafraichirEtat() async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/etatTicket.php'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({
+              'documentId': widget.idTicket,
+              'place': widget.place,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true && mounted) {
+          setState(() {
+            etatScannActuel = data['etatScanne'];
+            _etatScannController.add(etatScannActuel);
+          });
+        }
+      }
+    } catch (e) {}
+  }
+
   @override
   Widget build(BuildContext context) {
-    final double w = MediaQuery.of(context).size.width;
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 96, 125, 139),
+      backgroundColor: Config.colors.authDialogBackground,
       appBar: AppBar(
         toolbarHeight: MediaQuery.of(context).size.height * 0.06,
         title: const Text(
           'Details du ticket',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: const Color.fromARGB(255, 96, 125, 139),
+        backgroundColor: Config.colors.authDialogBackground,
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -365,23 +519,29 @@ class _DetailsTicketsState extends State<DetailsTickets> {
           children: [
             Center(
               child: TicketWidget(
-                width: w * 0.90,
+                width: MediaQuery.of(context).size.width * 0.90,
                 height: MediaQuery.of(context).size.height * 0.78,
                 padding: const EdgeInsets.all(16),
-                child: TicketData(
-                  idUtilisateur: widget.idUtilisateur,
-                  idTicket: widget.idTicket,
-                  place: widget.place,
-                  nom: widget.nom,
-                  contact: widget.contact,
-                  date: widget.date,
-                  heure: widget.heure,
-                  depart: widget.depart,
-                  destination: widget.destination,
-                  prixTicket: widget.prixTicket,
-                  etatScann: widget.etatScann,
-                  dateCalcule: widget.datePourCalcule,
-                  typeVoyage: widget.typeVoyage,
+                child: StreamBuilder<String>(
+                  stream: _etatScannController.stream,
+                  initialData: etatScannActuel,
+                  builder: (context, snapshot) {
+                    return TicketData(
+                      idUtilisateur: widget.idUtilisateur,
+                      idTicket: widget.idTicket,
+                      place: widget.place,
+                      nom: widget.nom,
+                      contact: widget.contact,
+                      date: widget.date,
+                      heure: widget.heure,
+                      depart: widget.depart,
+                      destination: widget.destination,
+                      prixTicket: widget.prixTicket,
+                      etatScann: snapshot.data ?? etatScannActuel,
+                      dateCalcule: widget.datePourCalcule,
+                      typeVoyage: widget.typeVoyage,
+                    );
+                  },
                 ),
               ),
             ),
@@ -402,6 +562,7 @@ class _DetailsTicketsState extends State<DetailsTickets> {
   }
 }
 
+// ── TicketData ─────────────────────────────────────────────────────────────────
 class TicketData extends StatelessWidget {
   const TicketData({
     super.key,
@@ -515,7 +676,7 @@ class TicketData extends StatelessWidget {
           padding: const EdgeInsets.all(8.0),
           child: Text(
             "Ticket Ref ${idTicket.toUpperCase()}",
-            style: const TextStyle(fontSize: 6, color: Colors.grey),
+            style: const TextStyle(fontSize: 7, color: Colors.grey),
           ),
         ),
         // ── Départ / Destination ───────────────────────────────────────────
@@ -654,8 +815,8 @@ class TicketData extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.only(top: 1.0),
             child: SizedBox(
-              width: w * 0.46,
-              height: w * 0.46,
+              width: w * 0.50,
+              height: w * 0.50,
               child: FittedBox(
                 child: CreationQrCode.buildQrCode(
                   idUtilisateur,

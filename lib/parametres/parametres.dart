@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/parametres/ajoutDimages.dart';
+import 'package:mvst_admin/parametres/datesDisponibles.dart';
 import 'package:mvst_admin/parametres/gare.dart';
 import 'package:mvst_admin/parametres/gestion_admins.dart';
 import 'package:mvst_admin/parametres/heuresDeparts.dart';
@@ -86,6 +87,16 @@ class ParametresBody extends StatelessWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => ListeImages()),
+            ),
+          ),
+          _item(
+            context: context,
+            icon: Icons.date_range_outlined,
+            label: 'Dates disponibles à la réservation',
+            c: c,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DatesDisponibles()),
             ),
           ),
           _item(
@@ -214,7 +225,7 @@ class ParametresBody extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         decoration: BoxDecoration(
-          color: c.authCardBackground,
+          //color: c.authCardBackground,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: c.authBorder, width: 1),
         ),
@@ -234,17 +245,13 @@ class ParametresBody extends StatelessWidget {
               child: Text(
                 label,
                 style: TextStyle(
-                  color: c.authTextPrimary,
-                  fontWeight: FontWeight.w500,
+                  color: c.authButton,
+                  fontWeight: FontWeight.bold,
                   fontSize: 14,
                 ),
               ),
             ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: c.authTextSecondary,
-              size: 20,
-            ),
+            Icon(Icons.chevron_right_rounded, color: c.authButton, size: 20),
           ],
         ),
       ),

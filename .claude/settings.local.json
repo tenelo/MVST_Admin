@@ -5,7 +5,12 @@
       "Bash(flutter pub *)",
       "Bash(dart analyze *)",
       "Bash(Get-ChildItem -Path \"d:\\\\App\\\\mvst_admin\\\\lib\" -Recurse -Filter \"*.dart\")",
-      "Bash(Select-Object -ExpandProperty FullName)"
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\GTMS\\\\.gradle\" -ErrorAction SilentlyContinue | Select-Object Name, @{N='Size\\(MB\\)';E={[math]::Round\\(\\(Get-ChildItem $_.FullName -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum\\).Sum/1MB,1\\)}})",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\GTMS\\\\.gradle\" -ErrorAction SilentlyContinue | ForEach-Object { $_.Name })"
+    ],
+    "additionalDirectories": [
+      "d:\\App\\mvst\\lib\\screens"
     ]
   }
 }

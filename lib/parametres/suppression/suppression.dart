@@ -316,7 +316,7 @@ class TicketDataSource extends DataTableSource {
             onLongPress: () => _supprimerTicket(
                 ticket['id'], ticket['idUtilisateur'], ticket['nom'])),
         DataCell(
-            Text("${ticket['heure']} h", style: const TextStyle(fontSize: 13)),
+            Text(formatHeure(ticket['heure']?.toString() ?? ''), style: const TextStyle(fontSize: 13)),
             onLongPress: () => _supprimerTicket(
                 ticket['id'], ticket['idUtilisateur'], ticket['nom'])),
         DataCell(

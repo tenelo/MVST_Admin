@@ -518,7 +518,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
           _span('Date départ : '),
           _value('${ticketData.date}\n\n'),
           _span('Heure : '),
-          _value('${ticketData.heure} h\n\n'),
+          _value('${formatHeure(ticketData.heure)}\n\n'),
           _span('Trajet : '),
           _value('${ticketData.depart} → ${ticketData.destination}\n\n'),
           _span('Passager : '),

@@ -13,8 +13,8 @@ const Color _vipOr = Color(0xFF00D87E);
 const Color _vipSiegeDispo = Color.fromARGB(226, 1, 80, 40);
 const Color _vipSiegeOccupe = Color(0xFF00D87E);
 
-class PlacesAssisesVIP extends StatefulWidget {
-  const PlacesAssisesVIP({
+class CarVIP extends StatefulWidget {
+  const CarVIP({
     super.key,
     required this.documentId,
     required this.depart,
@@ -27,10 +27,10 @@ class PlacesAssisesVIP extends StatefulWidget {
   final String heure;
 
   @override
-  State<PlacesAssisesVIP> createState() => _PlacesAssisesVIPState();
+  State<CarVIP> createState() => _CarVIPState();
 }
 
-class _PlacesAssisesVIPState extends State<PlacesAssisesVIP> {
+class _CarVIPState extends State<CarVIP> {
   bool _isLoading = true;
   String? _errorMessage;
 
@@ -112,7 +112,7 @@ class _PlacesAssisesVIPState extends State<PlacesAssisesVIP> {
         iconTheme: const IconThemeData(color: Colors.white),
         title: Center(
           child: Text(
-            "${widget.depart} -> ${widget.destination}  ${widget.heure} h",
+            "${widget.depart} -> ${widget.destination}  ${formatHeure(widget.heure)}",
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w500,
@@ -490,7 +490,7 @@ class _PlacesVIPState extends State<PlacesVIP> {
                         icon: Icons.route,
                         iconColor: _vipOr,
                         label: 'Trajet',
-                        value: '$depart → $destination $heure h',
+                        value: '$depart → $destination ${formatHeure(heure)}',
                         isBold: true,
                       ),
                       const Divider(height: 24),

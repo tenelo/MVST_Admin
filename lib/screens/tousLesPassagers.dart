@@ -8,8 +8,8 @@ import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/screens/ticketsDuJour.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
-class ListeDesPassagers extends StatefulWidget {
-  const ListeDesPassagers({
+class TousLesPassagers extends StatefulWidget {
+  const TousLesPassagers({
     super.key,
     required this.gare,
     required this.uid,
@@ -24,12 +24,10 @@ class ListeDesPassagers extends StatefulWidget {
   final int tailleEcran;
 
   @override
-  State<ListeDesPassagers> createState() =>
-      _ListeDesPassagersState();
+  State<TousLesPassagers> createState() => _TousLesPassagersState();
 }
 
-class _ListeDesPassagersState
-    extends State<ListeDesPassagers> {
+class _TousLesPassagersState extends State<TousLesPassagers> {
   List<Map<String, dynamic>> departs = [];
   bool _isLoading = true;
   late DateTime _dateSelectionnee;
@@ -118,6 +116,7 @@ class _ListeDesPassagersState
 
   @override
   Widget build(BuildContext context) {
+    final c = Config.colors;
     final vipCount = departs
         .where(
           (d) => (d['typeVoyage']?.toString().toLowerCase() ?? '') == 'vip',
@@ -127,11 +126,11 @@ class _ListeDesPassagersState
 
     return Scaffold(
       appBar: AppBar(
-        iconTheme: IconThemeData(color: Config.colors.authCardBackground),
+        iconTheme: IconThemeData(color: c.authCardBackground),
         title: Text(
-          'Passagers',
+          'Tous lesPassagers',
           style: TextStyle(
-            color: Config.colors.authCardBackground,
+            color: c.authCardBackground,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -140,12 +139,12 @@ class _ListeDesPassagersState
           IconButton(
             icon: Icon(
               Icons.calendar_month_outlined,
-              color: Config.colors.authCardBackground,
+              color: c.authCardBackground,
             ),
             onPressed: _choisirDate,
           ),
           IconButton(
-            icon: Icon(Icons.refresh, color: Config.colors.authCardBackground),
+            icon: Icon(Icons.refresh, color: c.authCardBackground),
             onPressed: _chargerDeparts,
           ),
         ],
@@ -160,7 +159,7 @@ class _ListeDesPassagersState
                   'Aucun départ trouvé pour le $_dateNormale',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Config.colors.authCardBackground,
+                    color: c.authCardBackground,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -174,7 +173,7 @@ class _ListeDesPassagersState
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.blueGrey,
+                      color: c.authCardBackground,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
@@ -245,6 +244,8 @@ class _ListeDesPassagersState
                                 MaterialPageRoute(
                                   builder: (context) => TicketsDuJour(
                                     gare: widget.gare,
+                                    destination:
+                                        d['destination']?.toString() ?? '',
                                     uid: widget.uid,
                                     date: _dateApi,
                                     idDoc: d['documentId'],
@@ -266,7 +267,7 @@ class _ListeDesPassagersState
                                 ],
                                 Flexible(
                                   child: Text(
-                                    "Départ de ${d['heureDeDepart']} h ${d['depart']} ${d['destination']}",
+                                    "Départ de ${formatHeure(d['heureDeDepart']?.toString() ?? '')} ${d['depart']} ${d['destination']}",
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       fontSize: 16,

@@ -2,19 +2,20 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/graphiques/graphiqueJourDepart/graphiqueJourDepart.dart';
-import 'package:mvst_admin/screens/placesAssisesStandard.dart';
+import 'package:mvst_admin/screens/carStandard.dart';
 import 'package:mvst_admin/screens/ticketsDuJour.dart';
-import 'package:mvst_admin/screens/vip/placesAssisesVIP.dart';
+import 'package:mvst_admin/screens/vip/carVIP.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 List<String> listeDesHeures = [];
 String? heuresFormattees;
 
-class TousLesDepartsDuJour extends StatefulWidget {
-  const TousLesDepartsDuJour({
+class DepartsDuJour extends StatefulWidget {
+  const DepartsDuJour({
     super.key,
     required this.gare,
     required this.uid,
@@ -29,13 +30,15 @@ class TousLesDepartsDuJour extends StatefulWidget {
   final int tailleEcran;
 
   @override
-  State<TousLesDepartsDuJour> createState() => _TousLesDepartsDuJourState();
+  State<DepartsDuJour> createState() => _DepartsDuJourState();
 }
 
-class _TousLesDepartsDuJourState extends State<TousLesDepartsDuJour> {
+class _DepartsDuJourState extends State<DepartsDuJour> {
   List<Map<String, dynamic>> departs = [];
   bool _isLoading = true;
   int _activeTab = 0; // 0=Tous, 1=Standard, 2=VIP
+  late DateTime _dateSelectionnee;
+  late String _dateNormale;
 
   List<Map<String, dynamic>> get _departsFiltres {
     if (_activeTab == 0) return departs;
@@ -59,8 +62,37 @@ class _TousLesDepartsDuJourState extends State<TousLesDepartsDuJour> {
   @override
   void initState() {
     super.initState();
+    _dateSelectionnee = _parseDate(widget.date);
+    _dateNormale = widget.dateNormale;
     _chargerDeparts();
     _connecterSocket();
+  }
+
+  DateTime _parseDate(String s) {
+    try {
+      return DateFormat('EEEE_d_MMMM_y', 'fr_FR').parse(s);
+    } catch (_) {
+      return DateTime.now();
+    }
+  }
+
+  String get _dateApi =>
+      DateFormat('EEEE_d_MMMM_y', 'fr_FR').format(_dateSelectionnee);
+
+  Future<void> _choisirDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _dateSelectionnee,
+      firstDate: DateTime(2024),
+      lastDate: DateTime(2027),
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _dateSelectionnee = picked;
+        _dateNormale = DateFormat('d MMMM yyyy', 'fr_FR').format(picked);
+      });
+      _chargerDeparts();
+    }
   }
 
   @override
@@ -95,7 +127,7 @@ class _TousLesDepartsDuJourState extends State<TousLesDepartsDuJour> {
       final response = await http.post(
         apiUri('departsParGare.php'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'date': widget.date, 'gare': widget.gare}),
+        body: jsonEncode({'date': _dateApi, 'gare': widget.gare}),
       );
 
       if (response.statusCode == 200) {
@@ -105,7 +137,7 @@ class _TousLesDepartsDuJourState extends State<TousLesDepartsDuJour> {
 
           // Calculer les heures formatées
           listeDesHeures = liste
-              .map((d) => '${d['heureDeDepart']} h')
+              .map((d) => formatHeure(d['heureDeDepart']?.toString() ?? ''))
               .toSet()
               .toList();
           heuresFormattees = liste
@@ -127,18 +159,26 @@ class _TousLesDepartsDuJourState extends State<TousLesDepartsDuJour> {
 
   @override
   Widget build(BuildContext context) {
+    final c = Config.colors;
     return Scaffold(
       appBar: AppBar(
         iconTheme: IconThemeData(color: Config.colors.authCardBackground),
         title: Text(
           'Départs',
           style: TextStyle(
-            color: Config.colors.authCardBackground,
+            color: c.authCardBackground,
             fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: Icon(
+              Icons.calendar_month_outlined,
+              color: Config.colors.authCardBackground,
+            ),
+            onPressed: _choisirDate,
+          ),
           IconButton(
             icon: Icon(Icons.refresh, color: Config.colors.authCardBackground),
             onPressed: _chargerDeparts,
@@ -152,9 +192,9 @@ class _TousLesDepartsDuJourState extends State<TousLesDepartsDuJour> {
               child: Padding(
                 padding: const EdgeInsets.all(4.0),
                 child: Text(
-                  'Aucun ticket pris pour le départ du ${widget.dateNormale}',
+                  'Aucun ticket pris pour le départ du $_dateNormale',
                   style: TextStyle(
-                    color: Config.colors.authCardBackground,
+                    color: c.authCardBackground,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -168,12 +208,12 @@ class _TousLesDepartsDuJourState extends State<TousLesDepartsDuJour> {
                   child: Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(8),
-                    color: Colors.blueGrey,
+                    color: c.authCardBackground,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Le ${widget.dateNormale}",
+                          "Le $_dateNormale",
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -184,7 +224,7 @@ class _TousLesDepartsDuJourState extends State<TousLesDepartsDuJour> {
                         Row(
                           children: [
                             Text(
-                              "Départs: ${departs.length}",
+                              "Nombre de Départs: ${departs.length}",
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -205,7 +245,7 @@ class _TousLesDepartsDuJourState extends State<TousLesDepartsDuJour> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          "Heures: $heuresFormattees",
+                          "Heures: ${listeDesHeures.join(' | ')}",
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -359,7 +399,7 @@ Widget _CartePetitEcran(
           Row(
             children: [
               Text(
-                "Départ de : $heures h",
+                "Départ de : ${formatHeure(heures)} $depart -> $destination",
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -437,6 +477,7 @@ Widget _CartePetitEcran(
                       documentId: documentId,
                       date: date,
                       gare: gare,
+                      destination: destination,
                       uid: uid,
                     ),
                   ),
@@ -450,6 +491,7 @@ Widget _CartePetitEcran(
                       date: date,
                       idDoc: documentId,
                       gare: gare,
+                      destination: destination,
                       uid: uid,
                       typeDepart: typeVoyage,
                     ),
@@ -461,13 +503,13 @@ Widget _CartePetitEcran(
                   context,
                   MaterialPageRoute(
                     builder: (context) => isVip
-                        ? PlacesAssisesVIP(
+                        ? CarVIP(
                             documentId: documentId,
                             depart: depart,
                             destination: destination,
                             heure: heures,
                           )
-                        : PlacesAssises(
+                        : CarStandard(
                             documentId: documentId,
                             depart: depart,
                             destination: destination,
@@ -523,7 +565,7 @@ Widget _CarteGrandEcran(
           Row(
             children: [
               Text(
-                "Départ de : $heures h",
+                "Départ de : ${formatHeure(heures)}",
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -602,6 +644,7 @@ Widget _CarteGrandEcran(
                       documentId: documentId,
                       date: date,
                       gare: gare,
+                      destination: destination,
                       uid: uid,
                     ),
                   ),
@@ -611,7 +654,7 @@ Widget _CarteGrandEcran(
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => PlacesAssises(
+                    builder: (context) => CarStandard(
                       documentId: documentId,
                       depart: depart,
                       destination: destination,
@@ -628,6 +671,7 @@ Widget _CarteGrandEcran(
                       date: date,
                       idDoc: documentId,
                       gare: gare,
+                      destination: destination,
                       uid: uid,
                       typeDepart: typeVoyage,
                     ),

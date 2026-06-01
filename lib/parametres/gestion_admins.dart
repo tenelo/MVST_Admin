@@ -209,7 +209,7 @@ class _GestionAdminsState extends State<GestionAdmins> {
                       border: Border.all(color: c.authBorder, width: 1.5),
                     ),
                     child: DropdownButtonFormField<String>(
-                      value: roleSelectionne,
+                      initialValue: roleSelectionne,
                       dropdownColor: c.authCardBackground,
                       iconEnabledColor: c.authAccent,
                       style: TextStyle(color: c.authTextPrimary),
@@ -249,7 +249,7 @@ class _GestionAdminsState extends State<GestionAdmins> {
                       border: Border.all(color: c.authBorder, width: 1.5),
                     ),
                     child: DropdownButtonFormField<String>(
-                      value: _listeGares.contains(gareSelectionnee)
+                      initialValue: _listeGares.contains(gareSelectionnee)
                           ? gareSelectionnee
                           : null,
                       dropdownColor: c.authCardBackground,
@@ -456,7 +456,7 @@ class _GestionAdminsState extends State<GestionAdmins> {
     final sh = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      backgroundColor: c.authBackground,
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: c.authCardBackground,
         elevation: 0,
@@ -489,7 +489,6 @@ class _GestionAdminsState extends State<GestionAdmins> {
             Text(
               'Ajouter un numéro',
               style: TextStyle(
-                color: c.authTextPrimary,
                 fontSize: sw * 0.045,
                 fontWeight: FontWeight.bold,
               ),
@@ -549,7 +548,7 @@ class _GestionAdminsState extends State<GestionAdmins> {
                       border: Border.all(color: c.authBorder, width: 1.5),
                     ),
                     child: DropdownButtonFormField<String>(
-                      value: _roleSelectionne,
+                      initialValue: _roleSelectionne,
                       dropdownColor: c.authCardBackground,
                       iconEnabledColor: c.authAccent,
                       style: TextStyle(color: c.authTextPrimary),
@@ -588,7 +587,7 @@ class _GestionAdminsState extends State<GestionAdmins> {
                       border: Border.all(color: c.authBorder, width: 1.5),
                     ),
                     child: DropdownButtonFormField<String>(
-                      value: _gareSelectionnee,
+                      initialValue: _gareSelectionnee,
                       dropdownColor: c.authCardBackground,
                       iconEnabledColor: c.authAccent,
                       style: TextStyle(color: c.authTextPrimary),
@@ -675,7 +674,6 @@ class _GestionAdminsState extends State<GestionAdmins> {
             Text(
               'Liste des admins autorisés',
               style: TextStyle(
-                color: c.authTextPrimary,
                 fontSize: sw * 0.045,
                 fontWeight: FontWeight.bold,
               ),

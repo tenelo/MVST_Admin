@@ -10,11 +10,13 @@ class GraphiqueJourDepart extends StatefulWidget {
   const GraphiqueJourDepart({
     super.key,
     required this.gare,
+    required this.destination,
     required this.uid,
     required this.documentId,
     required this.date,
   });
   final String gare;
+  final String destination;
   final String uid;
   final String documentId;
   final String date;
@@ -85,6 +87,8 @@ class _GraphiqueJourDepartState extends State<GraphiqueJourDepart> {
   int _getTotalPassagers() =>
       ticketsData.fold(0, (sum, t) => sum + t.nombrePassagers);
 
+  
+
   final List<Color> listeDesCouleurs = const [
     Color.fromARGB(192, 6, 90, 132),
     Color.fromARGB(255, 255, 192, 0),
@@ -117,17 +121,24 @@ class _GraphiqueJourDepartState extends State<GraphiqueJourDepart> {
           decoration: InputDecoration(
             hintText: 'Rechercher...',
             border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30.0),
-                borderSide: BorderSide.none),
+              borderRadius: BorderRadius.circular(30.0),
+              borderSide: BorderSide.none,
+            ),
             enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30.0),
-                borderSide:
-                    const BorderSide(color: Colors.blueAccent, width: 2.0)),
+              borderRadius: BorderRadius.circular(30.0),
+              borderSide: const BorderSide(
+                color: Colors.blueAccent,
+                width: 2.0,
+              ),
+            ),
             focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30.0),
-                borderSide: const BorderSide(color: Colors.blue, width: 2.0)),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+              borderRadius: BorderRadius.circular(30.0),
+              borderSide: const BorderSide(color: Colors.blue, width: 2.0),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 10.0,
+            ),
           ),
           onChanged: (value) => setState(() {}),
         ),
@@ -142,19 +153,24 @@ class _GraphiqueJourDepartState extends State<GraphiqueJourDepart> {
                     height: MediaQuery.of(context).size.height * 0.6,
                     child: SfCartesianChart(
                       primaryXAxis: const CategoryAxis(
-                          labelStyle: TextStyle(fontWeight: FontWeight.bold)),
+                        labelStyle: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       primaryYAxis: const NumericAxis(
-                          majorGridLines: MajorGridLines(width: 0),
-                          labelStyle: TextStyle(fontSize: 0)),
+                        majorGridLines: MajorGridLines(width: 0),
+                        labelStyle: TextStyle(fontSize: 0),
+                      ),
                       title: ChartTitle(
-                          text:
-                              'Les passagers par destinations\npartants de ${widget.gare}',
-                          textStyle: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Config.colors.bleuA)),
+                        text:
+                            '${widget.gare} -> ${widget.destination} ${widget.date}',
+                        textStyle: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Config.colors.bleuA,
+                        ),
+                      ),
                       legend: const Legend(
-                          isVisible: true,
-                          textStyle: TextStyle(fontWeight: FontWeight.w900)),
+                        isVisible: true,
+                        textStyle: TextStyle(fontWeight: FontWeight.w900),
+                      ),
                       tooltipBehavior: TooltipBehavior(enable: true),
                       series: <CartesianSeries<MesDonneesTickets, String>>[
                         BarSeries<MesDonneesTickets, String>(
@@ -168,9 +184,9 @@ class _GraphiqueJourDepartState extends State<GraphiqueJourDepart> {
                           pointColorMapper: (d, i) =>
                               listeDesCouleurs[i % listeDesCouleurs.length],
                           dataLabelSettings: const DataLabelSettings(
-                              isVisible: true,
-                              textStyle:
-                                  TextStyle(fontWeight: FontWeight.bold)),
+                            isVisible: true,
+                            textStyle: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ],
                     ),

@@ -153,6 +153,16 @@ class ImageService {
   }
 }
 
+// ─── Formatage heure HH:mm ────────────────────────────────────────────────────
+String formatHeure(String h) {
+  final trimmed = h.trim();
+  if (trimmed.contains(':')) {
+    final parts = trimmed.split(':');
+    return '${parts[0].padLeft(2, '0')}:${parts[1].padLeft(2, '0')}';
+  }
+  return '${trimmed.padLeft(2, '0')}:00';
+}
+
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
 class Calcule {
   static double tailleEcran(BuildContext ctx) {
@@ -181,7 +191,6 @@ Future<void> supprimerGareEtUid() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove('gare');
     await prefs.remove('uid');
-    await prefs.remove('profil');
     await prefs.remove('role');
   } catch (e) {}
 }
@@ -215,11 +224,3 @@ Future<String?> recupererGare(String idUtilisateur) async {
   }
 }
 
-Future<String?> recupererProfil() async {
-  try {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getString('profil') ?? 'admin';
-  } catch (e) {
-    return 'admin';
-  }
-}

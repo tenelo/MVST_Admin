@@ -13,12 +13,14 @@ class TicketsDuJour extends StatefulWidget {
   const TicketsDuJour({
     super.key,
     required this.gare,
+    required this.destination,
     required this.uid,
     required this.date,
     required this.idDoc,
     this.typeDepart = '',
   });
   final String gare;
+  final String destination;
   final String uid;
   final String date;
   final String idDoc;
@@ -131,21 +133,22 @@ class _TicketsDuJourState extends State<TicketsDuJour> {
 
   @override
   Widget build(BuildContext context) {
+    final c = Config.colors;
     return Scaffold(
       appBar: AppBar(
-        iconTheme: IconThemeData(color: Config.colors.authCardBackground),
+        iconTheme: IconThemeData(color: c.authCardBackground),
         title: Text(
-          "Tickets du ${widget.date}",
+          '${widget.gare} -> ${widget.destination} ${widget.date}',
           style: TextStyle(
-            fontSize: 14,
-            color: Config.colors.authCardBackground,
+            fontSize: 12,
+            color: c.authCardBackground,
             fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh, color: Config.colors.authCardBackground),
+            icon: Icon(Icons.refresh, size: 18, color: c.authCardBackground),
             onPressed: _getDonnees,
           ),
         ],
@@ -159,62 +162,59 @@ class _TicketsDuJourState extends State<TicketsDuJour> {
         child: Column(
           children: [
             // ── Champs de recherche ───────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.only(top: 3, left: 4, right: 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _rechercheParDate,
-                      decoration: const InputDecoration(
-                        hintText: 'Recherche\npar date',
-                        hintMaxLines: 2,
-                        hintStyle: TextStyle(fontSize: 11),
-                        prefixIcon: Icon(Icons.search, size: 18),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(12.0)),
-                        ),
-                        contentPadding: EdgeInsets.symmetric(vertical: 2),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _rechercheParDate,
+                    decoration: const InputDecoration(
+                      hintText: 'Par dates',
+                      hintMaxLines: 2,
+                      hintStyle: TextStyle(fontSize: 11),
+                      prefixIcon: Icon(Icons.search, size: 18),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12.0)),
                       ),
-                      onChanged: (value) => _filtrerDonnees(),
+                      contentPadding: EdgeInsets.symmetric(vertical: 2),
                     ),
+                    onChanged: (value) => _filtrerDonnees(),
                   ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: TextField(
-                      controller: _rechercheParDestination,
-                      decoration: const InputDecoration(
-                        hintText: 'Recherche\npar destination',
-                        hintMaxLines: 2,
-                        hintStyle: TextStyle(fontSize: 11),
-                        prefixIcon: Icon(Icons.search, size: 18),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(12.0)),
-                        ),
-                        contentPadding: EdgeInsets.symmetric(vertical: 2),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: TextField(
+                    controller: _rechercheParDestination,
+                    decoration: const InputDecoration(
+                      hintText: 'Par destinations',
+                      hintMaxLines: 2,
+                      hintStyle: TextStyle(fontSize: 11),
+                      prefixIcon: Icon(Icons.search, size: 18),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12.0)),
                       ),
-                      onChanged: (value) => _filtrerDonnees(),
+                      contentPadding: EdgeInsets.symmetric(vertical: 2),
                     ),
+                    onChanged: (value) => _filtrerDonnees(),
                   ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: TextField(
-                      controller: _rechercheParNom,
-                      decoration: const InputDecoration(
-                        hintText: 'Recherche\npar nom',
-                        hintMaxLines: 2,
-                        hintStyle: TextStyle(fontSize: 11),
-                        prefixIcon: Icon(Icons.search, size: 18),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(12.0)),
-                        ),
-                        contentPadding: EdgeInsets.symmetric(vertical: 2),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: TextField(
+                    controller: _rechercheParNom,
+                    decoration: const InputDecoration(
+                      hintText: 'Par noms',
+                      hintMaxLines: 2,
+                      hintStyle: TextStyle(fontSize: 11),
+                      prefixIcon: Icon(Icons.search, size: 18),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12.0)),
                       ),
-                      onChanged: (value) => _filtrerDonnees(),
+                      contentPadding: EdgeInsets.symmetric(vertical: 2),
                     ),
+                    onChanged: (value) => _filtrerDonnees(),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
             // ── Tableau ───────────────────────────────────────────────────
             Expanded(
@@ -239,14 +239,16 @@ class _TicketsDuJourState extends State<TicketsDuJour> {
                                   if (widget.typeDepart.isNotEmpty)
                                     Padding(
                                       padding: const EdgeInsets.only(bottom: 4),
-                                      child: _TypeBadge(type: widget.typeDepart),
+                                      child: _TypeBadge(
+                                        type: widget.typeDepart,
+                                      ),
                                     ),
                                   Text(
                                     "NOMBRE TOTAL DE TICKETS : ${donnees.length}",
                                     style: TextStyle(
                                       color: Config.colors.authCardBackground,
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 14,
+                                      fontSize: 12,
                                     ),
                                   ),
                                 ],
@@ -365,19 +367,23 @@ class TicketDataSource extends DataTableSource {
     final date = parseDate(ticket['date'].toString());
     final formattedDate = DateFormat('dd MMMM yyyy', 'fr_FR').format(date);
 
-    final isVip =
-        ticket['typeVoyage']?.toString().toLowerCase() == 'vip';
+    final isVip = ticket['typeVoyage']?.toString().toLowerCase() == 'vip';
     return DataRow.byIndex(
       index: index,
-      color: WidgetStateProperty.resolveWith<Color?>((states) =>
-          isVip ? const Color(0xFFFFD700).withValues(alpha: 0.08) : null),
+      color: WidgetStateProperty.resolveWith<Color?>(
+        (states) =>
+            isVip ? const Color(0xFFFFD700).withValues(alpha: 0.08) : null,
+      ),
       cells: [
         DataCell(
           Text(formattedDate, style: const TextStyle(fontSize: 13)),
           onTap: () => _onTapRow(ticket),
         ),
         DataCell(
-          Text("${ticket['heure']} h", style: const TextStyle(fontSize: 13)),
+          Text(
+            formatHeure(ticket['heure']?.toString() ?? ''),
+            style: const TextStyle(fontSize: 13),
+          ),
           onTap: () => _onTapRow(ticket),
         ),
         DataCell(
@@ -473,7 +479,9 @@ class _TypeBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: isVip ? const Color(0xFFFFD700).withValues(alpha: 0.15) : Colors.blue.shade50,
+        color: isVip
+            ? const Color(0xFFFFD700).withValues(alpha: 0.15)
+            : Colors.blue.shade50,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isVip ? const Color(0xFFB8860B) : Colors.blue.shade200,

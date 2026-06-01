@@ -6,19 +6,18 @@ import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/screens/detailsTickets.dart';
-import 'package:mvst_admin/screens/petitsEcrans/detailsTickets2.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:ticket_material/ticket_material.dart';
 
-class MesTicketsScannes extends StatefulWidget {
-  const MesTicketsScannes({super.key, required this.documentId});
+class TicketsScannes extends StatefulWidget {
+  const TicketsScannes({super.key, required this.documentId});
   final String documentId;
 
   @override
-  State<MesTicketsScannes> createState() => _MesTicketsScannesState();
+  State<TicketsScannes> createState() => _TicketsScannesState();
 }
 
-class _MesTicketsScannesState extends State<MesTicketsScannes> {
+class _TicketsScannesState extends State<TicketsScannes> {
   final TextEditingController _searchController = TextEditingController();
   String _searchText = "";
   bool _isLoading = true;
@@ -206,7 +205,7 @@ class _MesTicketsScannesState extends State<MesTicketsScannes> {
                                 )
                               : DateTime.now(),
                           tailleEcran,
-                          ticket['typeVoyage']
+                          ticket['typeVoyage'],
                         ),
                         rightChild: _buildRight(),
                         tapHandler: () {},
@@ -265,7 +264,7 @@ class _MesTicketsScannesState extends State<MesTicketsScannes> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => DetailsTickets2(
+              builder: (context) => DetailsTickets(
                 idTicket: idTicket,
                 idUtilisateur: idUtilisateur,
                 nom: nom,
@@ -367,7 +366,7 @@ class _MesTicketsScannesState extends State<MesTicketsScannes> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => DetailsTickets2(
+                            builder: (context) => DetailsTickets(
                               idTicket: idTicket,
                               idUtilisateur: idUtilisateur,
                               nom: nom,

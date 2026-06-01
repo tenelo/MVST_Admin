@@ -6,24 +6,23 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
-import 'package:mvst_admin/authentification/authentification.dart';
 import 'package:mvst_admin/authentification/connection.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/firebase_options.dart';
 import 'package:mvst_admin/graphiques/diagrammeABarres.dart';
 import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/qrcode/lecteurQrCode.dart';
-import 'package:mvst_admin/screens/lesDeparts.dart';
-import 'package:mvst_admin/screens/listeDesPassagers.dart';
+import 'package:mvst_admin/screens/placesOcuppees.dart';
+import 'package:mvst_admin/screens/tousLesPassagers.dart';
 import 'package:mvst_admin/parametres/parametres.dart';
 import 'package:mvst_admin/screens/ticketsDuJourScannes.dart';
-import 'package:mvst_admin/screens/tousLesDepartsDuJour.dart';
+import 'package:mvst_admin/screens/departsDuJour.dart';
 import 'package:mvst_admin/screens/profil.dart';
 import 'package:mvst_admin/parametres/suppression/suppression.dart';
-import 'package:mvst_admin/screens/tableaudestickets.dart';
+import 'package:mvst_admin/screens/tousLesTickets.dart';
 import 'package:mvst_admin/screens/suggestions_admin.dart';
-import 'package:mvst_admin/gestionUtilisateursEtComptes/comptesBloques.dart';
-import 'package:mvst_admin/gestionUtilisateursEtComptes/listeDesUtilisateurs.dart';
+import 'package:mvst_admin/gestionUtilisateurs/comptesBloques.dart';
+import 'package:mvst_admin/gestionUtilisateurs/listeDesUtilisateurs.dart';
 import 'package:mvst_admin/verifTickets/verifierticket.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mvst_admin/parametres/gestion_admins.dart';
@@ -259,19 +258,18 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                             fontFamily: 'Lobster',
                           ),
                         ),
-                        onTap: () {
+                        onTap: () async {
                           if (FirebaseAuth.instance.currentUser != null) {
                             String userId =
                                 FirebaseAuth.instance.currentUser!.uid;
-                            String? userProfil =
-                                FirebaseAuth.instance.currentUser!.displayName;
-
+                            String userProfil =
+                                await recupererRole() ?? 'admin';
                             Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => Profil(
                                   idUtilisateur: userId,
-                                  userProfil: userProfil!,
+                                  userProfil: userProfil,
                                 ),
                               ),
                             );
@@ -334,28 +332,7 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                           }
                         },
                       ),
-                      ListTile(
-                        leading: Icon(
-                          Icons.chat_bubble_outline_rounded,
-                          color: c.bleuClaire,
-                        ),
-                        title: Text(
-                          'Suggestions',
-                          style: TextStyle(
-                            color: c.bleuClaire,
-                            fontFamily: 'Lobster',
-                          ),
-                        ),
-                        onTap: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SuggestionsAdmin(),
-                            ),
-                          );
-                        },
-                      ),
+
                       //  Visible uniquement pour superadmin
                       if (_role == 'superadmin')
                         ListTile(
@@ -382,6 +359,89 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                         ),
                       ListTile(
                         leading: Icon(
+                          Icons.people_alt_outlined,
+                          color: c.bleuClaire,
+                        ),
+                        title: Text(
+                          'Utilisateurs',
+                          style: TextStyle(
+                            color: c.bleuClaire,
+                            fontFamily: 'Lobster',
+                          ),
+                        ),
+                        onTap: () {
+                          if (FirebaseAuth.instance.currentUser != null) {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ListeDesUtilisateurs(),
+                              ),
+                            );
+                          } else {
+                            Navigator.pop(context);
+                            showIncompleteFieldsSnackBar(context);
+                          }
+                        },
+                      ),
+                      ListTile(
+                        leading: Icon(Icons.block_rounded, color: c.bleuClaire),
+                        title: Text(
+                          'Comptes bloqués',
+                          style: TextStyle(
+                            color: c.bleuClaire,
+                            fontFamily: 'Lobster',
+                          ),
+                        ),
+                        onTap: () {
+                          if (FirebaseAuth.instance.currentUser != null) {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const GestionComptesBloques(),
+                              ),
+                            );
+                          } else {
+                            Navigator.pop(context);
+                            showIncompleteFieldsSnackBar(context);
+                          }
+                        },
+                      ),
+                      ListTile(
+                        leading: Icon(
+                          Icons.delete_forever_outlined,
+                          color: Colors.red[300],
+                        ),
+                        title: Text(
+                          'Supprimer ticket',
+                          style: TextStyle(
+                            color: c.bleuClaire,
+                            fontFamily: 'Lobster',
+                          ),
+                        ),
+                        onTap: () {
+                          if (FirebaseAuth.instance.currentUser != null) {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => Suppression(
+                                  dateHier: dateNormaleHiere,
+                                  aujoudhui: dateNormale,
+                                  demain: dateNormaleDemain,
+                                  apresDemain: dateNormaleApresdemain,
+                                ),
+                              ),
+                            );
+                          } else {
+                            Navigator.pop(context);
+                            showIncompleteFieldsSnackBar(context);
+                          }
+                        },
+                      ),
+                      ListTile(
+                        leading: Icon(
                           Icons.power_settings_new,
                           color: c.bleuClaire,
                         ),
@@ -396,23 +456,6 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                       ),
                     ],
                   ),
-                ),
-                ListTile(
-                  leading: Icon(Icons.info_outlined, color: c.bleuClaire),
-                  title: Text(
-                    'À propos du développeur',
-                    style: TextStyle(
-                      color: c.bleuClaire,
-                      fontFamily: 'Lobster',
-                    ),
-                  ),
-                  onTap: () {
-                    if (FirebaseAuth.instance.currentUser != null) {
-                    } else {
-                      Navigator.pop(context);
-                      showIncompleteFieldsSnackBar(context);
-                    }
-                  },
                 ),
               ],
             ),
@@ -432,9 +475,6 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                     ticketsScannes(context, setLoadingState),
                     departsDuJour(context, setLoadingState),
                     placesOccupees(context, setLoadingState),
-                    suppressionTickets(context, setLoadingState),
-                    listeUtilisateurs(context, setLoadingState),
-                    comptesBloques(context, setLoadingState),
                     suggestions(context, setLoadingState),
                   ],
                 ),
@@ -449,10 +489,10 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                     )
                   : const Center(child: CircularProgressIndicator()),
               _gare != null && _uid != null
-                  ? TableauDeTickets(gare: _gare!, uid: _uid!, date: idAnnee)
+                  ? TousLesTickets(gare: _gare!, uid: _uid!, date: idAnnee)
                   : const Center(child: CircularProgressIndicator()),
               _gare != null && _gare!.isNotEmpty && _uid != null
-                  ? ListeDesPassagers(
+                  ? TousLesPassagers(
                       gare: _gare!,
                       uid: _uid!,
                       date: idDate,
@@ -502,7 +542,7 @@ class _BottomNav extends StatelessWidget {
     (
       icon: Icons.table_chart_outlined,
       activeIcon: Icons.table_chart,
-      label: 'Tableau',
+      label: 'Tickets',
     ),
     (icon: Icons.people_outlined, activeIcon: Icons.people, label: 'Passagers'),
   ];
@@ -656,7 +696,7 @@ Widget scannQrCode(BuildContext ctx, Function setLoadingState) {
         user = FirebaseAuth.instance.currentUser;
         final String _uid = user!.uid;
         final String? _gare = await recupererGare(_uid);
-        final String profilAdmin = await recupererProfil() ?? 'admin';
+        final String profilAdmin = await recupererRole() ?? 'admin';
         await ListesDesTickets.ticketsAscanner(_gare ?? '', profilAdmin);
         Navigator.push(
           ctx,
@@ -741,7 +781,6 @@ Widget graphiques(BuildContext ctx, Function setLoadingState) {
   );
 }
 
-
 Widget departsDuJour(BuildContext ctx, Function setLoadingState) {
   return _carteMenu(
     ctx: ctx,
@@ -756,7 +795,7 @@ Widget departsDuJour(BuildContext ctx, Function setLoadingState) {
         Navigator.push(
           ctx,
           MaterialPageRoute(
-            builder: (_) => TousLesDepartsDuJour(
+            builder: (_) => DepartsDuJour(
               gare: _gare!,
               uid: _uid,
               date: idDate,
@@ -780,7 +819,7 @@ Widget tableau(BuildContext ctx, Function setLoadingState) {
     ctx: ctx,
     setLoadingState: setLoadingState,
     icon: Icons.format_list_bulleted_sharp,
-    label: 'TABLEAU',
+    label: 'Tous les Tickets',
     onTap: () async {
       if (FirebaseAuth.instance.currentUser != null) {
         user = FirebaseAuth.instance.currentUser;
@@ -790,7 +829,7 @@ Widget tableau(BuildContext ctx, Function setLoadingState) {
           ctx,
           MaterialPageRoute(
             builder: (_) =>
-                TableauDeTickets(gare: _gare!, uid: _uid, date: idAnnee),
+                TousLesTickets(gare: _gare!, uid: _uid, date: idAnnee),
           ),
         ).then((_) => setLoadingState(false));
       } else {
@@ -817,7 +856,7 @@ Widget placesOccupees(BuildContext ctx, Function setLoadingState) {
         Navigator.push(
           ctx,
           MaterialPageRoute(
-            builder: (_) => LesDeparts(
+            builder: (_) => PlacesOccupees(
               gare: _gare!,
               uid: _uid,
               date: idDate,
@@ -850,7 +889,7 @@ Widget listePassagers(BuildContext ctx, Function setLoadingState) {
         Navigator.push(
           ctx,
           MaterialPageRoute(
-            builder: (_) => ListeDesPassagers(
+            builder: (_) => TousLesPassagers(
               gare: _gare!,
               uid: _uid,
               date: idDate,

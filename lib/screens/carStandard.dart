@@ -5,12 +5,11 @@ import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/models/models.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 List<PlacesTickets> maListeDeTickets = [];
 
-class PlacesAssises extends StatefulWidget {
-  const PlacesAssises({
+class CarStandard extends StatefulWidget {
+  const CarStandard({
     super.key,
     required this.documentId,
     required this.depart,
@@ -23,15 +22,12 @@ class PlacesAssises extends StatefulWidget {
   final String heure;
 
   @override
-  State<PlacesAssises> createState() => _PlacesAssisesState();
+  State<CarStandard> createState() => _CarStandardState();
 }
 
-class _PlacesAssisesState extends State<PlacesAssises> {
+class _CarStandardState extends State<CarStandard> {
   bool _isLoading = true;
   String? _errorMessage;
-
-  // ── Socket.IO ──────────────────────────────────────────────────────────────
-  late IO.Socket socket;
 
   @override
   void initState() {
@@ -42,8 +38,6 @@ class _PlacesAssisesState extends State<PlacesAssises> {
   @override
   void dispose() {
     maListeDeTickets.clear();
-    socket.disconnect();
-    socket.dispose();
     super.dispose();
   }
 
@@ -105,7 +99,7 @@ class _PlacesAssisesState extends State<PlacesAssises> {
         iconTheme: const IconThemeData(color: Colors.white),
         title: Center(
           child: Text(
-            "${widget.depart} -> ${widget.destination}  ${widget.heure} h",
+            "${widget.depart} -> ${widget.destination}  ${formatHeure(widget.heure)}",
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w500,
@@ -875,7 +869,7 @@ Future<void> showRichTextDialog(
                       icon: Icons.route,
                       iconColor: const Color(0xFF1565C0),
                       label: 'Trajet',
-                      value: '$depart → $destination $heure h',
+                      value: '$depart → $destination ${formatHeure(heure)}',
                       isBold: true,
                     ),
                     const Divider(height: 24),

@@ -27,6 +27,8 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
   int _rowsPerPage = 20;
   bool _isLoading = true;
   int _activeTab = 0; // 0=Tous, 1=Standard, 2=VIP
+  late DateTime _dateSelectionnee;
+  late String _dateNormale;
   List<Map<String, dynamic>> donnees = [];
   List<Map<String, dynamic>> _filtre = [];
   final TextEditingController _rechercheParDate = TextEditingController();
@@ -40,8 +42,43 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
   @override
   void initState() {
     super.initState();
+    _dateSelectionnee = _parseDate(widget.date);
+    _dateNormale = DateFormat('d MMMM yyyy', 'fr_FR').format(_dateSelectionnee);
     _getDonnees();
     _connecterSocket();
+  }
+
+  DateTime _parseDate(String s) {
+    try {
+      return DateFormat('EEEE_d_MMMM_y', 'fr_FR').parse(s);
+    } catch (_) {
+      return DateTime.now();
+    }
+  }
+
+  String get _dateApiSocket =>
+      DateFormat('EEEE_d_MMMM_y', 'fr_FR').format(_dateSelectionnee);
+
+  Future<void> _choisirDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _dateSelectionnee,
+      firstDate: DateTime(2024),
+      lastDate: DateTime(2027),
+    );
+    if (picked != null && mounted) {
+      final ancienneDate = _dateApiSocket;
+      setState(() {
+        _dateSelectionnee = picked;
+        _dateNormale = DateFormat('d MMMM yyyy', 'fr_FR').format(picked);
+      });
+      socket.emit('quitter_room', {'depart': widget.gare, 'date': ancienneDate});
+      socket.emit('rejoindre_room', {
+        'depart': widget.gare,
+        'date': _dateApiSocket,
+      });
+      _getDonnees();
+    }
   }
 
   @override
@@ -67,10 +104,9 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
     socket.connect();
 
     socket.onConnect((_) {
-      // Écouter tous les rooms du jour pour cette gare
       socket.emit('rejoindre_room', {
         'depart': widget.gare,
-        'date': widget.date,
+        'date': _dateApiSocket,
       });
     });
 
@@ -87,8 +123,8 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
     if (mounted) setState(() => _isLoading = true);
 
     try {
-      // La date reçue est au format 'EEEE_d_MMMM_y' → on extrait la date du jour
-      final String dateDuJour = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final String dateDuJour =
+          DateFormat('yyyy-MM-dd').format(_dateSelectionnee);
 
       final response = await http.post(
         apiUri('ticketsDuJourScannes.php'),
@@ -122,7 +158,8 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
     setState(() {
       donnees = _filtre.where((data) {
         final type = data['typeVoyage']?.toString().toLowerCase() ?? 'standard';
-        final matchType = _activeTab == 0 ||
+        final matchType =
+            _activeTab == 0 ||
             (_activeTab == 1 && type != 'vip') ||
             (_activeTab == 2 && type == 'vip');
         return matchType &&
@@ -141,7 +178,7 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
       appBar: AppBar(
         iconTheme: IconThemeData(color: Config.colors.authCardBackground),
         title: Text(
-          "Tickets scannés\ndu jour",
+          "Tickets scannés du jour",
           style: TextStyle(
             fontSize: 14,
             color: Config.colors.authCardBackground,
@@ -149,8 +186,14 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
           ),
         ),
         centerTitle: true,
-        // ── Bouton rafraîchir manuel ──────────────────────────────────────
         actions: [
+          IconButton(
+            icon: Icon(
+              Icons.calendar_month_outlined,
+              color: Config.colors.authCardBackground,
+            ),
+            onPressed: _choisirDate,
+          ),
           IconButton(
             icon: Icon(Icons.refresh, color: Config.colors.authCardBackground),
             onPressed: _getDonnees,
@@ -251,7 +294,9 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
                   ChoiceChip(
                     label: const Text('VIP'),
                     selected: _activeTab == 2,
-                    selectedColor: const Color(0xFFFFD700).withValues(alpha: 0.4),
+                    selectedColor: const Color(
+                      0xFFFFD700,
+                    ).withValues(alpha: 0.4),
                     onSelected: (_) {
                       setState(() => _activeTab = 2);
                       _filtrerDonnees();
@@ -390,19 +435,23 @@ class TicketDataSource extends DataTableSource {
     final date = parseDate(ticket['date'].toString());
     final formattedDate = DateFormat('dd MMMM yyyy', 'fr_FR').format(date);
 
-    final isVip =
-        ticket['typeVoyage']?.toString().toLowerCase() == 'vip';
+    final isVip = ticket['typeVoyage']?.toString().toLowerCase() == 'vip';
     return DataRow.byIndex(
       index: index,
-      color: WidgetStateProperty.resolveWith<Color?>((states) =>
-          isVip ? const Color(0xFFFFD700).withValues(alpha: 0.08) : null),
+      color: WidgetStateProperty.resolveWith<Color?>(
+        (states) =>
+            isVip ? const Color(0xFFFFD700).withValues(alpha: 0.08) : null,
+      ),
       cells: [
         DataCell(
           Text(formattedDate, style: const TextStyle(fontSize: 13)),
           onTap: () => _onTapRow(ticket),
         ),
         DataCell(
-          Text("${ticket['heure']} h", style: const TextStyle(fontSize: 13)),
+          Text(
+            formatHeure(ticket['heure']?.toString() ?? ''),
+            style: const TextStyle(fontSize: 13),
+          ),
           onTap: () => _onTapRow(ticket),
         ),
         DataCell(
@@ -485,7 +534,9 @@ class _TypeBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: isVip ? const Color(0xFFFFD700).withValues(alpha: 0.15) : Colors.blue.shade50,
+        color: isVip
+            ? const Color(0xFFFFD700).withValues(alpha: 0.15)
+            : Colors.blue.shade50,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isVip ? const Color(0xFFB8860B) : Colors.blue.shade200,

@@ -282,7 +282,7 @@ class _ProfilState extends State<Profil> {
                         _InfoRow(
                           icon: Icons.manage_accounts_outlined,
                           label: 'Rôle',
-                          value: widget.userProfil,
+                          value: widget.userProfil.isEmpty ? '—' : widget.userProfil,
                         ),
                       ]),
                       const SizedBox(height: 24),

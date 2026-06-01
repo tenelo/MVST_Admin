@@ -32,7 +32,6 @@ class _LoginState extends State<Login> {
   String? _erreur;
   String _gare = '';
   String _uid = '';
-  String _profil = 'admin';
   String _role = 'admin';
 
   @override
@@ -44,13 +43,11 @@ class _LoginState extends State<Login> {
   Future<void> enregistrerSession(
     String gare,
     String uid,
-    String profil,
     String role,
   ) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('gare', gare);
     await prefs.setString('uid', uid);
-    await prefs.setString('profil', profil);
     await prefs.setString('role', role);
   }
 
@@ -135,7 +132,6 @@ class _LoginState extends State<Login> {
 
       _gare = data['gare'] as String? ?? '';
       _uid = data['uid'] as String? ?? '';
-      _profil = data['profil'] as String? ?? 'admin';
       _role = data['role'] as String? ?? 'admin';
       final bool compteExiste = data['compteExiste'] == true;
 
@@ -196,7 +192,7 @@ class _LoginState extends State<Login> {
         password: '${_pin}mv',
       );
 
-      await enregistrerSession(_gare, _uid, _profil, _role);
+      await enregistrerSession(_gare, _uid, _role);
 
       if (mounted) {
         Navigator.pushAndRemoveUntil(
