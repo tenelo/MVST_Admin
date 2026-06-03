@@ -10,6 +10,7 @@ import 'package:mvst_admin/authentification/authentification.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/main.dart';
 import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
+import 'package:mvst_admin/mesfonctions/keyboard_notifier.dart';
 import 'package:mvst_admin/authentification/clavier_numerique.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -24,7 +25,6 @@ class _LoginState extends State<Login> {
   final TextEditingController _phoneNumberController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
-  // 0 = saisie numéro, 1 = saisie PIN
   int _etape = 0;
   String _telephone = '';
   String _pin = '';
@@ -40,11 +40,7 @@ class _LoginState extends State<Login> {
     super.dispose();
   }
 
-  Future<void> enregistrerSession(
-    String gare,
-    String uid,
-    String role,
-  ) async {
+  Future<void> enregistrerSession(String gare, String uid, String role) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('gare', gare);
     await prefs.setString('uid', uid);
@@ -60,7 +56,6 @@ class _LoginState extends State<Login> {
     });
 
     try {
-      // Étape 1 : vérifier dans la table Admins
       final response = await http.post(
         apiUri('verifierAdmin.php'),
         headers: {'Content-Type': 'application/json'},
@@ -76,7 +71,6 @@ class _LoginState extends State<Login> {
 
       final data = jsonDecode(response.body);
 
-      // Numéro pas dans la table → accès refusé
       if (data['success'] != true || data['existe'] != true) {
         if (context.mounted) {
           final c = Config.colors;
@@ -135,7 +129,6 @@ class _LoginState extends State<Login> {
       _role = data['role'] as String? ?? 'admin';
       final bool compteExiste = data['compteExiste'] == true;
 
-      // Compte pas encore créé → PageDAuthentification
       if (!compteExiste) {
         if (context.mounted) {
           Navigator.pushReplacement(
@@ -152,7 +145,6 @@ class _LoginState extends State<Login> {
         return;
       }
 
-      // Compte existe → passer à l'étape PIN
       setState(() {
         _telephone = _phoneNumberController.text.trim();
         _etape = 1;
@@ -227,7 +219,6 @@ class _LoginState extends State<Login> {
 
     return Scaffold(
       backgroundColor: c.authBackground,
-      resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: _etape == 0
             ? _buildEtapeTelephone(c, sw, sh)
@@ -236,127 +227,128 @@ class _LoginState extends State<Login> {
     );
   }
 
-  // ── Étape 1 : numéro de téléphone ─────────────────────────────────────────
-
   Widget _buildEtapeTelephone(dynamic c, double sw, double sh) {
-    final keyboardH = MediaQuery.of(context).viewInsets.bottom;
-    return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(sw * 0.08, 0, sw * 0.08, keyboardH + 20),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(height: sh * 0.10),
-            _Logo(colors: c, sw: sw),
-            SizedBox(height: sh * 0.04),
-            Text(
-              'Connexion Admin',
-              style: TextStyle(
-                color: c.authTextPrimary,
-                fontSize: sw * 0.06,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1,
-              ),
-            ),
-            SizedBox(height: sh * 0.008),
-            Text(
-              'Entrez votre numéro pour continuer',
-              style: TextStyle(
-                color: c.authTextSecondary,
-                fontSize: sw * 0.033,
-              ),
-            ),
-            SizedBox(height: sh * 0.045),
-            Container(
-              decoration: BoxDecoration(
-                color: c.authCardBackground,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: c.authBorder, width: 1.5),
-              ),
-              child: TextFormField(
-                maxLength: 10,
-                cursorColor: c.authAccent,
+    return KeyboardHeightProvider(
+      builder: (_, keyboardHeight) => SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          sw * 0.08,
+          0,
+          sw * 0.08,
+          keyboardHeight + 20,
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(height: sh * 0.10),
+              _Logo(colors: c, sw: sw),
+              SizedBox(height: sh * 0.04),
+              Text(
+                'Connexion Admin',
                 style: TextStyle(
                   color: c.authTextPrimary,
-                  fontWeight: FontWeight.w500,
+                  fontSize: sw * 0.06,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1,
                 ),
-                controller: _phoneNumberController,
-                keyboardType: TextInputType.phone,
-                textAlign: TextAlign.center,
-                decoration: InputDecoration(
-                  counterText: '',
-                  border: InputBorder.none,
-                  hintText: 'Ex: 0505050505',
-                  hintStyle: TextStyle(
-                    color: c.authTextSecondary,
-                    fontSize: sw * 0.035,
-                  ),
-                  prefixIcon: Icon(Icons.phone_outlined, color: c.authAccent),
-                  contentPadding: EdgeInsets.symmetric(vertical: sh * 0.018),
-                ),
-                validator: (v) {
-                  if (v == null || v.isEmpty) {
-                    return 'Veuillez entrer votre numéro';
-                  }
-                  if (v.length < 10) return 'Numéro invalide';
-                  return null;
-                },
               ),
-            ),
-            SizedBox(height: sh * 0.03),
-            SizedBox(
-              width: double.infinity,
-              height: sh * 0.058,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: c.authButton,
-                  foregroundColor: c.authTextPrimary,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+              SizedBox(height: sh * 0.008),
+              Text(
+                'Entrez votre numéro pour continuer',
+                style: TextStyle(
+                  color: c.authTextSecondary,
+                  fontSize: sw * 0.033,
                 ),
-                onPressed: _isLoading ? null : _continuer,
-                child: _isLoading
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              color: c.authTextPrimary,
-                              strokeWidth: 2.5,
+              ),
+              SizedBox(height: sh * 0.045),
+              Container(
+                decoration: BoxDecoration(
+                  color: c.authCardBackground,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: c.authBorder, width: 1.5),
+                ),
+                child: TextFormField(
+                  maxLength: 10,
+                  cursorColor: c.authAccent,
+                  style: TextStyle(
+                    color: c.authTextPrimary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  controller: _phoneNumberController,
+                  keyboardType: TextInputType.phone,
+                  textAlign: TextAlign.center,
+                  decoration: InputDecoration(
+                    counterText: '',
+                    border: InputBorder.none,
+                    hintText: 'Ex: 0505050505',
+                    hintStyle: TextStyle(
+                      color: c.authTextSecondary,
+                      fontSize: sw * 0.035,
+                    ),
+                    prefixIcon: Icon(Icons.phone_outlined, color: c.authAccent),
+                    contentPadding: EdgeInsets.symmetric(vertical: sh * 0.018),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.isEmpty)
+                      return 'Veuillez entrer votre numéro';
+                    if (v.length < 10) return 'Numéro invalide';
+                    return null;
+                  },
+                ),
+              ),
+              SizedBox(height: sh * 0.03),
+              SizedBox(
+                width: double.infinity,
+                height: sh * 0.058,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: c.authButton,
+                    foregroundColor: c.authTextPrimary,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: _isLoading ? null : _continuer,
+                  child: _isLoading
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                color: c.authTextPrimary,
+                                strokeWidth: 2.5,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Vérification...',
-                            style: TextStyle(
-                              color: c.authTextPrimary,
-                              fontWeight: FontWeight.bold,
+                            const SizedBox(width: 12),
+                            Text(
+                              'Vérification...',
+                              style: TextStyle(
+                                color: c.authTextPrimary,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
+                          ],
+                        )
+                      : Text(
+                          'Continuer',
+                          style: TextStyle(
+                            fontSize: sw * 0.038,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
                           ),
-                        ],
-                      )
-                    : Text(
-                        'Continuer',
-                        style: TextStyle(
-                          fontSize: sw * 0.038,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
                         ),
-                      ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
-
-  // ── Étape 2 : saisie PIN ──────────────────────────────────────────────────
 
   Widget _buildEtapePin(dynamic c, double sw, double sh) {
     return Column(
@@ -423,8 +415,6 @@ class _LoginState extends State<Login> {
     );
   }
 }
-
-// ── Widgets partagés ──────────────────────────────────────────────────────────
 
 class _Logo extends StatelessWidget {
   final dynamic colors;

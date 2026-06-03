@@ -1,4 +1,5 @@
-import 'dart:async';
+// ignore_for_file: library_private_types_in_public_api
+
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -89,12 +90,15 @@ class _GaresState extends State<Gares> {
     final sh = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      backgroundColor: c.authBackground,
       appBar: AppBar(
         backgroundColor: c.authCardBackground,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new, color: c.authTextPrimary, size: 20),
+          icon: Icon(
+            Icons.arrow_back_ios_new,
+            color: c.authTextPrimary,
+            size: 20,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         centerTitle: true,
@@ -119,7 +123,10 @@ class _GaresState extends State<Gares> {
           ? Center(
               child: Text(
                 'Aucune donnée disponible',
-                style: TextStyle(color: c.authTextSecondary, fontFamily: 'Lobster'),
+                style: TextStyle(
+                  color: c.authTextSecondary,
+                  fontFamily: 'Lobster',
+                ),
               ),
             )
           : ListView.builder(
@@ -133,7 +140,6 @@ class _GaresState extends State<Gares> {
                 return Container(
                   margin: const EdgeInsets.only(bottom: 10),
                   decoration: BoxDecoration(
-                    color: c.authCardBackground,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: c.authBorder, width: 1),
                   ),
@@ -148,7 +154,7 @@ class _GaresState extends State<Gares> {
                         Text(
                           gare['gare'].toString(),
                           style: TextStyle(
-                            color: c.authTextPrimary,
+                            color: c.authCardBackground,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -162,11 +168,11 @@ class _GaresState extends State<Gares> {
                             IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
                               onPressed: () async {
-                                final confirm =
-                                    await _confirmerSuppression(context);
-                                if (confirm == true) {
+                                final confirm = await _confirmerSuppression(
+                                  context,
+                                );
+                                if (confirm == true)
                                   await _supprimerGare(gare['id']);
-                                }
                               },
                             ),
                           ],
@@ -196,80 +202,77 @@ class _GaresState extends State<Gares> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          top: 20,
-          left: 20,
-          right: 20,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-        ),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Ajouter une gare',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: c.authTextPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                decoration: BoxDecoration(
-                  color: c.authCardBackground,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: c.authBorder, width: 1.5),
-                ),
-                child: TextFormField(
-                  controller: _gareController,
-                  cursorColor: c.authAccent,
-                  style: TextStyle(color: c.authTextPrimary),
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    hintText: 'Nom de la gare',
-                    hintStyle: TextStyle(color: c.authTextSecondary),
+      builder: (ctx) => SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            MediaQuery.of(ctx).viewInsets.bottom + 20,
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                Text(
+                  'Ajouter une gare',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: c.authTextPrimary,
                   ),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Veuillez entrer une gare' : null,
                 ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () async {
-                  if (_formKey.currentState!.validate()) {
-                    await _ajouterGare(_gareController.text.trim());
-                    Navigator.of(context).pop();
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: c.authButton,
-                  foregroundColor: c.authTextPrimary,
-                  elevation: 0,
-                  minimumSize: const Size(double.infinity, 48),
-                  shape: RoundedRectangleBorder(
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: c.authCardBackground,
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: c.authBorder, width: 1.5),
+                  ),
+                  child: TextFormField(
+                    controller: _gareController,
+                    cursorColor: c.authAccent,
+                    style: TextStyle(color: c.authTextPrimary),
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      hintText: 'Nom de la gare',
+                      hintStyle: TextStyle(color: c.authTextSecondary),
+                    ),
+                    validator: (v) => v == null || v.isEmpty
+                        ? 'Veuillez entrer une gare'
+                        : null,
                   ),
                 ),
-                child: const Text('Ajouter'),
-              ),
-            ],
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (_formKey.currentState!.validate()) {
+                      await _ajouterGare(_gareController.text.trim());
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: c.authButton,
+                    foregroundColor: c.authTextPrimary,
+                    elevation: 0,
+                    minimumSize: const Size(double.infinity, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Ajouter'),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
     );
   }
 
-  void _afficherModalModifier(
-    BuildContext context,
-    Map<String, dynamic> gare,
-  ) {
+  void _afficherModalModifier(BuildContext context, Map<String, dynamic> gare) {
     final c = Config.colors;
     _gareController.text = gare['gare'];
     showModalBottomSheet(
@@ -279,73 +282,76 @@ class _GaresState extends State<Gares> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          top: 20,
-          left: 20,
-          right: 20,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-        ),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Modifier la gare',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: c.authTextPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                decoration: BoxDecoration(
-                  color: c.authCardBackground,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: c.authBorder, width: 1.5),
-                ),
-                child: TextFormField(
-                  controller: _gareController,
-                  cursorColor: c.authAccent,
-                  style: TextStyle(color: c.authTextPrimary),
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    hintText: 'Nom de la gare',
-                    hintStyle: TextStyle(color: c.authTextSecondary),
+      builder: (ctx) => SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            MediaQuery.of(ctx).viewInsets.bottom + 20,
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                Text(
+                  'Modifier la gare',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: c.authTextPrimary,
                   ),
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Veuillez entrer une gare' : null,
                 ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () async {
-                  if (_formKey.currentState!.validate()) {
-                    await _modifierGare(gare['id'], _gareController.text.trim());
-                    Navigator.of(context).pop();
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: c.authButton,
-                  foregroundColor: c.authTextPrimary,
-                  elevation: 0,
-                  minimumSize: const Size(double.infinity, 48),
-                  shape: RoundedRectangleBorder(
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: c.authCardBackground,
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: c.authBorder, width: 1.5),
+                  ),
+                  child: TextFormField(
+                    controller: _gareController,
+                    cursorColor: c.authAccent,
+                    style: TextStyle(color: c.authTextPrimary),
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      hintText: 'Nom de la gare',
+                      hintStyle: TextStyle(color: c.authTextSecondary),
+                    ),
+                    validator: (v) => v == null || v.isEmpty
+                        ? 'Veuillez entrer une gare'
+                        : null,
                   ),
                 ),
-                child: const Text('Modifier'),
-              ),
-            ],
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (_formKey.currentState!.validate()) {
+                      await _modifierGare(
+                        gare['id'],
+                        _gareController.text.trim(),
+                      );
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: c.authButton,
+                    foregroundColor: c.authTextPrimary,
+                    elevation: 0,
+                    minimumSize: const Size(double.infinity, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Modifier'),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
     );
   }
 
@@ -370,14 +376,14 @@ class _GaresState extends State<Gares> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Annuler', style: TextStyle(color: c.authTextSecondary)),
+            child: Text(
+              'Annuler',
+              style: TextStyle(color: c.authTextSecondary),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text(
-              'Supprimer',
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

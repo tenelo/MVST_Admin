@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/parametres/ajoutDimages.dart';
 import 'package:mvst_admin/parametres/datesDisponibles.dart';
 import 'package:mvst_admin/parametres/gare.dart';
@@ -13,8 +14,23 @@ import 'package:mvst_admin/screens/vip/lignesVip.dart';
 
 const Color _vipGold = Color(0xFFFFB300);
 
-class ParametresBody extends StatelessWidget {
+class ParametresBody extends StatefulWidget {
   const ParametresBody({super.key});
+
+  @override
+  State<ParametresBody> createState() => _ParametresBodyState();
+}
+
+class _ParametresBodyState extends State<ParametresBody> {
+  String _role = '';
+
+  @override
+  void initState() {
+    super.initState();
+    recupererRole().then((r) {
+      if (mounted) setState(() => _role = r ?? '');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,16 +45,17 @@ class ParametresBody extends StatelessWidget {
           // ── Section Général ───────────────────────────────────────────────
           _sectionLabel('Général'),
           const SizedBox(height: 8),
-          _item(
-            context: context,
-            icon: Icons.manage_accounts_outlined,
-            label: 'Gestion des administrateurs',
-            c: c,
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const GestionAdmins()),
+          if (_role == 'superadmin')
+            _item(
+              context: context,
+              icon: Icons.manage_accounts_outlined,
+              label: 'Gestion des administrateurs',
+              c: c,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const GestionAdmins()),
+              ),
             ),
-          ),
           _item(
             context: context,
             icon: Icons.train_outlined,
@@ -66,7 +83,7 @@ class ParametresBody extends StatelessWidget {
             c: c,
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const LignesStandard()),
+              MaterialPageRoute(builder: (_) => LignesStandard()),
             ),
           ),
           _item(

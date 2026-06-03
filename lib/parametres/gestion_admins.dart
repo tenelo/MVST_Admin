@@ -140,17 +140,15 @@ class _GestionAdminsState extends State<GestionAdmins> {
           final sw = MediaQuery.of(ctx2).size.width;
           return Padding(
             padding: EdgeInsets.only(
-              top: 20,
-              left: sw * 0.06,
-              right: sw * 0.06,
-              bottom: MediaQuery.of(ctx2).viewInsets.bottom + 20,
+              bottom: MediaQuery.of(ctx2).viewInsets.bottom,
             ),
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(sw * 0.06, 20, sw * 0.06, 20),
+              child: Form(
+                key: formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   Text(
                     'Modifier les informations',
                     style: TextStyle(
@@ -365,7 +363,8 @@ class _GestionAdminsState extends State<GestionAdmins> {
                 ],
               ),
             ),
-          );
+          ),
+        );
         },
       ),
     );

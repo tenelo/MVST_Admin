@@ -7,7 +7,14 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+const _kbChannel = MethodChannel('com.app.mvst_admin/keyboard');
+Future<void> keyboardAdjustResize() =>
+    _kbChannel.invokeMethod('adjustResize').catchError((_) {});
+Future<void> keyboardAdjustNothing() =>
+    _kbChannel.invokeMethod('adjustNothing').catchError((_) {});
 
 List<MonTicket> monTicket = [];
 List<Map<String, dynamic>> listeDesTicketsScannes = [];

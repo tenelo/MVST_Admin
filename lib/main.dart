@@ -26,6 +26,7 @@ import 'package:mvst_admin/gestionUtilisateurs/listeDesUtilisateurs.dart';
 import 'package:mvst_admin/verifTickets/verifierticket.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mvst_admin/parametres/gestion_admins.dart';
+import 'package:mvst_admin/authentification/login_wrapper.dart';
 
 DateTime? dateActuelle = DateTime.now();
 
@@ -119,7 +120,7 @@ class MyApp extends StatelessWidget {
           if (snapshot.hasData) {
             return const Accueil();
           } else {
-            return const Login();
+            return const LoginWrapper();
           }
         },
       ),

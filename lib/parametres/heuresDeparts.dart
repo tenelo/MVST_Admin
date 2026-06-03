@@ -192,7 +192,6 @@ class _HeureDepartState extends State<HeureDepart> {
     final sh = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      backgroundColor: c.authBackground,
       appBar: AppBar(
         backgroundColor: c.authCardBackground,
         elevation: 0,
@@ -326,7 +325,7 @@ class _HeureDepartState extends State<HeureDepart> {
                           return Container(
                             margin: const EdgeInsets.only(bottom: 10),
                             decoration: BoxDecoration(
-                              color: c.authCardBackground,
+
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(color: c.authBorder, width: 1),
                             ),
@@ -342,7 +341,7 @@ class _HeureDepartState extends State<HeureDepart> {
                                   Text(
                                     formattedTime,
                                     style: TextStyle(
-                                      color: c.authTextPrimary,
+                                      color: c.authCardBackground,
                                       fontWeight: FontWeight.w500,
                                       fontSize: 16,
                                     ),

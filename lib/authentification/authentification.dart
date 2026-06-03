@@ -178,9 +178,8 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => PinCreation(
-                  onPinConfirmed: _creerNouveauCompte,
-                ),
+                builder: (_) =>
+                    PinCreation(onPinConfirmed: _creerNouveauCompte),
               ),
             );
           }
@@ -188,9 +187,7 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Erreur de vérification. Réessayez.'),
-            ),
+            const SnackBar(content: Text('Erreur de vérification. Réessayez.')),
           );
         }
       }
@@ -362,6 +359,9 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
         keyboardType: keyboardType,
         maxLength: maxLength,
         cursorColor: c.authAccent,
+        enableSuggestions: false,
+        autocorrect: false,
+        textInputAction: TextInputAction.next,
         style: TextStyle(color: c.authTextPrimary, fontWeight: FontWeight.w500),
         decoration: InputDecoration(
           counterText: '',
@@ -384,32 +384,27 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
   @override
   Widget build(BuildContext context) {
     final c = Config.colors;
-    final double sw = MediaQuery.of(context).size.width;
-    final double sh = MediaQuery.of(context).size.height;
+    final double sw = MediaQuery.widthOf(context);
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: c.authBackground,
-      resizeToAvoidBottomInset: _etape == 0,
       body: SafeArea(
-        child: _etape == 0
-            ? _buildFormulaire(c, sw, sh)
-            : _buildEtapePin(c, sw, sh),
+        child: _etape == 0 ? _buildFormulaire(c, sw) : _buildEtapePin(c, sw),
       ),
     );
   }
 
-  Widget _buildFormulaire(dynamic c, double sw, double sh) {
+  Widget _buildFormulaire(dynamic c, double sw) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return SingleChildScrollView(
-      padding: EdgeInsets.only(
-        left: sw * 0.08,
-        right: sw * 0.08,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-      ),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: EdgeInsets.fromLTRB(sw * 0.08, 0, sw * 0.08, 20 + bottomInset),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          SizedBox(height: sh * 0.04),
+          const SizedBox(height: 28),
           Container(
             width: sw * 0.20,
             height: sw * 0.20,
@@ -430,7 +425,7 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
               ),
             ),
           ),
-          SizedBox(height: sh * 0.03),
+          const SizedBox(height: 20),
           Text(
             'Créer un compte Admin',
             style: TextStyle(
@@ -440,15 +435,12 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
               letterSpacing: 1,
             ),
           ),
-          SizedBox(height: sh * 0.006),
+          const SizedBox(height: 4),
           Text(
             'Remplissez les informations ci-dessous',
-            style: TextStyle(
-              color: c.authTextSecondary,
-              fontSize: sw * 0.032,
-            ),
+            style: TextStyle(color: c.authTextSecondary, fontSize: sw * 0.032),
           ),
-          SizedBox(height: sh * 0.02),
+          const SizedBox(height: 14),
 
           // Numéro affiché en lecture seule
           Container(
@@ -474,7 +466,7 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
             ),
           ),
 
-          SizedBox(height: sh * 0.015),
+          const SizedBox(height: 10),
 
           _buildChamp(
             controller: _nomController,
@@ -492,10 +484,10 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
             icone: Icons.location_on_outlined,
           ),
 
-          SizedBox(height: sh * 0.01),
+          const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
-            height: sh * 0.058,
+            height: 52,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: c.authButton,
@@ -543,13 +535,13 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
                     ),
             ),
           ),
-          SizedBox(height: sh * 0.03),
+          const SizedBox(height: 20),
         ],
       ),
     );
   }
 
-  Widget _buildEtapePin(dynamic c, double sw, double sh) {
+  Widget _buildEtapePin(dynamic c, double sw) {
     return Column(
       children: [
         Align(
@@ -567,7 +559,7 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
             }),
           ),
         ),
-        SizedBox(height: sh * 0.025),
+        const SizedBox(height: 18),
         Container(
           width: sw * 0.20,
           height: sw * 0.20,
@@ -588,7 +580,7 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
             ),
           ),
         ),
-        SizedBox(height: sh * 0.025),
+        const SizedBox(height: 18),
         Text(
           'Entrez votre Code Secret',
           style: TextStyle(
@@ -597,15 +589,12 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        SizedBox(height: sh * 0.008),
+        const SizedBox(height: 6),
         Text(
           'Ce numéro est déjà lié à un compte MVST',
-          style: TextStyle(
-            color: c.authTextSecondary,
-            fontSize: sw * 0.030,
-          ),
+          style: TextStyle(color: c.authTextSecondary, fontSize: sw * 0.030),
         ),
-        SizedBox(height: sh * 0.006),
+        const SizedBox(height: 4),
         Text(
           '+225 ${widget.telephone}',
           style: TextStyle(
@@ -614,7 +603,7 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        SizedBox(height: sh * 0.04),
+        const SizedBox(height: 28),
         _PinDots(longueur: _pin.length, erreur: _erreur != null, colors: c),
         if (_erreur != null) ...[
           const SizedBox(height: 14),
@@ -636,7 +625,7 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
             colors: c,
             sw: sw,
           ),
-        SizedBox(height: sh * 0.03),
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -691,6 +680,7 @@ class _PageDeVerificationState extends State<PageDeVerification> {
       backgroundColor: c.authBackground,
       body: SafeArea(
         child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: EdgeInsets.only(
             left: screenWidth * 0.08,
             right: screenWidth * 0.08,

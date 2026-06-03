@@ -194,10 +194,7 @@ class _LignesStandardState extends State<LignesStandard> {
     );
   }
 
-  Widget _buildLoaderOverlay({
-    required bool isLoading,
-    required Widget child,
-  }) {
+  Widget _buildLoaderOverlay({required bool isLoading, required Widget child}) {
     return Stack(
       children: [
         child,
@@ -217,7 +214,6 @@ class _LignesStandardState extends State<LignesStandard> {
     final sh = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      backgroundColor: c.authBackground,
       appBar: AppBar(
         backgroundColor: c.authCardBackground,
         elevation: 0,
@@ -270,7 +266,6 @@ class _LignesStandardState extends State<LignesStandard> {
                   return Container(
                     margin: const EdgeInsets.only(bottom: 10),
                     decoration: BoxDecoration(
-                      color: c.authCardBackground,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: c.authBorder, width: 1),
                     ),
@@ -288,13 +283,16 @@ class _LignesStandardState extends State<LignesStandard> {
                               Text(
                                 ligne['ligne'].toString(),
                                 style: TextStyle(
-                                  color: c.authTextPrimary,
+                                  color: c.authCardBackground,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               Text(
                                 '${ligne['prix']} f',
-                                style: TextStyle(color: c.authTextSecondary),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey[700],
+                                ),
                               ),
                             ],
                           ),
@@ -337,8 +335,8 @@ class _LignesStandardState extends State<LignesStandard> {
                                     : () async {
                                         final confirm =
                                             await _confirmerSuppression(
-                                          context,
-                                        );
+                                              context,
+                                            );
                                         if (confirm == true) {
                                           await _supprimer(ligne['id']);
                                         }
@@ -387,20 +385,20 @@ class _LignesStandardState extends State<LignesStandard> {
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx2, setModalState) {
-          final destinationsDisponibles =
-              _gares.where((g) => g != departSelectionne).toList();
+          final destinationsDisponibles = _gares
+              .where((g) => g != departSelectionne)
+              .toList();
 
-          return Padding(
-            padding: EdgeInsets.only(
-              top: 20,
-              left: 20,
-              right: 20,
-              bottom: MediaQuery.of(ctx2).viewInsets.bottom + 20,
+          return SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              20,
+              20,
+              MediaQuery.of(ctx).viewInsets.bottom + 20,
             ),
             child: Form(
               key: _formKeyAjout,
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     'Nouvelle ligne',
@@ -456,8 +454,10 @@ class _LignesStandardState extends State<LignesStandard> {
                       border: Border.all(color: c.authBorder, width: 1.5),
                     ),
                     child: DropdownButtonFormField<String>(
-                      value: destinationsDisponibles
-                              .contains(destinationSelectionnee)
+                      value:
+                          destinationsDisponibles.contains(
+                            destinationSelectionnee,
+                          )
                           ? destinationSelectionnee
                           : null,
                       dropdownColor: c.authCardBackground,
@@ -577,20 +577,20 @@ class _LignesStandardState extends State<LignesStandard> {
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx2, setModalState) {
-          final destinationsDisponibles =
-              _gares.where((g) => g != departSelectionne).toList();
+          final destinationsDisponibles = _gares
+              .where((g) => g != departSelectionne)
+              .toList();
 
-          return Padding(
-            padding: EdgeInsets.only(
-              top: 20,
-              left: 20,
-              right: 20,
-              bottom: MediaQuery.of(ctx2).viewInsets.bottom + 20,
+          return SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              20,
+              20,
+              MediaQuery.of(ctx).viewInsets.bottom + 20,
             ),
             child: Form(
               key: _formKeyModif,
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     'Modifier la ligne',
@@ -648,8 +648,10 @@ class _LignesStandardState extends State<LignesStandard> {
                       border: Border.all(color: c.authBorder, width: 1.5),
                     ),
                     child: DropdownButtonFormField<String>(
-                      value: destinationsDisponibles
-                              .contains(destinationSelectionnee)
+                      value:
+                          destinationsDisponibles.contains(
+                            destinationSelectionnee,
+                          )
                           ? destinationSelectionnee
                           : null,
                       dropdownColor: c.authCardBackground,
@@ -772,7 +774,10 @@ class _LignesStandardState extends State<LignesStandard> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Annuler', style: TextStyle(color: c.authTextSecondary)),
+            child: Text(
+              'Annuler',
+              style: TextStyle(color: c.authTextSecondary),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),

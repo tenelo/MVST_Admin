@@ -28,7 +28,6 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
   bool _isLoading = true;
   int _activeTab = 0; // 0=Tous, 1=Standard, 2=VIP
   late DateTime _dateSelectionnee;
-  late String _dateNormale;
   List<Map<String, dynamic>> donnees = [];
   List<Map<String, dynamic>> _filtre = [];
   final TextEditingController _rechercheParDate = TextEditingController();
@@ -43,7 +42,6 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
   void initState() {
     super.initState();
     _dateSelectionnee = _parseDate(widget.date);
-    _dateNormale = DateFormat('d MMMM yyyy', 'fr_FR').format(_dateSelectionnee);
     _getDonnees();
     _connecterSocket();
   }
@@ -70,7 +68,6 @@ class _TicketsDuJourScannesState extends State<TicketsDuJourScannes> {
       final ancienneDate = _dateApiSocket;
       setState(() {
         _dateSelectionnee = picked;
-        _dateNormale = DateFormat('d MMMM yyyy', 'fr_FR').format(picked);
       });
       socket.emit('quitter_room', {'depart': widget.gare, 'date': ancienneDate});
       socket.emit('rejoindre_room', {

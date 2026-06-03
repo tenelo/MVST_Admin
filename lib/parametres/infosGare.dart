@@ -104,7 +104,6 @@ class _InformationsState extends State<Informations> {
     final sh = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      backgroundColor: c.authBackground,
       appBar: AppBar(
         backgroundColor: c.authCardBackground,
         elevation: 0,
@@ -138,7 +137,10 @@ class _InformationsState extends State<Informations> {
           ? Center(
               child: Text(
                 'Aucune donnée disponible.',
-                style: TextStyle(color: c.authTextSecondary, fontFamily: 'Lobster'),
+                style: TextStyle(
+                  color: c.authTextSecondary,
+                  fontFamily: 'Lobster',
+                ),
               ),
             )
           : ListView.builder(
@@ -152,7 +154,6 @@ class _InformationsState extends State<Informations> {
                 return Container(
                   margin: const EdgeInsets.only(bottom: 10),
                   decoration: BoxDecoration(
-                    color: c.authCardBackground,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: c.authBorder, width: 1),
                   ),
@@ -185,7 +186,7 @@ class _InformationsState extends State<Informations> {
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
-                                  color: c.authTextPrimary,
+                                  color: c.authCardBackground,
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -193,7 +194,7 @@ class _InformationsState extends State<Informations> {
                                 row['description'],
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: c.authTextSecondary,
+                                  color: Colors.grey[800],
                                 ),
                               ),
                               const SizedBox(height: 6),
@@ -269,7 +270,8 @@ class _InformationsState extends State<Informations> {
                                     ],
                                   ),
                                 );
-                                if (confirm == true) await _supprimer(row['id']);
+                                if (confirm == true)
+                                  await _supprimer(row['id']);
                               },
                             ),
                           ],
@@ -310,17 +312,16 @@ class _InformationsState extends State<Informations> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          top: 16,
-          left: 16,
-          right: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+      builder: (ctx) => SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          MediaQuery.of(ctx).viewInsets.bottom + 20,
         ),
         child: Form(
           key: _formKey,
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 row == null ? 'Ajouter une gare' : 'Modifier la gare',

@@ -58,8 +58,7 @@ class _ListeImagesState extends State<ListeImages> {
   Future<void> _recupImages() async {
     setState(() => isLoading = true);
     try {
-      final response =
-          await http.get(Uri.parse('$_baseUrl/gestionImages.php'));
+      final response = await http.get(Uri.parse('$_baseUrl/gestionImages.php'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
@@ -83,7 +82,6 @@ class _ListeImagesState extends State<ListeImages> {
     final sh = MediaQuery.of(context).size.height;
 
     return Scaffold(
-      backgroundColor: c.authBackground,
       appBar: AppBar(
         backgroundColor: c.authCardBackground,
         elevation: 0,
@@ -146,71 +144,177 @@ class _ListeImagesState extends State<ListeImages> {
       onTap: () =>
           _afficherImageEnGrand(lienImage, image.titre, image.description),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
+        margin: const EdgeInsets.only(bottom: 14),
         decoration: BoxDecoration(
-          color: c.authCardBackground,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: c.authBorder, width: 1),
         ),
-        child: Stack(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Container(
-                    width: 110,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: isActif
-                          ? c.authAccent.withValues(alpha: 0.07)
-                          : Colors.grey.withValues(alpha: 0.07),
-                      border: Border.all(
-                        color: isActif ? c.authAccent : Colors.grey,
-                        width: 1.0,
-                      ),
-                      borderRadius: BorderRadius.circular(8.0),
+            // ── Image en haut ─────────────────────────────────────────
+            if (image.lien_image.isNotEmpty)
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(12),
                     ),
-                    child: image.lien_image.isNotEmpty
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(8.0),
-                            child: ColorFiltered(
-                              colorFilter: isActif
-                                  ? const ColorFilter.mode(
-                                      Colors.transparent,
-                                      BlendMode.multiply,
-                                    )
-                                  : const ColorFilter.matrix([
-                                      0.2126, 0.7152, 0.0722, 0, 0,
-                                      0.2126, 0.7152, 0.0722, 0, 0,
-                                      0.2126, 0.7152, 0.0722, 0, 0,
-                                      0, 0, 0, 1, 0,
-                                    ]),
-                              child: Image.network(
-                                lienImage,
-                                width: 110,
-                                height: 100,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Icon(
-                                      Icons.error_outline_outlined,
-                                      color: c.authAccent,
-                                      size: 40,
-                                    ),
-                              ),
-                            ),
-                          )
-                        : Icon(
-                            Icons.campaign_rounded,
-                            color: isActif ? c.authAccent : Colors.grey,
-                            size: 36,
+                    child: ColorFiltered(
+                      colorFilter: isActif
+                          ? const ColorFilter.mode(
+                              Colors.transparent,
+                              BlendMode.multiply,
+                            )
+                          : const ColorFilter.matrix([
+                              0.2126,
+                              0.7152,
+                              0.0722,
+                              0,
+                              0,
+                              0.2126,
+                              0.7152,
+                              0.0722,
+                              0,
+                              0,
+                              0.2126,
+                              0.7152,
+                              0.0722,
+                              0,
+                              0,
+                              0,
+                              0,
+                              0,
+                              1,
+                              0,
+                            ]),
+                      child: Image.network(
+                        lienImage,
+                        width: double.infinity,
+                        height: 160,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          width: double.infinity,
+                          height: 160,
+                          color: c.authCardBackground,
+                          child: Icon(
+                            Icons.error_outline_outlined,
+                            color: c.authAccent,
+                            size: 40,
                           ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Badge statut
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isActif
+                            ? const Color.fromARGB(255, 35, 177, 127)
+                            : Colors.grey,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isActif ? Icons.visibility : Icons.visibility_off,
+                            color: Colors.white,
+                            size: 12,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            isActif ? 'Actif' : 'Inactif',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            else
+              // Pas d'image : icône centrée
+              Container(
+                width: double.infinity,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: isActif
+                      ? c.authAccent.withValues(alpha: 0.07)
+                      : Colors.grey.withValues(alpha: 0.07),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(12),
+                  ),
+                  border: Border(
+                    bottom: BorderSide(color: c.authBorder, width: 1),
                   ),
                 ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
+                child: Stack(
+                  children: [
+                    Center(
+                      child: Icon(
+                        Icons.campaign_rounded,
+                        color: isActif ? c.authAccent : Colors.grey,
+                        size: 48,
+                      ),
+                    ),
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isActif
+                              ? const Color.fromARGB(255, 35, 177, 127)
+                              : Colors.grey,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isActif ? Icons.visibility : Icons.visibility_off,
+                              color: Colors.white,
+                              size: 12,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              isActif ? 'Actif' : 'Inactif',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            // ── Textes et boutons en dessous ──────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 8, 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -218,57 +322,39 @@ class _ListeImagesState extends State<ListeImages> {
                           image.titre,
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: isActif ? c.authTextPrimary : Colors.grey,
+                            fontSize: 15,
+                            color: isActif ? c.authCardBackground : Colors.grey,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           image.description,
-                          maxLines: 10,
+                          maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: isActif ? c.authTextSecondary : Colors.grey,
+                            fontSize: 13,
+                            color: isActif
+                                ? c.authCardBackground.withValues(alpha: 0.8)
+                                : Colors.grey[500],
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
-                _buildActionButtons(image, c),
-              ],
-            ),
-            // ── Badge statut ─────────────────────────────────────────────
-            Positioned(
-              top: 6,
-              left: 6,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                decoration: BoxDecoration(
-                  color: isActif
-                      ? const Color.fromARGB(255, 35, 177, 127)
-                      : Colors.grey,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      isActif ? Icons.visibility : Icons.visibility_off,
-                      color: Colors.white,
-                      size: 11,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      isActif ? 'Actif' : 'Inactif',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+                  // Boutons
+                  Column(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.edit, color: c.authAccent),
+                        onPressed: () => _showEditDialog(image),
                       ),
-                    ),
-                  ],
-                ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => _showDeleteDialog(image),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],
@@ -276,6 +362,161 @@ class _ListeImagesState extends State<ListeImages> {
       ),
     );
   }
+
+  // Widget _buildImageCard(ImageModel image, dynamic c) {
+  //   final String lienImage = '$_baseUrl/${image.lien_image}';
+  //   final bool isActif = image.statut.toLowerCase() == 'actif';
+
+  //   return GestureDetector(
+  //     onTap: () =>
+  //         _afficherImageEnGrand(lienImage, image.titre, image.description),
+  //     child: Container(
+  //       margin: const EdgeInsets.only(bottom: 10),
+  //       decoration: BoxDecoration(
+  //         borderRadius: BorderRadius.circular(12),
+  //         border: Border.all(color: c.authBorder, width: 1),
+  //       ),
+  //       child: Stack(
+  //         children: [
+  //           Row(
+  //             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //             children: [
+  //               Padding(
+  //                 padding: const EdgeInsets.all(8.0),
+  //                 child: Container(
+  //                   width: 110,
+  //                   height: 100,
+  //                   decoration: BoxDecoration(
+  //                     color: isActif
+  //                         ? c.authAccent.withValues(alpha: 0.07)
+  //                         : Colors.grey.withValues(alpha: 0.07),
+  //                     border: Border.all(
+  //                       color: isActif ? c.authAccent : Colors.grey,
+  //                       width: 1.0,
+  //                     ),
+  //                     borderRadius: BorderRadius.circular(8.0),
+  //                   ),
+  //                   child: image.lien_image.isNotEmpty
+  //                       ? ClipRRect(
+  //                           borderRadius: BorderRadius.circular(8.0),
+  //                           child: ColorFiltered(
+  //                             colorFilter: isActif
+  //                                 ? const ColorFilter.mode(
+  //                                     Colors.transparent,
+  //                                     BlendMode.multiply,
+  //                                   )
+  //                                 : const ColorFilter.matrix([
+  //                                     0.2126,
+  //                                     0.7152,
+  //                                     0.0722,
+  //                                     0,
+  //                                     0,
+  //                                     0.2126,
+  //                                     0.7152,
+  //                                     0.0722,
+  //                                     0,
+  //                                     0,
+  //                                     0.2126,
+  //                                     0.7152,
+  //                                     0.0722,
+  //                                     0,
+  //                                     0,
+  //                                     0,
+  //                                     0,
+  //                                     0,
+  //                                     1,
+  //                                     0,
+  //                                   ]),
+  //                             child: Image.network(
+  //                               lienImage,
+  //                               width: 110,
+  //                               height: 100,
+  //                               fit: BoxFit.cover,
+  //                               errorBuilder: (context, error, stackTrace) =>
+  //                                   Icon(
+  //                                     Icons.error_outline_outlined,
+  //                                     color: c.authAccent,
+  //                                     size: 40,
+  //                                   ),
+  //                             ),
+  //                           ),
+  //                         )
+  //                       : Icon(
+  //                           Icons.campaign_rounded,
+  //                           color: isActif ? c.authAccent : Colors.grey,
+  //                           size: 36,
+  //                         ),
+  //                 ),
+  //               ),
+  //               Expanded(
+  //                 child: Padding(
+  //                   padding: const EdgeInsets.all(8.0),
+  //                   child: Column(
+  //                     crossAxisAlignment: CrossAxisAlignment.start,
+  //                     children: [
+  //                       Text(
+  //                         image.titre,
+  //                         style: TextStyle(
+  //                           fontWeight: FontWeight.bold,
+  //                           color: isActif ? c.authCardBackground : Colors.grey,
+  //                         ),
+  //                       ),
+  //                       const SizedBox(height: 4),
+  //                       Text(
+  //                         image.description,
+  //                         maxLines: 10,
+  //                         overflow: TextOverflow.ellipsis,
+  //                         style: TextStyle(
+  //                           color: isActif
+  //                               ? c.authCardBackground.withValues(alpha: 0.9)
+  //                               : Colors.grey[500],
+  //                         ),
+  //                       ),
+  //                     ],
+  //                   ),
+  //                 ),
+  //               ),
+  //               _buildActionButtons(image, c),
+  //             ],
+  //           ),
+  //           // ── Badge statut ─────────────────────────────────────────────
+  //           Positioned(
+  //             top: 6,
+  //             left: 6,
+  //             child: Container(
+  //               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+  //               decoration: BoxDecoration(
+  //                 color: isActif
+  //                     ? const Color.fromARGB(255, 35, 177, 127)
+  //                     : Colors.grey,
+  //                 borderRadius: BorderRadius.circular(20),
+  //               ),
+  //               child: Row(
+  //                 mainAxisSize: MainAxisSize.min,
+  //                 children: [
+  //                   Icon(
+  //                     isActif ? Icons.visibility : Icons.visibility_off,
+  //                     color: Colors.white,
+  //                     size: 11,
+  //                   ),
+  //                   const SizedBox(width: 3),
+  //                   Text(
+  //                     isActif ? 'Actif' : 'Inactif',
+  //                     style: const TextStyle(
+  //                       color: Colors.white,
+  //                       fontSize: 10,
+  //                       fontWeight: FontWeight.bold,
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Future<void> _afficherImageEnGrand(
     String imageUrl,
@@ -368,112 +609,122 @@ class _ListeImagesState extends State<ListeImages> {
         image.statut[0].toUpperCase() + image.statut.substring(1);
     bool isUpdating = false;
 
-    await showDialog(
+    await showModalBottomSheet(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          backgroundColor: c.authCardBackground,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Center(
-            child: Text(
-              'Modifier les informations',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: c.authTextPrimary,
+      isScrollControlled: true,
+      backgroundColor: c.authCardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModal) => SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            MediaQuery.of(ctx).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Modifier les informations',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: c.authTextPrimary,
+                ),
               ),
-            ),
-          ),
-          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _dialogField(
-                  controller: titreController,
-                  hint: 'Titre',
-                  c: c,
+              const SizedBox(height: 14),
+              _dialogField(controller: titreController, hint: 'Titre', c: c),
+              const SizedBox(height: 10),
+              _dialogField(
+                controller: descriptionController,
+                hint: 'Description',
+                c: c,
+                maxLines: 5,
+              ),
+              const SizedBox(height: 10),
+              Container(
+                decoration: BoxDecoration(
+                  color: c.authCardBackground,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: c.authBorder, width: 1.5),
                 ),
-                const SizedBox(height: 8),
-                _dialogField(
-                  controller: descriptionController,
-                  hint: 'Description',
-                  c: c,
-                  maxLines: 5,
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  decoration: BoxDecoration(
-                    color: c.authCardBackground,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: c.authBorder, width: 1.5),
-                  ),
-                  child: DropdownButtonFormField<String>(
-                    value: statutSelectionne,
-                    dropdownColor: c.authCardBackground,
-                    iconEnabledColor: c.authAccent,
-                    style: TextStyle(color: c.authTextPrimary),
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 4,
-                      ),
-                      hintStyle: TextStyle(color: c.authTextSecondary),
+                child: DropdownButtonFormField<String>(
+                  value: statutSelectionne,
+                  dropdownColor: c.authCardBackground,
+                  iconEnabledColor: c.authAccent,
+                  style: TextStyle(color: c.authTextPrimary),
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
                     ),
-                    items: statuts
-                        .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                        .toList(),
-                    onChanged: (val) {
-                      if (val != null) setState(() => statutSelectionne = val);
-                    },
+                    hintStyle: TextStyle(color: c.authTextSecondary),
                   ),
-                ),
-                if (isUpdating)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 20),
-                    child: CircularProgressIndicator(color: c.authAccent),
-                  ),
-              ],
-            ),
-          ),
-          actions: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text(
-                    'Annuler',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: c.authTextSecondary,
-                    ),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () async {
-                    setState(() => isUpdating = true);
-                    await _modifierImage(
-                      image.id,
-                      titreController.text,
-                      descriptionController.text,
-                      statutSelectionne,
-                    );
-                    setState(() => isUpdating = false);
-                    Navigator.of(context).pop();
+                  items: statuts
+                      .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                      .toList(),
+                  onChanged: (val) {
+                    if (val != null) setModal(() => statutSelectionne = val);
                   },
-                  child: Text(
-                    'Enregistrer',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: c.authAccent,
+                ),
+              ),
+              if (isUpdating)
+                Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: CircularProgressIndicator(color: c.authAccent),
+                ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: c.authTextSecondary,
+                        side: BorderSide(color: c.authBorder),
+                        minimumSize: const Size(double.infinity, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Annuler'),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: isUpdating
+                          ? null
+                          : () async {
+                              setModal(() => isUpdating = true);
+                              await _modifierImage(
+                                image.id,
+                                titreController.text,
+                                descriptionController.text,
+                                statutSelectionne,
+                              );
+                              if (ctx.mounted) Navigator.of(ctx).pop();
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: c.authButton,
+                        foregroundColor: c.authTextPrimary,
+                        elevation: 0,
+                        minimumSize: const Size(double.infinity, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Enregistrer'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -555,15 +806,13 @@ class _ListeImagesState extends State<ListeImages> {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           backgroundColor: c.authCardBackground,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Center(
             child: Text(
               'Suppression',
-              style: TextStyle(
-                color: Colors.red,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
             ),
           ),
           content: Column(
@@ -711,10 +960,7 @@ class _AjouterImagesState extends State<AjouterImages> {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: sw * 0.06,
-            vertical: 16,
-          ),
+          padding: EdgeInsets.symmetric(horizontal: sw * 0.06, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -792,9 +1038,7 @@ class _AjouterImagesState extends State<AjouterImages> {
 
               _buildTextField(
                 titreImage,
-                _avecImage
-                    ? "Titre de l'image"
-                    : "Titre de l'information",
+                _avecImage ? "Titre de l'image" : "Titre de l'information",
                 c,
               ),
               const SizedBox(height: 8),
@@ -811,9 +1055,7 @@ class _AjouterImagesState extends State<AjouterImages> {
               const SizedBox(height: 8),
               _buildTextField(
                 detailsImage,
-                _avecImage
-                    ? "Détails de l'image"
-                    : "Contenu de l'information",
+                _avecImage ? "Détails de l'image" : "Contenu de l'information",
                 c,
                 maxLines: 10,
               ),
@@ -933,6 +1175,7 @@ class _AjouterImagesState extends State<AjouterImages> {
         value: selectedItem,
         dropdownColor: c.authCardBackground,
         iconEnabledColor: c.authAccent,
+        // couleur du texte dans le dropdown
         style: TextStyle(color: c.authTextPrimary),
         decoration: InputDecoration(
           border: InputBorder.none,
@@ -941,7 +1184,7 @@ class _AjouterImagesState extends State<AjouterImages> {
             vertical: 4,
           ),
           hintText: label,
-          hintStyle: TextStyle(color: c.authTextSecondary),
+          hintStyle: TextStyle(color: c.authTextPrimary),
         ),
         items: items
             .map(
