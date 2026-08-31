@@ -1,11 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/services/auth_service.dart';
 
 // ignore: must_be_immutable
 class ParametresVerification extends StatelessWidget {
   ParametresVerification({super.key});
-  User? user = FirebaseAuth.instance.currentUser;
   @override
   Widget build(BuildContext context) {
     final c = Config.colors;
@@ -55,7 +55,9 @@ class ParametresVerification extends StatelessWidget {
       ),
       persistentFooterButtons: [
         Text(
-          user!.displayName!,
+          AuthService.getUtilisateur()?.displayName ??
+              FirebaseAuth.instance.currentUser?.displayName ??
+              '',
           style: TextStyle(
             fontFamily: 'Lobster',
             color: Config.colors.bleuClaire,
