@@ -158,16 +158,21 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
   }
 
   Future<void> _loadUserData() async {
-    final u = FirebaseAuth.instance.currentUser;
-    if (u == null) return;
-    final gare = await recupererGare(u.uid);
+    // Identifiant metier : AuthService (token Sanctum) en priorite ; repli
+    // sur currentUser.uid tant que les flux de creation de compte
+    // (authentification.dart) ne peuplent pas encore AuthService.
+    final idUtilisateur =
+        AuthService.getUid() ?? FirebaseAuth.instance.currentUser?.uid;
+    if (idUtilisateur == null) return;
+    final gare = await recupererGare(idUtilisateur);
     final role = await recupererRole();
-    if (mounted)
+    if (mounted) {
       setState(() {
-        _uid = u.uid;
+        _uid = idUtilisateur;
         _gare = gare;
         _role = role;
       });
+    }
   }
 
   @override
