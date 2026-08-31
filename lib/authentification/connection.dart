@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:mvst_admin/authentification/authentification.dart';
 import 'package:mvst_admin/config/config.dart';
@@ -12,6 +13,9 @@ import 'package:mvst_admin/main.dart';
 import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/mesfonctions/keyboard_notifier.dart';
 import 'package:mvst_admin/authentification/clavier_numerique.dart';
+import 'package:mvst_admin/services/api_client.dart';
+import 'package:mvst_admin/services/auth_service.dart';
+import 'package:mvst_admin/services/token_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Login extends StatefulWidget {
@@ -33,6 +37,7 @@ class _LoginState extends State<Login> {
   String _gare = '';
   String _uid = '';
   String _role = 'admin';
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   @override
   void dispose() {
@@ -179,12 +184,63 @@ class _LoginState extends State<Login> {
   Future<void> _seConnecter() async {
     setState(() => _isLoading = true);
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: '$_telephone@gmail.com',
-        password: '${_pin}mv',
-      );
+      // Source de verite : Laravel Sanctum.
+      final response = await ApiClient.instance
+          .post('admin/login', body: {'telephone': _telephone, 'pin': _pin})
+          .timeout(const Duration(seconds: 10));
 
+      final data = jsonDecode(response.body);
+
+      if (data['success'] != true) {
+        if (mounted) {
+          setState(() {
+            _erreur = data['message'] as String? ?? 'Code Secret incorrect.';
+            _pin = '';
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      final utilisateur = data['utilisateur'] as Map<String, dynamic>;
+
+      // Token Sanctum (future source de verite unique).
+      await TokenStorage.saveToken(data['token'] as String);
+
+      // Cles lues par AuthService.chargerDepuisStorage().
+      final nomComplet = [
+        utilisateur['nom']?.toString() ?? '',
+        utilisateur['prenoms']?.toString() ?? '',
+      ].where((s) => s.isNotEmpty).join(' ').trim();
+      await _secureStorage.write(
+        key: 'user_idUtilisateur',
+        value: utilisateur['idUtilisateur']?.toString() ?? _uid,
+      );
+      await _secureStorage.write(key: 'user_name', value: nomComplet);
+
+      // Valeurs metier issues de la reponse serveur (fallback sur celles
+      // recuperees a l'etape telephone si absentes).
+      _gare = utilisateur['gare']?.toString() ?? _gare;
+      _role = utilisateur['role']?.toString() ?? _role;
+      _uid = utilisateur['idUtilisateur']?.toString() ?? _uid;
+
+      // Pont transition : on continue d'ecrire gare/role/uid en
+      // SharedPreferences, encore lus par main() et profil.dart tant que
+      // le Lot 1c n'a pas migre ces lectures vers AuthService.
       await enregistrerSession(_gare, _uid, _role);
+
+      // Rafraichir le cache memoire d'AuthService avant navigation.
+      await AuthService.chargerDepuisStorage();
+
+      // Best-effort : garder une session Firebase valide (currentUser) le
+      // temps que les autres ecrans migrent. Un echec Firebase n'invalide
+      // PAS un login Laravel deja reussi.
+      try {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: '$_telephone@gmail.com',
+          password: '${_pin}mv',
+        );
+      } catch (_) {}
 
       if (mounted) {
         Navigator.pushAndRemoveUntil(
@@ -192,13 +248,6 @@ class _LoginState extends State<Login> {
           MaterialPageRoute(builder: (_) => const Accueil()),
           (route) => false,
         );
-      }
-    } on FirebaseAuthException {
-      if (mounted) {
-        setState(() {
-          _erreur = 'Code Secret incorrect.';
-          _pin = '';
-        });
       }
     } catch (_) {
       if (mounted) {
