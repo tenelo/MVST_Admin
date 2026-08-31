@@ -2,7 +2,6 @@
 
 import 'dart:convert';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -231,16 +230,6 @@ class _LoginState extends State<Login> {
 
       // Rafraichir le cache memoire d'AuthService avant navigation.
       await AuthService.chargerDepuisStorage();
-
-      // Best-effort : garder une session Firebase valide (currentUser) le
-      // temps que les autres ecrans migrent. Un echec Firebase n'invalide
-      // PAS un login Laravel deja reussi.
-      try {
-        await FirebaseAuth.instance.signInWithEmailAndPassword(
-          email: '$_telephone@gmail.com',
-          password: '${_pin}mv',
-        );
-      } catch (_) {}
 
       if (mounted) {
         Navigator.pushAndRemoveUntil(
