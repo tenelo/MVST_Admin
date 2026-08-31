@@ -27,6 +27,7 @@ import 'package:mvst_admin/verifTickets/verifierticket.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mvst_admin/parametres/gestion_admins.dart';
 import 'package:mvst_admin/authentification/login_wrapper.dart';
+import 'package:mvst_admin/services/auth_service.dart';
 
 DateTime? dateActuelle = DateTime.now();
 
@@ -90,6 +91,17 @@ void main() async {
   runApp(const MyApp());
 }
 
+/// Decide l'ecran de demarrage.
+/// Palier 1 : token Sanctum present -> connecte (source de verite).
+/// Palier 2 : pas de token mais session Firebase encore active (compat
+/// pendant la migration) -> connecte.
+/// Sinon -> non connecte.
+Future<bool> _decideDemarrage() async {
+  await AuthService.chargerDepuisStorage();
+  if (AuthService.estConnecte()) return true;
+  return FirebaseAuth.instance.currentUser != null;
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -109,19 +121,15 @@ class MyApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('fr', '')],
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
+      home: FutureBuilder<bool>(
+        future: _decideDemarrage(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (!snapshot.hasData) {
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             );
           }
-          if (snapshot.hasData) {
-            return const Accueil();
-          } else {
-            return const LoginWrapper();
-          }
+          return snapshot.data! ? const Accueil() : const LoginWrapper();
         },
       ),
     );
@@ -1019,15 +1027,19 @@ void showIncompleteFieldsSnackBar(BuildContext context) {
   );
 }
 
-void deconnexion(BuildContext context) async {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  await _auth.signOut();
-  // si l'admin est déconecté
+Future<void> deconnexion(BuildContext context) async {
+  // Nettoyage complet : token Sanctum + identite locale + session
+  // Firebase residuelle. AuthService.deconnexion centralise tout ca
+  // (POST /logout best-effort, suppression token, purge cles, signOut).
+  await AuthService.deconnexion();
+  // Purge aussi les cles SharedPreferences propres a l'admin (gare/uid/
+  // role) encore lues par main() et profil.dart.
   await supprimerGareEtUid();
 
+  if (!context.mounted) return;
   Navigator.pushAndRemoveUntil(
     context,
-    MaterialPageRoute(builder: (BuildContext context) => const Login()),
+    MaterialPageRoute(builder: (_) => const Login()),
     (route) => false,
   );
 }
