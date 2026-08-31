@@ -67,7 +67,6 @@ String dateDeDemainStr = DateFormat(formatLong).format(dateDeDemain);
 String dateApresDemainStr = DateFormat(formatLong).format(dateApresDemain);
 String dateDhierStr = DateFormat(formatLong).format(dateDhier);
 
-User? user;
 String? profil;
 int? tailleEcran;
 double? taille;
@@ -273,9 +272,11 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                           ),
                         ),
                         onTap: () async {
-                          if (FirebaseAuth.instance.currentUser != null) {
+                          if (AuthService.estConnecte()) {
                             String userId =
-                                FirebaseAuth.instance.currentUser!.uid;
+                                AuthService.getUid() ??
+                                FirebaseAuth.instance.currentUser?.uid ??
+                                '';
                             String userProfil =
                                 await recupererRole() ?? 'admin';
                             Navigator.push(
@@ -310,7 +311,7 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                           ),
                         ),
                         onTap: () {
-                          if (FirebaseAuth.instance.currentUser != null) {
+                          if (AuthService.estConnecte()) {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -333,7 +334,7 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                           ),
                         ),
                         onTap: () {
-                          if (FirebaseAuth.instance.currentUser != null) {
+                          if (AuthService.estConnecte()) {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -384,7 +385,7 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                           ),
                         ),
                         onTap: () {
-                          if (FirebaseAuth.instance.currentUser != null) {
+                          if (AuthService.estConnecte()) {
                             Navigator.pop(context);
                             Navigator.push(
                               context,
@@ -408,7 +409,7 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                           ),
                         ),
                         onTap: () {
-                          if (FirebaseAuth.instance.currentUser != null) {
+                          if (AuthService.estConnecte()) {
                             Navigator.pop(context);
                             Navigator.push(
                               context,
@@ -435,7 +436,7 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                           ),
                         ),
                         onTap: () {
-                          if (FirebaseAuth.instance.currentUser != null) {
+                          if (AuthService.estConnecte()) {
                             Navigator.pop(context);
                             Navigator.push(
                               context,
@@ -706,9 +707,9 @@ Widget scannQrCode(BuildContext ctx, Function setLoadingState) {
     icon: Icons.qr_code_scanner_outlined,
     label: 'SCANNER LES TICKETS',
     onTap: () async {
-      if (FirebaseAuth.instance.currentUser != null) {
-        user = FirebaseAuth.instance.currentUser;
-        final String _uid = user!.uid;
+      if (AuthService.estConnecte()) {
+        final String _uid =
+            AuthService.getUid() ?? FirebaseAuth.instance.currentUser?.uid ?? '';
         final String? _gare = await recupererGare(_uid);
         final String profilAdmin = await recupererRole() ?? 'admin';
         await ListesDesTickets.ticketsAscanner(_gare ?? '', profilAdmin);
@@ -741,9 +742,9 @@ Widget ticketsScannes(BuildContext ctx, Function setLoadingState) {
     icon: CupertinoIcons.tickets,
     label: 'TICKETS SCANNÉS',
     onTap: () async {
-      if (FirebaseAuth.instance.currentUser != null) {
-        user = FirebaseAuth.instance.currentUser;
-        final String _uid = user!.uid;
+      if (AuthService.estConnecte()) {
+        final String _uid =
+            AuthService.getUid() ?? FirebaseAuth.instance.currentUser?.uid ?? '';
         final String? _gare = await recupererGare(_uid);
         Navigator.push(
           ctx,
@@ -769,9 +770,9 @@ Widget graphiques(BuildContext ctx, Function setLoadingState) {
     icon: Icons.bar_chart_outlined,
     label: 'GRAPHIQUES',
     onTap: () async {
-      if (FirebaseAuth.instance.currentUser != null) {
-        user = FirebaseAuth.instance.currentUser;
-        final String _uid = user!.uid;
+      if (AuthService.estConnecte()) {
+        final String _uid =
+            AuthService.getUid() ?? FirebaseAuth.instance.currentUser?.uid ?? '';
         final String? _gare = await recupererGare(_uid);
         Navigator.push(
           ctx,
@@ -802,9 +803,9 @@ Widget departsDuJour(BuildContext ctx, Function setLoadingState) {
     icon: Icons.bar_chart,
     label: 'DÉPARTS DU JOUR',
     onTap: () async {
-      if (FirebaseAuth.instance.currentUser != null) {
-        user = FirebaseAuth.instance.currentUser;
-        final String _uid = user!.uid;
+      if (AuthService.estConnecte()) {
+        final String _uid =
+            AuthService.getUid() ?? FirebaseAuth.instance.currentUser?.uid ?? '';
         final String? _gare = await recupererGare(_uid);
         Navigator.push(
           ctx,
@@ -835,9 +836,9 @@ Widget tableau(BuildContext ctx, Function setLoadingState) {
     icon: Icons.format_list_bulleted_sharp,
     label: 'Tous les Tickets',
     onTap: () async {
-      if (FirebaseAuth.instance.currentUser != null) {
-        user = FirebaseAuth.instance.currentUser;
-        final String _uid = user!.uid;
+      if (AuthService.estConnecte()) {
+        final String _uid =
+            AuthService.getUid() ?? FirebaseAuth.instance.currentUser?.uid ?? '';
         final String? _gare = await recupererGare(_uid);
         Navigator.push(
           ctx,
@@ -863,9 +864,9 @@ Widget placesOccupees(BuildContext ctx, Function setLoadingState) {
     icon: Icons.event_seat,
     label: 'PLACES OCCUPÉES',
     onTap: () async {
-      if (FirebaseAuth.instance.currentUser != null) {
-        user = FirebaseAuth.instance.currentUser;
-        final String _uid = user!.uid;
+      if (AuthService.estConnecte()) {
+        final String _uid =
+            AuthService.getUid() ?? FirebaseAuth.instance.currentUser?.uid ?? '';
         final String? _gare = await recupererGare(_uid);
         Navigator.push(
           ctx,
@@ -896,9 +897,9 @@ Widget listePassagers(BuildContext ctx, Function setLoadingState) {
     icon: Icons.format_list_bulleted,
     label: 'LISTE DES PASSAGERS',
     onTap: () async {
-      if (FirebaseAuth.instance.currentUser != null) {
-        user = FirebaseAuth.instance.currentUser;
-        final String _uid = user!.uid;
+      if (AuthService.estConnecte()) {
+        final String _uid =
+            AuthService.getUid() ?? FirebaseAuth.instance.currentUser?.uid ?? '';
         final String? _gare = await recupererGare(_uid);
         Navigator.push(
           ctx,
@@ -930,7 +931,7 @@ Widget suppressionTickets(BuildContext ctx, Function setLoadingState) {
     label: 'SUPPRIMER TICKET',
     iconColor: Colors.red[300]!,
     onTap: () async {
-      if (FirebaseAuth.instance.currentUser != null) {
+      if (AuthService.estConnecte()) {
         Navigator.push(
           ctx,
           MaterialPageRoute(
@@ -959,7 +960,7 @@ Widget listeUtilisateurs(BuildContext ctx, Function setLoadingState) {
     icon: Icons.people_alt_outlined,
     label: 'UTILISATEURS',
     onTap: () async {
-      if (FirebaseAuth.instance.currentUser != null) {
+      if (AuthService.estConnecte()) {
         Navigator.push(
           ctx,
           MaterialPageRoute(builder: (_) => const ListeDesUtilisateurs()),
@@ -982,7 +983,7 @@ Widget comptesBloques(BuildContext ctx, Function setLoadingState) {
     label: 'COMPTES BLOQUÉS',
     iconColor: Colors.red[400]!,
     onTap: () async {
-      if (FirebaseAuth.instance.currentUser != null) {
+      if (AuthService.estConnecte()) {
         Navigator.push(
           ctx,
           MaterialPageRoute(builder: (_) => const GestionComptesBloques()),
@@ -1004,7 +1005,7 @@ Widget suggestions(BuildContext ctx, Function setLoadingState) {
     icon: Icons.chat_bubble_outline_rounded,
     label: 'SUGGESTIONS',
     onTap: () async {
-      if (FirebaseAuth.instance.currentUser != null) {
+      if (AuthService.estConnecte()) {
         Navigator.push(
           ctx,
           MaterialPageRoute(builder: (_) => const SuggestionsAdmin()),
