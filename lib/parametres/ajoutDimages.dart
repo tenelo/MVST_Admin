@@ -583,20 +583,6 @@ class _ListeImagesState extends State<ListeImages> {
     );
   }
 
-  Widget _buildActionButtons(ImageModel image, dynamic c) {
-    return Row(
-      children: [
-        IconButton(
-          icon: Icon(Icons.edit, color: c.authAccent),
-          onPressed: () => _showEditDialog(image),
-        ),
-        IconButton(
-          icon: const Icon(Icons.delete, color: Colors.red),
-          onPressed: () => _showDeleteDialog(image),
-        ),
-      ],
-    );
-  }
 
   Future<void> _showEditDialog(ImageModel image) async {
     final c = Config.colors;
@@ -652,7 +638,7 @@ class _ListeImagesState extends State<ListeImages> {
                   border: Border.all(color: c.authBorder, width: 1.5),
                 ),
                 child: DropdownButtonFormField<String>(
-                  value: statutSelectionne,
+                  initialValue: statutSelectionne,
                   dropdownColor: c.authCardBackground,
                   iconEnabledColor: c.authAccent,
                   style: TextStyle(color: c.authTextPrimary),
