@@ -1,10 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/models/models.dart';
+import 'package:mvst_admin/services/api_client.dart';
 
 List<PlacesTickets> maListeDeTicketsVIP = [];
 
@@ -54,10 +54,9 @@ class _CarVIPState extends State<CarVIP> {
       });
 
     try {
-      final response = await http.post(
-        apiUri('placesAssises.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'documentId': widget.documentId}),
+      final response = await ApiClient.instance.post(
+        'placesAssises.php',
+        body: {'documentId': widget.documentId},
       );
 
       if (response.statusCode == 200) {

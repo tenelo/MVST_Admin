@@ -1,9 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
-import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
+import 'package:mvst_admin/services/api_client.dart';
 
 class LignesVip extends StatefulWidget {
   const LignesVip({super.key});
@@ -48,10 +47,8 @@ class _LignesVipState extends State<LignesVip> {
     setState(() => _isLoading = true);
     try {
       final results = await Future.wait([
-        http.get(apiUri('gares.php')),
-        http.get(
-          apiUri('api_lignes.php?type=vip'),
-        ),
+        ApiClient.instance.get('gares.php'),
+        ApiClient.instance.get('api_lignes.php?type=vip'),
       ]);
       if (!mounted) return;
 
@@ -79,9 +76,7 @@ class _LignesVipState extends State<LignesVip> {
 
   Future<void> _rafraichirLignes() async {
     try {
-      final response = await http.get(
-        apiUri('api_lignes.php?type=vip'),
-      );
+      final response = await ApiClient.instance.get('api_lignes.php?type=vip');
       if (response.statusCode == 200 && mounted) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
@@ -101,17 +96,16 @@ class _LignesVipState extends State<LignesVip> {
     setState(() => _isAdding = true);
 
     try {
-      final response = await http.post(
-        apiUri('api_lignes.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      final response = await ApiClient.instance.post(
+        'api_lignes.php',
+        body: {
           'action': 'ajouter',
           'depart': depart,
           'destination': destination,
           'ligne': '$depart $destination',
           'prix': prix,
           'type': 'vip',
-        }),
+        },
       );
 
       if (response.statusCode == 200 && mounted) {
@@ -141,17 +135,16 @@ class _LignesVipState extends State<LignesVip> {
     setState(() => _isUpdating = true);
 
     try {
-      final response = await http.post(
-        apiUri('api_lignes.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      final response = await ApiClient.instance.post(
+        'api_lignes.php',
+        body: {
           'action': 'modifier',
           'id': id,
           'depart': depart,
           'destination': destination,
           'ligne': '$depart $destination',
           'prix': prix,
-        }),
+        },
       );
 
       if (response.statusCode == 200 && mounted) {
@@ -178,10 +171,9 @@ class _LignesVipState extends State<LignesVip> {
     setState(() => _isDeleting = true);
 
     try {
-      final response = await http.post(
-        apiUri('api_lignes.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'action': 'supprimer', 'id': id}),
+      final response = await ApiClient.instance.post(
+        'api_lignes.php',
+        body: {'action': 'supprimer', 'id': id},
       );
 
       if (response.statusCode == 200 && mounted) {
