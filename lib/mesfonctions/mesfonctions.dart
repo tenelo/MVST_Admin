@@ -95,30 +95,33 @@ class MonTicket {
 }
 
 // ─── Mise à jour etatScanne via PHP ──────────────────────────────────────────
-Future<void> misAjourEtatScanne(
+// Renvoie l'etat renvoye par le serveur : 'scanne' (ok), 'deja_scanne',
+// 'introuvable', ou null si erreur reseau/timeout (on n'a pas pu savoir).
+Future<String?> misAjourEtatScanne(
   String documentId,
   String idUtilisateur,
   int place,
 ) async {
   try {
-    final response = await http.post(
-      apiUri('misAjourEtatScanne.php'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'documentId': documentId,
-        'idUtilisateur': idUtilisateur,
-        'place': place,
-      }),
-    );
+    final response = await http
+        .post(
+          apiUri('misAjourEtatScanne.php'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'documentId': documentId,
+            'idUtilisateur': idUtilisateur,
+            'place': place,
+          }),
+        )
+        .timeout(const Duration(seconds: 5));
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      if (data['success'] != true) {
-        // Silencieux — ne pas bloquer le scan
-      }
+      return data['etat'] as String?;
     }
+    return null;
   } catch (e) {
-    // Silencieux — ne pas bloquer le scan
+    return null; // reseau lent/coupe : on ne bloque pas, on ne sait juste pas
   }
 }
 

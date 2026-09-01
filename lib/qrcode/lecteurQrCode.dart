@@ -245,23 +245,37 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
                                     dateDuJourFormate,
                                   )) {
                                     if (ticketData.etatScann == 'nonScanné') {
-                                      // ── Socket d'abord → couleur change instantanément côté client
+                                      // Notifier partage avec le dialog : true = ce ticket s'est revele
+                                      // deja scanne selon le serveur (bascule le dialog en bleu).
+                                      final dejaScanneNotifier =
+                                          ValueNotifier<bool>(false);
+
+                                      // Emission socket immediate (temps reel cote client, inchange).
                                       _emettreTicketScanne(ticketData);
 
                                       if (!mounted) return;
+                                      // Dialog VERT ouvert INSTANTANEMENT (aucune attente reseau).
                                       showDialog(
                                         context: context,
                                         barrierDismissible: false,
-                                        builder: (context) =>
-                                            _dialogValide(context, ticketData),
+                                        builder: (context) => _dialogScanResultat(
+                                          context,
+                                          ticketData,
+                                          dejaScanneNotifier,
+                                        ),
                                       );
 
-                                      // PHP en arrière-plan pendant que l'admin lit le dialog
+                                      // POST en arriere-plan : si le serveur dit "deja_scanne", on bascule
+                                      // le contenu du dialog en bleu SANS le fermer (via le notifier).
                                       misAjourEtatScanne(
                                         ticketData.idTicket,
                                         ticketData.idUtilisateur,
                                         ticketData.place,
-                                      );
+                                      ).then((etat) {
+                                        if (etat == 'deja_scanne') {
+                                          dejaScanneNotifier.value = true;
+                                        }
+                                      });
                                     } else {
                                       showDialog(
                                         context: context,
@@ -413,31 +427,46 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
 
   // ── Dialogs ─────────────────────────────────────────────────────────────────
 
-  Widget _dialogValide(BuildContext context, TicketData ticketData) {
-    return AlertDialog(
-      title: _dialogTitre(
-        'assets/images/valide.png',
-        'TICKET VALIDE',
-        Colors.green,
-      ),
-      content: _buildTicketContent(ticketData, Colors.green),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.pop(context);
-            setState(() => compteurScans++);
-            _continuerScan();
-          },
-          child: const Text(
-            'OK',
-            style: TextStyle(
-              color: Colors.green,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+  Widget _dialogScanResultat(
+    BuildContext context,
+    TicketData ticketData,
+    ValueNotifier<bool> dejaScanneNotifier,
+  ) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: dejaScanneNotifier,
+      builder: (context, dejaScanne, _) {
+        // dejaScanne=false -> vert "TICKET VALIDE" ; true -> bleu "DEJA SCANNE"
+        final Color couleur = dejaScanne ? Colors.blue : Colors.green;
+        final String image = dejaScanne
+            ? 'assets/images/dejaValide.png'
+            : 'assets/images/valide.png';
+        final String titre = dejaScanne ? 'DÉJÀ SCANNÉ' : 'TICKET VALIDE';
+        return AlertDialog(
+          title: _dialogTitre(image, titre, couleur),
+          content: _buildTicketContent(ticketData, couleur),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                // On n'incremente le compteur que si le ticket etait
+                // reellement valide (pas un doublon).
+                if (!dejaScanne) {
+                  setState(() => compteurScans++);
+                }
+                _continuerScan();
+              },
+              child: Text(
+                'OK',
+                style: TextStyle(
+                  color: couleur,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 
