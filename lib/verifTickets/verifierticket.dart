@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/services/auth_service.dart';
@@ -55,9 +54,7 @@ class ParametresVerification extends StatelessWidget {
       ),
       persistentFooterButtons: [
         Text(
-          AuthService.getUtilisateur()?.displayName ??
-              FirebaseAuth.instance.currentUser?.displayName ??
-              '',
+          AuthService.getUtilisateur()?.displayName ?? '',
           style: TextStyle(
             fontFamily: 'Lobster',
             color: Config.colors.bleuClaire,

@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -90,15 +89,10 @@ void main() async {
   runApp(const MyApp());
 }
 
-/// Decide l'ecran de demarrage.
-/// Palier 1 : token Sanctum present -> connecte (source de verite).
-/// Palier 2 : pas de token mais session Firebase encore active (compat
-/// pendant la migration) -> connecte.
-/// Sinon -> non connecte.
+/// Decide l'ecran de demarrage : token Sanctum present -> connecte.
 Future<bool> _decideDemarrage() async {
   await AuthService.chargerDepuisStorage();
-  if (AuthService.estConnecte()) return true;
-  return FirebaseAuth.instance.currentUser != null;
+  return AuthService.estConnecte();
 }
 
 class MyApp extends StatelessWidget {
@@ -157,11 +151,7 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
   }
 
   Future<void> _loadUserData() async {
-    // Identifiant metier : AuthService (token Sanctum) en priorite ; repli
-    // sur currentUser.uid tant que les flux de creation de compte
-    // (authentification.dart) ne peuplent pas encore AuthService.
-    final idUtilisateur =
-        AuthService.getUid() ?? FirebaseAuth.instance.currentUser?.uid;
+    final idUtilisateur = AuthService.getUid();
     if (idUtilisateur == null) return;
     final gare = await recupererGare(idUtilisateur);
     final role = await recupererRole();
@@ -273,10 +263,7 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                         ),
                         onTap: () async {
                           if (AuthService.estConnecte()) {
-                            String userId =
-                                AuthService.getUid() ??
-                                FirebaseAuth.instance.currentUser?.uid ??
-                                '';
+                            String userId = AuthService.getUid() ?? '';
                             String userProfil =
                                 await recupererRole() ?? 'admin';
                             Navigator.push(
@@ -708,8 +695,7 @@ Widget scannQrCode(BuildContext ctx, Function setLoadingState) {
     label: 'SCANNER LES TICKETS',
     onTap: () async {
       if (AuthService.estConnecte()) {
-        final String _uid =
-            AuthService.getUid() ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+        final String _uid = AuthService.getUid() ?? '';
         final String? _gare = await recupererGare(_uid);
         final String profilAdmin = await recupererRole() ?? 'admin';
         await ListesDesTickets.ticketsAscanner(_gare ?? '', profilAdmin);
@@ -743,8 +729,7 @@ Widget ticketsScannes(BuildContext ctx, Function setLoadingState) {
     label: 'TICKETS SCANNÉS',
     onTap: () async {
       if (AuthService.estConnecte()) {
-        final String _uid =
-            AuthService.getUid() ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+        final String _uid = AuthService.getUid() ?? '';
         final String? _gare = await recupererGare(_uid);
         Navigator.push(
           ctx,
@@ -771,8 +756,7 @@ Widget graphiques(BuildContext ctx, Function setLoadingState) {
     label: 'GRAPHIQUES',
     onTap: () async {
       if (AuthService.estConnecte()) {
-        final String _uid =
-            AuthService.getUid() ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+        final String _uid = AuthService.getUid() ?? '';
         final String? _gare = await recupererGare(_uid);
         Navigator.push(
           ctx,
@@ -804,8 +788,7 @@ Widget departsDuJour(BuildContext ctx, Function setLoadingState) {
     label: 'DÉPARTS DU JOUR',
     onTap: () async {
       if (AuthService.estConnecte()) {
-        final String _uid =
-            AuthService.getUid() ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+        final String _uid = AuthService.getUid() ?? '';
         final String? _gare = await recupererGare(_uid);
         Navigator.push(
           ctx,
@@ -837,8 +820,7 @@ Widget tableau(BuildContext ctx, Function setLoadingState) {
     label: 'Tous les Tickets',
     onTap: () async {
       if (AuthService.estConnecte()) {
-        final String _uid =
-            AuthService.getUid() ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+        final String _uid = AuthService.getUid() ?? '';
         final String? _gare = await recupererGare(_uid);
         Navigator.push(
           ctx,
@@ -865,8 +847,7 @@ Widget placesOccupees(BuildContext ctx, Function setLoadingState) {
     label: 'PLACES OCCUPÉES',
     onTap: () async {
       if (AuthService.estConnecte()) {
-        final String _uid =
-            AuthService.getUid() ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+        final String _uid = AuthService.getUid() ?? '';
         final String? _gare = await recupererGare(_uid);
         Navigator.push(
           ctx,
@@ -898,8 +879,7 @@ Widget listePassagers(BuildContext ctx, Function setLoadingState) {
     label: 'LISTE DES PASSAGERS',
     onTap: () async {
       if (AuthService.estConnecte()) {
-        final String _uid =
-            AuthService.getUid() ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+        final String _uid = AuthService.getUid() ?? '';
         final String? _gare = await recupererGare(_uid);
         Navigator.push(
           ctx,
