@@ -1,10 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
-import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
+import 'package:mvst_admin/services/api_client.dart';
 import 'package:mvst_admin/graphiques/diagrammeABarres.dart';
 import 'package:mvst_admin/graphiques/graphiqueAnnee.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
@@ -62,14 +61,13 @@ class _GraphiquesABarresMoisAnneeState
   Future<void> _chargerTickets() async {
     if (mounted) setState(() => _isLoading = true);
     try {
-      final response = await http.post(
-        apiUri('graphiques.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      final response = await ApiClient.instance.post(
+        'graphiques.php',
+        body: {
           'type': 'moisAnnee',
           'moisAnnee': widget.moisAnnee,
           'gare': widget.gare,
-        }),
+        },
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
