@@ -33,7 +33,18 @@ class LecteurQrCode extends StatefulWidget {
 class _LecteurQrCodeState extends State<LecteurQrCode> {
   final MobileScannerController controller = MobileScannerController(
     autoStart: false,
-    detectionTimeoutMs: 500,
+    // Ne decoder que le QR : evite de tester tous les formats de
+    // code-barres a chaque frame (gain de vitesse de decodage).
+    formats: const [BarcodeFormat.qrCode],
+    // Zoom automatique sur un QR detecte de loin : evite de devoir
+    // rapprocher physiquement l'appareil.
+    autoZoom: true,
+    // Resolution plafonnee : un flux plus leger se decode plus vite
+    // qu'une haute resolution native pensee pour l'apercu.
+    cameraResolution: const Size(1280, 720),
+    // Cadence de detection ramenee au defaut package (250ms) pour plus
+    // de reactivite. N'affecte PAS le verrou anti-double-scan qrRead.
+    detectionTimeoutMs: 250,
   );
 
   bool isScanning = false;
