@@ -197,94 +197,123 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
         children: [
           // ── Zone scanner ──────────────────────────────────────────────────
           SizedBox(
-            height: size.height * .45,
+            height: size.height * .50,
             child: Stack(
               children: [
                 Padding(
                   padding: const EdgeInsets.all(32.0),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: MobileScanner(
-                      controller: controller,
-                      onDetect: (capture) async {
-                        if (!isScanning || qrRead) return;
-                        final barcode = capture.barcodes.firstOrNull;
-                        if (barcode?.rawValue == null) return;
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final Size zone = constraints.biggest;
+                      // Cadre carre centre, 70% de la plus petite dimension (un QR est carre).
+                      final double cote = (zone.shortestSide) * 0.70;
+                      final Rect scanWindow = Rect.fromCenter(
+                        center: zone.center(Offset.zero),
+                        width: cote,
+                        height: cote,
+                      );
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Stack(
+                          children: [
+                            MobileScanner(
+                              controller: controller,
+                              scanWindow: scanWindow,
+                              onDetect: (capture) async {
+                                if (!isScanning || qrRead) return;
+                                final barcode = capture.barcodes.firstOrNull;
+                                if (barcode?.rawValue == null) return;
 
-                        setState(() => qrRead = true);
+                                setState(() => qrRead = true);
 
-                        final ticketData = TicketData.fromQrCode(
-                          barcode!.rawValue!,
-                        );
+                                final ticketData = TicketData.fromQrCode(
+                                  barcode!.rawValue!,
+                                );
 
-                        final ticket = await _trouverTicket(ticketData);
+                                final ticket = await _trouverTicket(ticketData);
 
-                        if (!mounted) return;
+                                if (!mounted) return;
 
-                        if (ticket != null) {
-                          final String dateDuJour = DateFormat(
-                            'yyyy-MM-dd',
-                          ).format(DateTime.now());
-                          final DateTime dateDuJourFormate = DateTime.parse(
-                            dateDuJour,
-                          ).toUtc();
+                                if (ticket != null) {
+                                  final String dateDuJour = DateFormat(
+                                    'yyyy-MM-dd',
+                                  ).format(DateTime.now());
+                                  final DateTime dateDuJourFormate =
+                                      DateTime.parse(dateDuJour).toUtc();
 
-                          if (ticketData.dateCalcule.isAtSameMomentAs(
-                            dateDuJourFormate,
-                          )) {
-                            if (ticketData.etatScann == 'nonScanné') {
-                              // ── Socket d'abord → couleur change instantanément côté client
-                              _emettreTicketScanne(ticketData);
+                                  if (ticketData.dateCalcule.isAtSameMomentAs(
+                                    dateDuJourFormate,
+                                  )) {
+                                    if (ticketData.etatScann == 'nonScanné') {
+                                      // ── Socket d'abord → couleur change instantanément côté client
+                                      _emettreTicketScanne(ticketData);
 
-                              if (!mounted) return;
-                              showDialog(
-                                context: context,
-                                barrierDismissible: false,
-                                builder: (context) =>
-                                    _dialogValide(context, ticketData),
-                              );
+                                      if (!mounted) return;
+                                      showDialog(
+                                        context: context,
+                                        barrierDismissible: false,
+                                        builder: (context) =>
+                                            _dialogValide(context, ticketData),
+                                      );
 
-                              // PHP en arrière-plan pendant que l'admin lit le dialog
-                              misAjourEtatScanne(
-                                ticketData.idTicket,
-                                ticketData.idUtilisateur,
-                                ticketData.place,
-                              );
-                            } else {
-                              showDialog(
-                                context: context,
-                                barrierDismissible: false,
-                                builder: (context) =>
-                                    _dialogDejaValide(context, ticketData),
-                              );
-                            }
-                          } else if (ticketData.dateCalcule.isAfter(
-                            dateDuJourFormate,
-                          )) {
-                            showDialog(
-                              context: context,
-                              barrierDismissible: false,
-                              builder: (context) =>
-                                  _dialogFutureDate(context, ticketData),
-                            );
-                          } else {
-                            showDialog(
-                              context: context,
-                              barrierDismissible: false,
-                              builder: (context) =>
-                                  _dialogInvalide(context, ticketData),
-                            );
-                          }
-                        } else {
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (context) =>
-                                _dialogInvalide(context, ticketData),
-                          );
-                        }
-                      },
-                    ),
+                                      // PHP en arrière-plan pendant que l'admin lit le dialog
+                                      misAjourEtatScanne(
+                                        ticketData.idTicket,
+                                        ticketData.idUtilisateur,
+                                        ticketData.place,
+                                      );
+                                    } else {
+                                      showDialog(
+                                        context: context,
+                                        barrierDismissible: false,
+                                        builder: (context) => _dialogDejaValide(
+                                          context,
+                                          ticketData,
+                                        ),
+                                      );
+                                    }
+                                  } else if (ticketData.dateCalcule.isAfter(
+                                    dateDuJourFormate,
+                                  )) {
+                                    showDialog(
+                                      context: context,
+                                      barrierDismissible: false,
+                                      builder: (context) => _dialogFutureDate(
+                                        context,
+                                        ticketData,
+                                      ),
+                                    );
+                                  } else {
+                                    showDialog(
+                                      context: context,
+                                      barrierDismissible: false,
+                                      builder: (context) =>
+                                          _dialogInvalide(context, ticketData),
+                                    );
+                                  }
+                                } else {
+                                  showDialog(
+                                    context: context,
+                                    barrierDismissible: false,
+                                    builder: (context) =>
+                                        _dialogInvalide(context, ticketData),
+                                  );
+                                }
+                              },
+                            ),
+                            // Overlay visuel : cadre en equerre, cale sur le MEME scanWindow.
+                            Positioned.fromRect(
+                              rect: scanWindow,
+                              child: IgnorePointer(
+                                child: CustomPaint(
+                                  painter: _CadreMirePainter(),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                 ),
                 // Indicateur état scanner
@@ -615,4 +644,39 @@ class TicketData {
       dateCalcule: DateTime.parse(data[10].trim()),
     );
   }
+}
+
+class _CadreMirePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final double l = size.shortestSide * 0.18; // longueur des equerres
+    // Coin haut-gauche
+    canvas.drawLine(const Offset(0, 0), Offset(l, 0), paint);
+    canvas.drawLine(const Offset(0, 0), Offset(0, l), paint);
+    // Coin haut-droit
+    canvas.drawLine(Offset(size.width, 0), Offset(size.width - l, 0), paint);
+    canvas.drawLine(Offset(size.width, 0), Offset(size.width, l), paint);
+    // Coin bas-gauche
+    canvas.drawLine(Offset(0, size.height), Offset(l, size.height), paint);
+    canvas.drawLine(Offset(0, size.height), Offset(0, size.height - l), paint);
+    // Coin bas-droit
+    canvas.drawLine(
+      Offset(size.width, size.height),
+      Offset(size.width - l, size.height),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width, size.height),
+      Offset(size.width, size.height - l),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
