@@ -1,9 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
-import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
+import 'package:mvst_admin/services/api_client.dart';
 
 class Informations extends StatefulWidget {
   @override
@@ -38,7 +37,7 @@ class _InformationsState extends State<Informations> {
   Future<void> _chargerDonnees() async {
     if (mounted) setState(() => _isLoading = true);
     try {
-      final response = await http.get(apiUri('infosGares.php'));
+      final response = await ApiClient.instance.get('infosGares.php');
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true && mounted) {
@@ -55,15 +54,14 @@ class _InformationsState extends State<Informations> {
 
   Future<void> _ajouter() async {
     try {
-      await http.post(
-        apiUri('infosGares.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      await ApiClient.instance.post(
+        'infosGares.php',
+        body: {
           'action': 'ajouter',
           'ville': villeController.text,
           'description': descriptionController.text,
           'telephone': telephoneController.text,
-        }),
+        },
       );
       await _chargerDonnees();
     } catch (e) {}
@@ -71,16 +69,15 @@ class _InformationsState extends State<Informations> {
 
   Future<void> _modifier(int id) async {
     try {
-      await http.post(
-        apiUri('infosGares.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      await ApiClient.instance.post(
+        'infosGares.php',
+        body: {
           'action': 'modifier',
           'id': id,
           'ville': villeController.text,
           'description': descriptionController.text,
           'telephone': telephoneController.text,
-        }),
+        },
       );
       await _chargerDonnees();
     } catch (e) {}
@@ -88,10 +85,9 @@ class _InformationsState extends State<Informations> {
 
   Future<void> _supprimer(int id) async {
     try {
-      await http.post(
-        apiUri('infosGares.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'action': 'supprimer', 'id': id}),
+      await ApiClient.instance.post(
+        'infosGares.php',
+        body: {'action': 'supprimer', 'id': id},
       );
       await _chargerDonnees();
     } catch (e) {}

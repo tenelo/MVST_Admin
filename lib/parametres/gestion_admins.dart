@@ -3,9 +3,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
-import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
+import 'package:mvst_admin/services/api_client.dart';
 
 class GestionAdmins extends StatefulWidget {
   const GestionAdmins({super.key});
@@ -45,7 +44,7 @@ class _GestionAdminsState extends State<GestionAdmins> {
 
   Future<void> _recupererGares() async {
     try {
-      final response = await http.get(apiUri('gares.php'));
+      final response = await ApiClient.instance.get('gares.php');
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true && mounted) {
@@ -62,7 +61,7 @@ class _GestionAdminsState extends State<GestionAdmins> {
   Future<void> _recupererListeAdmins() async {
     setState(() => _isLoadingListe = true);
     try {
-      final response = await http.get(apiUri('listeAdmins.php'));
+      final response = await ApiClient.instance.get('listeAdmins.php');
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true && mounted) {
@@ -89,14 +88,13 @@ class _GestionAdminsState extends State<GestionAdmins> {
     });
 
     try {
-      final response = await http.post(
-        apiUri('ajouterNumeroAdmin.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      final response = await ApiClient.instance.post(
+        'ajouterNumeroAdmin.php',
+        body: {
           'telephone': _telephoneController.text.trim(),
           'role': _roleSelectionne,
           'gare': _gareSelectionnee,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -314,15 +312,14 @@ class _GestionAdminsState extends State<GestionAdmins> {
                         }
 
                         try {
-                          final response = await http.post(
-                            apiUri('modifierNumeroAdmin.php'),
-                            headers: {'Content-Type': 'application/json'},
-                            body: jsonEncode({
+                          final response = await ApiClient.instance.post(
+                            'modifierNumeroAdmin.php',
+                            body: {
                               'id': admin['id'],
                               'telephone': telephoneCtrl.text.trim(),
                               'role': roleSelectionne,
                               'gare': gareSelectionnee,
-                            }),
+                            },
                           );
 
                           if (response.statusCode == 200) {
@@ -416,10 +413,9 @@ class _GestionAdminsState extends State<GestionAdmins> {
     if (confirmer != true) return;
 
     try {
-      final response = await http.post(
-        apiUri('supprimerNumeroAdmin.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'telephone': telephone}),
+      final response = await ApiClient.instance.post(
+        'supprimerNumeroAdmin.php',
+        body: {'telephone': telephone},
       );
 
       if (response.statusCode == 200) {

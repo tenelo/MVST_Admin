@@ -1,9 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
-import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
+import 'package:mvst_admin/services/api_client.dart';
 
 class LignesStandard extends StatefulWidget {
   const LignesStandard({super.key});
@@ -42,8 +41,8 @@ class _LignesStandardState extends State<LignesStandard> {
     setState(() => _isLoading = true);
     try {
       final results = await Future.wait([
-        http.get(apiUri('gares.php')),
-        http.get(apiUri('api_lignes.php')),
+        ApiClient.instance.get('gares.php'),
+        ApiClient.instance.get('api_lignes.php'),
       ]);
       if (!mounted) return;
 
@@ -69,7 +68,7 @@ class _LignesStandardState extends State<LignesStandard> {
 
   Future<void> _rafraichirLignes() async {
     try {
-      final response = await http.get(apiUri('api_lignes.php'));
+      final response = await ApiClient.instance.get('api_lignes.php');
       if (response.statusCode == 200 && mounted) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
@@ -87,17 +86,16 @@ class _LignesStandardState extends State<LignesStandard> {
     if (!mounted) return;
     setState(() => _isAdding = true);
     try {
-      final response = await http.post(
-        apiUri('api_lignes.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      final response = await ApiClient.instance.post(
+        'api_lignes.php',
+        body: {
           'action': 'ajouter',
           'depart': depart,
           'destination': destination,
           'ligne': '$depart $destination',
           'prix': prix,
           'type': 'standard',
-        }),
+        },
       );
       if (response.statusCode == 200 && mounted) {
         final data = jsonDecode(response.body);
@@ -124,17 +122,16 @@ class _LignesStandardState extends State<LignesStandard> {
     if (!mounted) return;
     setState(() => _isUpdating = true);
     try {
-      final response = await http.post(
-        apiUri('api_lignes.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      final response = await ApiClient.instance.post(
+        'api_lignes.php',
+        body: {
           'action': 'modifier',
           'id': id,
           'depart': depart,
           'destination': destination,
           'ligne': '$depart $destination',
           'prix': prix,
-        }),
+        },
       );
       if (response.statusCode == 200 && mounted) {
         final data = jsonDecode(response.body);
@@ -158,10 +155,9 @@ class _LignesStandardState extends State<LignesStandard> {
     if (!mounted) return;
     setState(() => _isDeleting = true);
     try {
-      final response = await http.post(
-        apiUri('api_lignes.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'action': 'supprimer', 'id': id}),
+      final response = await ApiClient.instance.post(
+        'api_lignes.php',
+        body: {'action': 'supprimer', 'id': id},
       );
       if (response.statusCode == 200 && mounted) {
         final data = jsonDecode(response.body);

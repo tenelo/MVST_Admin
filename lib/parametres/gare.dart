@@ -3,9 +3,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
-import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
+import 'package:mvst_admin/services/api_client.dart';
 
 class Gares extends StatefulWidget {
   const Gares({super.key});
@@ -35,7 +34,7 @@ class _GaresState extends State<Gares> {
   Future<void> _rafraichirDonnees() async {
     if (mounted) setState(() => _isLoading = true);
     try {
-      final response = await http.get(apiUri('gares.php'));
+      final response = await ApiClient.instance.get('gares.php');
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true && mounted) {
@@ -52,10 +51,9 @@ class _GaresState extends State<Gares> {
 
   Future<void> _ajouterGare(String gare) async {
     try {
-      await http.post(
-        apiUri('gares.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'action': 'ajouter', 'gare': gare}),
+      await ApiClient.instance.post(
+        'gares.php',
+        body: {'action': 'ajouter', 'gare': gare},
       );
       _rafraichirDonnees();
     } catch (e) {}
@@ -63,10 +61,9 @@ class _GaresState extends State<Gares> {
 
   Future<void> _modifierGare(int id, String gare) async {
     try {
-      await http.post(
-        apiUri('gares.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'action': 'modifier', 'id': id, 'gare': gare}),
+      await ApiClient.instance.post(
+        'gares.php',
+        body: {'action': 'modifier', 'id': id, 'gare': gare},
       );
       _rafraichirDonnees();
     } catch (e) {}
@@ -74,10 +71,9 @@ class _GaresState extends State<Gares> {
 
   Future<void> _supprimerGare(int id) async {
     try {
-      await http.post(
-        apiUri('gares.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'action': 'supprimer', 'id': id}),
+      await ApiClient.instance.post(
+        'gares.php',
+        body: {'action': 'supprimer', 'id': id},
       );
       _rafraichirDonnees();
     } catch (e) {}

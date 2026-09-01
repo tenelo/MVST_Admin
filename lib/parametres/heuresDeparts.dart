@@ -1,9 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
-import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
+import 'package:mvst_admin/services/api_client.dart';
 
 class HeureDepart extends StatefulWidget {
   const HeureDepart({Key? key}) : super(key: key);
@@ -35,7 +34,7 @@ class _HeureDepartState extends State<HeureDepart> {
   Future<void> _chargerHeures() async {
     if (mounted) setState(() => _isLoading = true);
     try {
-      final response = await http.get(apiUri('heuresDepart.php'));
+      final response = await ApiClient.instance.get('heuresDepart.php');
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true && mounted) {
@@ -57,14 +56,13 @@ class _HeureDepartState extends State<HeureDepart> {
     try {
       final formattedTime =
           '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
-      await http.post(
-        apiUri('heuresDepart.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      await ApiClient.instance.post(
+        'heuresDepart.php',
+        body: {
           'action': 'ajouter',
           'heure': formattedTime,
           'type': 'standard',
-        }),
+        },
       );
       _timeController.clear();
       await _chargerHeures();
@@ -106,14 +104,13 @@ class _HeureDepartState extends State<HeureDepart> {
       final formattedTime =
           '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
       try {
-        await http.post(
-          apiUri('heuresDepart.php'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
+        await ApiClient.instance.post(
+          'heuresDepart.php',
+          body: {
             'action': 'modifier',
             'id': id,
             'heure': formattedTime,
-          }),
+          },
         );
         await _chargerHeures();
         if (mounted) {
@@ -164,10 +161,9 @@ class _HeureDepartState extends State<HeureDepart> {
 
     if (confirm == true) {
       try {
-        await http.post(
-          apiUri('heuresDepart.php'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'action': 'supprimer', 'id': id}),
+        await ApiClient.instance.post(
+          'heuresDepart.php',
+          body: {'action': 'supprimer', 'id': id},
         );
         await _chargerHeures();
         if (mounted) {
