@@ -4,12 +4,15 @@ import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:mvst_admin/authentification/clavier_numerique.dart';
 import 'package:mvst_admin/authentification/pin_creation.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/main.dart';
 import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
+import 'package:mvst_admin/services/api_client.dart';
+import 'package:mvst_admin/services/auth_service.dart';
+import 'package:mvst_admin/services/token_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ════════════════════════════════════════════════════════════════
@@ -110,11 +113,8 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
   final TextEditingController _prenomController = TextEditingController();
   final TextEditingController _residenceController = TextEditingController();
 
-  // 0 = formulaire, 1 = saisie PIN (compte Firebase existant)
-  int _etape = 0;
-  String _pin = '';
   bool _isLoading = false;
-  String? _erreur;
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   @override
   void dispose() {
@@ -141,199 +141,61 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
       );
       return;
     }
-
-    setState(() {
-      _isLoading = true;
-      _erreur = null;
-    });
     FocusScope.of(context).unfocus();
-
-    try {
-      // Si le numéro existe dans la BD MVST client, le compte Firebase existe aussi
-      // (MVST client crée toujours les deux ensemble)
-      final response = await http
-          .post(
-            apiUri('verifierTelephone.php'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'telephone': widget.telephone}),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      setState(() => _isLoading = false);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final bool existe = data['success'] == true && data['existe'] == true;
-
-        if (existe) {
-          // Numéro déjà enregistré comme client MVST → demander le PIN existant
-          setState(() {
-            _etape = 1;
-            _pin = '';
-            _erreur = null;
-          });
-        } else {
-          // Nouveau compte → créer via PinCreation
-          if (mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) =>
-                    PinCreation(onPinConfirmed: _creerNouveauCompte),
-              ),
-            );
-          }
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Erreur de vérification. Réessayez.')),
-          );
-        }
-      }
-    } catch (e) {
-      setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erreur de vérification. Réessayez.')),
-        );
-      }
-    }
-  }
-
-  // ── Cas A : nouveau compte Firebase (admin + client MVST) ──────────────────
-
-  Future<void> _creerNouveauCompte(String pin) async {
-    final userCredential = await FirebaseAuth.instance
-        .createUserWithEmailAndPassword(
-          email: '${widget.telephone}@gmail.com',
-          password: '${pin}mv',
-        );
-    final user = userCredential.user!;
-    await user.updateDisplayName(
-      '${_nomController.text.trim()} ${_prenomController.text.trim()}',
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PinCreation(onPinConfirmed: _finaliserCreation),
+      ),
     );
-
-    // Insère dans la base MVST client pour que ce numéro puisse utiliser l'app client
-    await http
-        .post(
-          apiUri('insert_utilisateur.php'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'idUtilisateur': user.uid,
-            'idAuth': user.uid,
-            'nom': _nomController.text.trim(),
-            'prenoms': _prenomController.text.trim(),
-            'residence': _residenceController.text.trim(),
-            'telephone': widget.telephone,
-            'points': 0,
-            'mail': '${widget.telephone}@gmail.com',
-          }),
-        )
-        .timeout(const Duration(seconds: 10));
-
-    // Enregistre les données admin
-    await http.post(
-      apiUri('ajouterAdmin.php'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'idUtilisateur': user.uid,
-        'idAuth': user.uid,
-        'nom': _nomController.text.trim(),
-        'prenoms': _prenomController.text.trim(),
-        'residence': _residenceController.text.trim(),
-        'telephone': widget.telephone,
-        'mail': '${widget.telephone}@gmail.com',
-      }),
-    );
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('gare', widget.gare);
-    await prefs.setString('uid', user.uid);
-    await prefs.setString('role', widget.role);
-    // PinCreation navigue vers Accueil après cette callback
   }
 
-  // ── Cas B : compte Firebase existant (déjà client MVST) ───────────────────
+  // ── Creation admin via Sanctum (serveur gere flux nouveau/existant) ─────────
 
-  void _onChiffre(String chiffre) {
-    if (_pin.length >= 4) return;
-    setState(() {
-      _erreur = null;
-      _pin += chiffre;
-    });
-    if (_pin.length == 4) _connecterCompteExistant();
-  }
-
-  void _onSupprimer() {
-    if (_pin.isEmpty) return;
-    setState(() {
-      _erreur = null;
-      _pin = _pin.substring(0, _pin.length - 1);
-    });
-  }
-
-  Future<void> _connecterCompteExistant() async {
-    setState(() => _isLoading = true);
-    try {
-      final result = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: '${widget.telephone}@gmail.com',
-        password: '${_pin}mv',
-      );
-      final user = result.user!;
-
-      // Met à jour le nom si nécessaire
-      final newName =
-          '${_nomController.text.trim()} ${_prenomController.text.trim()}';
-      if (user.displayName != newName) {
-        await user.updateDisplayName(newName);
-      }
-
-      // Enregistre / met à jour les données admin
-      await http.post(
-        apiUri('ajouterAdmin.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'idUtilisateur': user.uid,
-          'idAuth': user.uid,
+  Future<void> _finaliserCreation(String pin) async {
+    // Appel unique : le serveur gere flux A (nouveau) vs B (deja client),
+    // hashe le PIN et rend un token. PinCreation navigue vers Accueil apres.
+    final response = await ApiClient.instance
+        .post('admin/register', body: {
+          'telephone': widget.telephone,
+          'pin': pin,
           'nom': _nomController.text.trim(),
           'prenoms': _prenomController.text.trim(),
           'residence': _residenceController.text.trim(),
-          'telephone': widget.telephone,
-          'mail': '${widget.telephone}@gmail.com',
-        }),
-      );
+        })
+        .timeout(const Duration(seconds: 15));
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('gare', widget.gare);
-      await prefs.setString('uid', user.uid);
-      await prefs.setString('role', widget.role);
+    final data = jsonDecode(response.body);
 
-      if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (_) => const Accueil()),
-          (route) => false,
-        );
-      }
-    } on FirebaseAuthException {
-      if (mounted) {
-        setState(() {
-          _erreur = 'Code Secret incorrect.';
-          _pin = '';
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _erreur = 'Erreur de connexion. Réessayez.';
-          _pin = '';
-          _isLoading = false;
-        });
-      }
+    if (data['success'] != true) {
+      // Remonter l'erreur : PinCreation attend une exception pour ne pas
+      // naviguer vers Accueil sur echec.
+      throw Exception(data['message'] ?? 'Echec de la creation du compte');
     }
-    if (mounted) setState(() => _isLoading = false);
+
+    final utilisateur = data['utilisateur'] as Map<String, dynamic>;
+
+    await TokenStorage.saveToken(data['token'] as String);
+
+    final nomComplet = [
+      utilisateur['nom']?.toString() ?? '',
+      utilisateur['prenoms']?.toString() ?? '',
+    ].where((s) => s.isNotEmpty).join(' ').trim();
+    await _secureStorage.write(
+      key: 'user_idUtilisateur',
+      value: utilisateur['idUtilisateur']?.toString() ?? '',
+    );
+    await _secureStorage.write(key: 'user_name', value: nomComplet);
+
+    // Pont SharedPreferences (gare/uid/role encore lus par main()/profil.dart).
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('gare', utilisateur['gare']?.toString() ?? widget.gare);
+    await prefs.setString(
+        'uid', utilisateur['idUtilisateur']?.toString() ?? '');
+    await prefs.setString('role', utilisateur['role']?.toString() ?? widget.role);
+
+    await AuthService.chargerDepuisStorage();
+    // Pas de navigation ici : PinCreation._validerConfirmation navigue.
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -390,7 +252,7 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
       resizeToAvoidBottomInset: true,
       backgroundColor: c.authBackground,
       body: SafeArea(
-        child: _etape == 0 ? _buildFormulaire(c, sw) : _buildEtapePin(c, sw),
+        child: _buildFormulaire(c, sw),
       ),
     );
   }
@@ -541,94 +403,6 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
     );
   }
 
-  Widget _buildEtapePin(dynamic c, double sw) {
-    return Column(
-      children: [
-        Align(
-          alignment: Alignment.centerLeft,
-          child: IconButton(
-            icon: Icon(
-              Icons.arrow_back_ios_new,
-              color: c.authTextPrimary,
-              size: 20,
-            ),
-            onPressed: () => setState(() {
-              _etape = 0;
-              _pin = '';
-              _erreur = null;
-            }),
-          ),
-        ),
-        const SizedBox(height: 18),
-        Container(
-          width: sw * 0.20,
-          height: sw * 0.20,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: c.authAccent, width: 2),
-            color: c.authCardBackground,
-          ),
-          child: Center(
-            child: Text(
-              'MVST',
-              style: TextStyle(
-                color: c.authAccent,
-                fontSize: sw * 0.042,
-                fontFamily: 'Lobster',
-                letterSpacing: 1.5,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 18),
-        Text(
-          'Entrez votre Code Secret',
-          style: TextStyle(
-            color: c.authTextPrimary,
-            fontSize: sw * 0.052,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Ce numéro est déjà lié à un compte MVST',
-          style: TextStyle(color: c.authTextSecondary, fontSize: sw * 0.030),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '+225 ${widget.telephone}',
-          style: TextStyle(
-            color: c.authAccent,
-            fontSize: sw * 0.032,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 28),
-        _PinDots(longueur: _pin.length, erreur: _erreur != null, colors: c),
-        if (_erreur != null) ...[
-          const SizedBox(height: 14),
-          Text(
-            _erreur!,
-            style: const TextStyle(color: Colors.red, fontSize: 13),
-          ),
-        ],
-        const Spacer(),
-        if (_isLoading)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 40),
-            child: CircularProgressIndicator(color: c.authAccent),
-          )
-        else
-          ClavierNumerique(
-            onChiffre: _onChiffre,
-            onSupprimer: _onSupprimer,
-            colors: c,
-            sw: sw,
-          ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -893,42 +667,5 @@ class _PageDeVerificationState extends State<PageDeVerification> {
     }
 
     if (mounted) setState(() => _isLoading = false);
-  }
-}
-
-// ── Widget partagé ────────────────────────────────────────────────────────────
-
-class _PinDots extends StatelessWidget {
-  final int longueur;
-  final bool erreur;
-  final dynamic colors;
-  const _PinDots({
-    required this.longueur,
-    required this.erreur,
-    required this.colors,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final c = colors;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(4, (i) {
-        final rempli = i < longueur;
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 12),
-          width: 18,
-          height: 18,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: rempli ? c.authAccent : Colors.transparent,
-            border: Border.all(
-              color: erreur ? Colors.red : c.authAccent,
-              width: 2,
-            ),
-          ),
-        );
-      }),
-    );
   }
 }
