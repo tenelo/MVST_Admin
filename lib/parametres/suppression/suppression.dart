@@ -1,10 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
+import 'package:mvst_admin/services/api_client.dart';
 
 class Suppression extends StatefulWidget {
   const Suppression({
@@ -53,17 +53,16 @@ class _SuppressionState extends State<Suppression> {
     if (mounted) setState(() => _isLoading = true);
 
     try {
-      final response = await http.post(
-        apiUri('suppressionTickets.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      final response = await ApiClient.instance.post(
+        'suppressionTickets.php',
+        body: {
           'dates': [
             widget.dateHier,
             widget.aujoudhui,
             widget.demain,
             widget.apresDemain,
           ],
-        }),
+        },
       );
 
       if (response.statusCode == 200) {
@@ -383,10 +382,9 @@ class TicketDataSource extends DataTableSource {
                     Navigator.of(context).pop();
                     try {
                       // ── Supprimer via PHP ──────────────────────────────
-                      await http.post(
-                        apiUri('suppressionTickets.php'),
-                        headers: {'Content-Type': 'application/json'},
-                        body: jsonEncode({'action': 'supprimer', 'id': id}),
+                      await ApiClient.instance.post(
+                        'suppressionTickets.php',
+                        body: {'action': 'supprimer', 'id': id},
                       );
 
                       // ── Décrémenter points ────────────────────
@@ -416,10 +414,9 @@ class TicketDataSource extends DataTableSource {
 
   Future<void> _decrementerPoints(String idUtilisateur) async {
     try {
-      await http.post(
-        apiUri('decrementerPoints.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'idUtilisateur': idUtilisateur}),
+      await ApiClient.instance.post(
+        'decrementerPoints.php',
+        body: {'idUtilisateur': idUtilisateur},
       );
     } catch (e) {}
   }

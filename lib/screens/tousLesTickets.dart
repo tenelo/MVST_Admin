@@ -2,11 +2,11 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/screens/detailsTickets.dart';
+import 'package:mvst_admin/services/api_client.dart';
 
 class TousLesTickets extends StatefulWidget {
   const TousLesTickets({
@@ -69,13 +69,12 @@ class _TousLesTicketsState extends State<TousLesTickets> {
     if (mounted) setState(() => _isLoading = true);
 
     try {
-      final response = await http.post(
-        apiUri('tableauAdmin.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      final response = await ApiClient.instance.post(
+        'tableauAdmin.php',
+        body: {
           'annee': DateFormat('y').format(_dateSelectionnee),
           'gare': widget.gare,
-        }),
+        },
       );
 
       if (response.statusCode == 200) {

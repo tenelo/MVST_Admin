@@ -5,11 +5,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:http/http.dart' as http;
 import 'package:mvst_admin/authentification/authentification.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/main.dart';
-import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/mesfonctions/keyboard_notifier.dart';
 import 'package:mvst_admin/authentification/clavier_numerique.dart';
 import 'package:mvst_admin/services/api_client.dart';
@@ -60,10 +58,9 @@ class _LoginState extends State<Login> {
     });
 
     try {
-      final response = await http.post(
-        apiUri('verifierAdmin.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'telephone': _phoneNumberController.text.trim()}),
+      final response = await ApiClient.instance.post(
+        'verifierAdmin.php',
+        body: {'telephone': _phoneNumberController.text.trim()},
       );
 
       setState(() => _isLoading = false);
