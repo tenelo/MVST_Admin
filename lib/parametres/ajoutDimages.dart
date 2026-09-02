@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/models/models.dart';
+import 'package:mvst_admin/services/api_client.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 const String _baseUrl = 'https://mvst.tenelo.cloud';
@@ -58,7 +58,7 @@ class _ListeImagesState extends State<ListeImages> {
   Future<void> _recupImages() async {
     setState(() => isLoading = true);
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/gestionImages.php'));
+      final response = await ApiClient.instance.get('gestionImages.php');
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
@@ -753,9 +753,9 @@ class _ListeImagesState extends State<ListeImages> {
     String statut,
   ) async {
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/gestionImages.php'),
-        body: {
+      final response = await ApiClient.instance.postForm(
+        'gestionImages.php',
+        fields: {
           'action': 'modifier',
           'id': id.toString(),
           'titre': titre,
@@ -853,9 +853,9 @@ class _ListeImagesState extends State<ListeImages> {
 
   Future<void> _supprimerImage(int id) async {
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/gestionImages.php'),
-        body: {'action': 'supprimer', 'id': id.toString()},
+      final response = await ApiClient.instance.postForm(
+        'gestionImages.php',
+        fields: {'action': 'supprimer', 'id': id.toString()},
       );
       final data = jsonDecode(response.body);
       if (data['success'] == true) _notifierClients();
@@ -1209,24 +1209,20 @@ class _AjouterImagesState extends State<AjouterImages> {
     setState(() => isLoading = true);
 
     try {
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$_baseUrl/gestionImages.php'),
+      final fields = <String, String>{
+        'action': 'ajouter',
+        'titre': titreImage.text,
+        'description': detailsImage.text,
+        'statut': selectedOption!,
+        if (!_avecImage) 'sans_image': '1',
+      };
+      final response = await ApiClient.instance.postMultipart(
+        'gestionImages.php',
+        fields: fields,
+        filePath: (_avecImage && _image != null) ? _image!.path : null,
+        fileField: 'lien_image',
       );
-      if (_avecImage && _image != null) {
-        request.files.add(
-          await http.MultipartFile.fromPath('lien_image', _image!.path),
-        );
-      }
-      request.fields['action'] = 'ajouter';
-      request.fields['titre'] = titreImage.text;
-      request.fields['description'] = detailsImage.text;
-      request.fields['statut'] = selectedOption!;
-      if (!_avecImage) request.fields['sans_image'] = '1';
-
-      final response = await request.send();
-      final body = await response.stream.bytesToString();
-      final data = jsonDecode(body);
+      final data = jsonDecode(response.body);
 
       if (data['success'] == true) {
         if (_socket.connected) {
