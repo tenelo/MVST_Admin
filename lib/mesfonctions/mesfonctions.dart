@@ -5,9 +5,9 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
+import 'package:mvst_admin/services/api_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _kbChannel = MethodChannel('com.app.mvst_admin/keyboard');
@@ -32,14 +32,12 @@ class ListesDesTickets {
     String profil,
   ) async {
     try {
-      final Uri uri = profil == 'superadmin'
-          ? apiUri('superadmin_ticketsAscanner.php')
-          : apiUri('ticketsAscanner.php');
-
-      final response = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: profil == 'superadmin' ? null : jsonEncode({'gare': gare}),
+      final String path = profil == 'superadmin'
+          ? 'superadmin_ticketsAscanner.php'
+          : 'ticketsAscanner.php';
+      final response = await ApiClient.instance.post(
+        path,
+        body: profil == 'superadmin' ? null : {'gare': gare},
       );
 
       if (response.statusCode == 200) {
@@ -62,10 +60,9 @@ class ListesDesTickets {
     String date,
   ) async {
     try {
-      final response = await http.post(
-        apiUri('ticketsAscanner.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'date': date, 'etatScanne': 'scanné'}),
+      final response = await ApiClient.instance.post(
+        'ticketsAscanner.php',
+        body: {'date': date, 'etatScanne': 'scanné'},
       );
 
       if (response.statusCode == 200) {
@@ -103,17 +100,15 @@ Future<String?> misAjourEtatScanne(
   int place,
 ) async {
   try {
-    final response = await http
-        .post(
-          apiUri('misAjourEtatScanne.php'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'documentId': documentId,
-            'idUtilisateur': idUtilisateur,
-            'place': place,
-          }),
-        )
-        .timeout(const Duration(seconds: 5));
+    final response = await ApiClient.instance.post(
+      'misAjourEtatScanne.php',
+      body: {
+        'documentId': documentId,
+        'idUtilisateur': idUtilisateur,
+        'place': place,
+      },
+      timeout: const Duration(seconds: 5),
+    );
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -216,10 +211,9 @@ Future<String?> recupererRole() async {
 
 Future<String?> recupererGare(String idUtilisateur) async {
   try {
-    final response = await http.post(
-      apiUri('recupererGare.php'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'idUtilisateur': idUtilisateur}),
+    final response = await ApiClient.instance.post(
+      'recupererGare.php',
+      body: {'idUtilisateur': idUtilisateur},
     );
 
     if (response.statusCode == 200) {

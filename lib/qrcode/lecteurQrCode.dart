@@ -2,11 +2,11 @@ import 'dart:convert';
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
+import 'package:mvst_admin/services/api_client.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 List<String> lecture = [];
@@ -95,11 +95,11 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
 
     // Fallback : requête directe par idUtilisateur
     try {
-      final response = await http.post(
-        apiUri('recuperation_mes_tickets.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'idUtilisateur': ticketData.idUtilisateur}),
-      ).timeout(const Duration(seconds: 5));
+      final response = await ApiClient.instance.post(
+        'recuperation_mes_tickets.php',
+        body: {'idUtilisateur': ticketData.idUtilisateur},
+        timeout: const Duration(seconds: 5),
+      );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
