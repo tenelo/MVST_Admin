@@ -99,7 +99,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
         apiUri('recuperation_mes_tickets.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'idUtilisateur': ticketData.idUtilisateur}),
-      );
+      ).timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
