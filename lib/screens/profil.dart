@@ -4,9 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/services/api_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-const String _apiBase = 'https://mvst.tenelo.cloud';
 
 class Profil extends StatefulWidget {
   const Profil({super.key, required this.idUtilisateur, required this.userProfil});
@@ -34,9 +33,10 @@ class _ProfilState extends State<Profil> {
 
   Future<Map<String, dynamic>?> _chargerProfil() async {
     final results = await Future.wait([
-      http.get(
-        Uri.parse('$_apiBase/get_utilisateur.php?id=${widget.idUtilisateur}'),
-      ).timeout(const Duration(seconds: 8)),
+      ApiClient.instance.get(
+        'get_utilisateur.php?id=${widget.idUtilisateur}',
+        timeout: const Duration(seconds: 8),
+      ),
       SharedPreferences.getInstance(),
     ]);
 
@@ -99,17 +99,17 @@ class _ProfilState extends State<Profil> {
   Future<void> _sauvegarder(String idUtilisateur, String nom, String prenoms,
       String telephone, String residence) async {
     try {
-      final resp = await http.post(
-        Uri.parse('$_apiBase/update_utilisateur.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
+      final resp = await ApiClient.instance.post(
+        'update_utilisateur.php',
+        body: {
           'idUtilisateur': idUtilisateur,
           'nom': nom,
           'prenoms': prenoms,
           'telephone': telephone,
           'residence': residence,
-        }),
-      ).timeout(const Duration(seconds: 8));
+        },
+        timeout: const Duration(seconds: 8),
+      );
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
         if (data['success'] == true && mounted) {
@@ -449,7 +449,8 @@ class _EditSheet extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: Column(
+      child: SingleChildScrollView(
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 12),
@@ -499,6 +500,7 @@ class _EditSheet extends StatelessWidget {
             ),
           ),
         ],
+        ),
       ),
     );
   }

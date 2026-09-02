@@ -1,15 +1,13 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
-import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
+import 'package:mvst_admin/services/api_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
 // ── Constantes ────────────────────────────────────────────────────────────────
-const String _apiUrl     = '$baseUrl/api_suggestions.php';
 const String _prefsMasqueKey = 'suggestions_masquees';
 
 // ── Catégories ────────────────────────────────────────────────────────────────
@@ -143,13 +141,16 @@ class _SuggestionsAdminState extends State<SuggestionsAdmin>
   Future<void> _chargerSuggestions() async {
     setState(() => _isLoading = true);
     try {
-      final uri = Uri.parse(_apiUrl).replace(queryParameters: {
+      final uri = Uri(path: 'api_suggestions.php').replace(queryParameters: {
         'action': 'get_all',
         if (_dateDebut != null) 'date_debut': DateFormat('yyyy-MM-dd').format(_dateDebut!),
         if (_dateFin   != null) 'date_fin':   DateFormat('yyyy-MM-dd').format(_dateFin!),
       });
 
-      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
+      final resp = await ApiClient.instance.get(
+        uri.toString(),
+        timeout: const Duration(seconds: 10),
+      );
       if (resp.statusCode == 200) {
         final data = jsonDecode(resp.body);
         if (data['success'] == true && mounted) {
@@ -200,11 +201,11 @@ class _SuggestionsAdminState extends State<SuggestionsAdmin>
   // ── Changer statut + émettre socket ──────────────────────────────────────
   Future<void> _changerStatut(_Suggestion s, String nouveauStatut) async {
     try {
-      final resp = await http.post(
-        Uri.parse(_apiUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'action': 'update_statut', 'id': s.id, 'statut': nouveauStatut}),
-      ).timeout(const Duration(seconds: 8));
+      final resp = await ApiClient.instance.post(
+        'api_suggestions.php',
+        body: {'action': 'update_statut', 'id': s.id, 'statut': nouveauStatut},
+        timeout: const Duration(seconds: 8),
+      );
 
       final data = jsonDecode(resp.body);
       if (data['success'] == true) {
@@ -245,11 +246,11 @@ class _SuggestionsAdminState extends State<SuggestionsAdmin>
     if (confirm != true || !mounted) return;
 
     try {
-      final resp = await http.post(
-        Uri.parse(_apiUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'action': 'admin_delete', 'id': s.id}),
-      ).timeout(const Duration(seconds: 8));
+      final resp = await ApiClient.instance.post(
+        'api_suggestions.php',
+        body: {'action': 'admin_delete', 'id': s.id},
+        timeout: const Duration(seconds: 8),
+      );
 
       final data = jsonDecode(resp.body);
       if (data['success'] == true) {

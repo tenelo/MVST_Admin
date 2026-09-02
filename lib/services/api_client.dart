@@ -51,5 +51,45 @@ class ApiClient {
         .timeout(timeout ?? _timeoutParDefaut);
   }
 
+  Future<Map<String, String>> _headersAuthSeul() async {
+    final headers = <String, String>{};
+    final token = await TokenStorage.getToken();
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    return headers;
+  }
+
+  Future<http.Response> postForm(
+    String path, {
+    required Map<String, String> fields,
+    Duration? timeout,
+  }) async {
+    return _client
+        .post(_uri(path), headers: await _headersAuthSeul(), body: fields)
+        .timeout(timeout ?? _timeoutParDefaut);
+  }
+
+  Future<http.Response> postMultipart(
+    String path, {
+    required Map<String, String> fields,
+    String? filePath,
+    String fileField = 'file',
+    Duration? timeout,
+  }) async {
+    final request = http.MultipartRequest('POST', _uri(path));
+    request.headers.addAll(await _headersAuthSeul());
+    request.fields.addAll(fields);
+    if (filePath != null) {
+      request.files.add(
+        await http.MultipartFile.fromPath(fileField, filePath),
+      );
+    }
+    final streamed = await _client
+        .send(request)
+        .timeout(timeout ?? _timeoutParDefaut);
+    return http.Response.fromStream(streamed);
+  }
+
   void close() => _client.close();
 }
