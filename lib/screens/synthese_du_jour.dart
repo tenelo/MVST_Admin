@@ -22,6 +22,7 @@ class _SyntheseDuJourState extends State<SyntheseDuJour> {
   Map<String, dynamic>? _bandeau;
   Map<String, dynamic>? _acheteurs;
   List<Map<String, dynamic>> _departsDuJour = [];
+  DateTime _dateSelectionnee = DateTime.now();
 
   // ── Socket.IO ──────────────────────────────────────────────────────────────
   late IO.Socket socket;
@@ -77,10 +78,11 @@ class _SyntheseDuJourState extends State<SyntheseDuJour> {
       });
     }
     try {
-      final String dateDuJour = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final String dateChoisie =
+          DateFormat('yyyy-MM-dd').format(_dateSelectionnee);
       final response = await ApiClient.instance.post(
         'synthese_gare.php',
-        body: {'gare': widget.gare, 'date': dateDuJour},
+        body: {'gare': widget.gare, 'date': dateChoisie},
       );
 
       if (response.statusCode == 200) {
@@ -115,6 +117,21 @@ class _SyntheseDuJourState extends State<SyntheseDuJour> {
     }
   }
 
+  // ── Selecteur de date (motif ticketsDuJourScannes._choisirDate) ────────────
+  Future<void> _choisirDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _dateSelectionnee,
+      firstDate: DateTime(2024),
+      lastDate: DateTime(2027),
+      locale: const Locale('fr', 'FR'),
+    );
+    if (picked != null && mounted) {
+      setState(() => _dateSelectionnee = picked);
+      _getDonnees();
+    }
+  }
+
   bool get _estVide => _departsDuJour.isEmpty;
 
   @override
@@ -134,6 +151,16 @@ class _SyntheseDuJourState extends State<SyntheseDuJour> {
             fontSize: 18,
           ),
         ),
+        actions: [
+          TextButton.icon(
+            onPressed: _choisirDate,
+            icon: Icon(Icons.calendar_month_outlined, color: c.jauneBlanc),
+            label: Text(
+              DateFormat('EEE d MMM', 'fr_FR').format(_dateSelectionnee),
+              style: TextStyle(color: c.jauneBlanc, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
