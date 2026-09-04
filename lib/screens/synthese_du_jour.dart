@@ -201,45 +201,75 @@ class _SyntheseDuJourState extends State<SyntheseDuJour> {
   }
 
   // ── Selecteur de gare (visible uniquement si _role == 'superadmin') ────────
-  PreferredSizeWidget _selecteurGareBottom(dynamic c) {
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(48),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        child: Row(
-          children: [
-            Icon(Icons.store_outlined, color: c.jauneBlanc, size: 18),
-            const SizedBox(width: 8),
-            Expanded(
-              child: DropdownButton<String?>(
-                value: _gareSelectionnee,
-                isExpanded: true,
-                dropdownColor: c.authCardBackground,
-                iconEnabledColor: c.jauneBlanc,
-                style: TextStyle(color: c.jauneBlanc),
-                underline: Container(
-                  height: 1,
-                  color: c.jauneBlanc.withValues(alpha: 0.4),
-                ),
-                items: [
-                  const DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text('Toutes les gares'),
-                  ),
-                  ..._listeGares.map(
-                    (g) => DropdownMenuItem<String?>(value: g, child: Text(g)),
-                  ),
-                ],
-                onChanged: (val) {
-                  setState(() => _gareSelectionnee = val);
-                  _rejoindreRoomGare();
-                  _getDonnees();
-                },
-              ),
+  // Contenu du selecteur de gare (icone + Dropdown), reutilise tel quel dans
+  // la barre de filtres sous l'AppBar.
+  Widget _selecteurGareDropdown(dynamic c) {
+    return Row(
+      children: [
+        Icon(Icons.store_outlined, color: c.jauneBlanc, size: 18),
+        const SizedBox(width: 8),
+        Expanded(
+          child: DropdownButton<String?>(
+            value: _gareSelectionnee,
+            isExpanded: true,
+            dropdownColor: c.authCardBackground,
+            iconEnabledColor: c.jauneBlanc,
+            style: TextStyle(color: c.jauneBlanc),
+            underline: Container(
+              height: 1,
+              color: c.jauneBlanc.withValues(alpha: 0.4),
             ),
-          ],
+            items: [
+              const DropdownMenuItem<String?>(
+                value: null,
+                child: Text('Toutes les gares'),
+              ),
+              ..._listeGares.map(
+                (g) => DropdownMenuItem<String?>(value: g, child: Text(g)),
+              ),
+            ],
+            onChanged: (val) {
+              setState(() => _gareSelectionnee = val);
+              _rejoindreRoomGare();
+              _getDonnees();
+            },
+          ),
         ),
+      ],
+    );
+  }
+
+  // Bouton date, reutilise tel quel (etait auparavant dans les actions de
+  // l'AppBar).
+  Widget _boutonDate(dynamic c) {
+    return TextButton.icon(
+      onPressed: _choisirDate,
+      icon: Icon(Icons.calendar_month_outlined, color: c.jauneBlanc),
+      label: Text(
+        DateFormat('EEE d MMM', 'fr_FR').format(_dateSelectionnee),
+        style: TextStyle(color: c.jauneBlanc, fontWeight: FontWeight.w600),
       ),
+    );
+  }
+
+  // Barre de filtres sous l'AppBar : selecteur de gare + bouton date sur la
+  // meme ligne (superadmin), ou juste le bouton date aligne a droite (admin
+  // normal, comportement inchange).
+  Widget _buildBarreFiltres(dynamic c) {
+    if (_role == 'superadmin') {
+      return Row(
+        children: [
+          Expanded(child: _selecteurGareDropdown(c)),
+          const SizedBox(width: 12),
+          _boutonDate(c),
+        ],
+      );
+    }
+    return Row(
+      children: [
+        const Spacer(),
+        _boutonDate(c),
+      ],
     );
   }
 
@@ -262,30 +292,35 @@ class _SyntheseDuJourState extends State<SyntheseDuJour> {
             fontSize: 18,
           ),
         ),
-        actions: [
-          TextButton.icon(
-            onPressed: _choisirDate,
-            icon: Icon(Icons.calendar_month_outlined, color: c.jauneBlanc),
-            label: Text(
-              DateFormat('EEE d MMM', 'fr_FR').format(_dateSelectionnee),
-              style: TextStyle(color: c.jauneBlanc, fontWeight: FontWeight.w600),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(0.6),
+          child: Container(color: c.jauneBlanc, height: 0.6),
+        ),
+      ),
+      body: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            color: c.authCardBackground,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: _buildBarreFiltres(c),
+          ),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final bool large = constraints.maxWidth >= 600;
+                return RefreshIndicator(
+                  onRefresh: _getDonnees,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    children: _buildContenu(large),
+                  ),
+                );
+              },
             ),
           ),
         ],
-        bottom: _role == 'superadmin' ? _selecteurGareBottom(c) : null,
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final bool large = constraints.maxWidth >= 600;
-          return RefreshIndicator(
-            onRefresh: _getDonnees,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              children: _buildContenu(large),
-            ),
-          );
-        },
       ),
     );
   }

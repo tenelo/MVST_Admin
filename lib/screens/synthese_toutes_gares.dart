@@ -178,29 +178,50 @@ class _SyntheseToutesGaresState extends State<SyntheseToutesGares> {
             fontSize: 18,
           ),
         ),
-        actions: [
-          TextButton.icon(
-            onPressed: _choisirDate,
-            icon: Icon(Icons.calendar_month_outlined, color: c.jauneBlanc),
-            label: Text(
-              DateFormat('EEE d MMM', 'fr_FR').format(_dateSelectionnee),
-              style: TextStyle(color: c.jauneBlanc, fontWeight: FontWeight.w600),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(0.6),
+          child: Container(color: c.jauneBlanc, height: 0.6),
+        ),
+      ),
+      body: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            color: c.authCardBackground,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: Row(
+              children: [
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: _choisirDate,
+                  icon: Icon(Icons.calendar_month_outlined, color: c.jauneBlanc),
+                  label: Text(
+                    DateFormat('EEE d MMM', 'fr_FR').format(_dateSelectionnee),
+                    style: TextStyle(
+                      color: c.jauneBlanc,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final bool large = constraints.maxWidth >= 600;
+                return RefreshIndicator(
+                  onRefresh: _getDonnees,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    children: _buildContenu(large),
+                  ),
+                );
+              },
             ),
           ),
         ],
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final bool large = constraints.maxWidth >= 600;
-          return RefreshIndicator(
-            onRefresh: _getDonnees,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              children: _buildContenu(large),
-            ),
-          );
-        },
       ),
     );
   }
