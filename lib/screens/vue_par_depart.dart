@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/services/api_client.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
@@ -21,10 +22,51 @@ class _VueParDepartState extends State<VueParDepart> {
   List<DepartVue> _departs = [];
   DateTime _dateSelectionnee = DateTime.now();
 
+  // ── Selecteur de gare (superadmin only) ─────────────────────────────────────
+  String? _role;
+  String? _gareSelectionnee;
+  List<String> _listeGares = [];
+
+  // Gare effectivement affichee : widget.gare pour un admin normal (INCHANGE),
+  // ou la gare choisie (eventuellement null = "Toutes les gares") pour un
+  // superadmin.
+  String? get _gareEffective =>
+      _role == 'superadmin' ? _gareSelectionnee : widget.gare;
+
+  // Titre affiche : la gare effective, ou "Toutes les gares" en mode
+  // agregat superadmin (le seul cas ou _gareEffective est null).
+  String get _titreGare => _gareEffective ?? 'Toutes les gares';
+
   @override
   void initState() {
     super.initState();
+    _initRoleEtGares();
+  }
+
+  Future<void> _initRoleEtGares() async {
+    final role = await recupererRole();
+    if (!mounted) return;
+    setState(() => _role = role);
+    if (role == 'superadmin') {
+      _chargerListeGares();
+    }
     _getDonnees();
+  }
+
+  Future<void> _chargerListeGares() async {
+    try {
+      final response = await ApiClient.instance.get('gares.php');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && mounted) {
+          setState(() {
+            _listeGares = List<Map<String, dynamic>>.from(data['gares'])
+                .map((g) => g['gare'].toString())
+                .toList();
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   // ── Charger la vue par depart via PHP ──────────────────────────────────────
@@ -38,9 +80,14 @@ class _VueParDepartState extends State<VueParDepart> {
     try {
       final String dateChoisie =
           DateFormat('yyyy-MM-dd').format(_dateSelectionnee);
+      final Map<String, dynamic> body = {'date': dateChoisie};
+      final gareEffective = _gareEffective;
+      if (gareEffective != null) {
+        body['gare'] = gareEffective;
+      }
       final response = await ApiClient.instance.post(
         'vue_par_depart.php',
-        body: {'gare': widget.gare, 'date': dateChoisie},
+        body: body,
       );
 
       if (response.statusCode == 200) {
@@ -88,6 +135,48 @@ class _VueParDepartState extends State<VueParDepart> {
     }
   }
 
+  // ── Selecteur de gare (visible uniquement si _role == 'superadmin') ────────
+  PreferredSizeWidget _selecteurGareBottom(dynamic c) {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(48),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: Row(
+          children: [
+            Icon(Icons.store_outlined, color: c.jauneBlanc, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: DropdownButton<String?>(
+                value: _gareSelectionnee,
+                isExpanded: true,
+                dropdownColor: c.authCardBackground,
+                iconEnabledColor: c.jauneBlanc,
+                style: TextStyle(color: c.jauneBlanc),
+                underline: Container(
+                  height: 1,
+                  color: c.jauneBlanc.withValues(alpha: 0.4),
+                ),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('Toutes les gares'),
+                  ),
+                  ..._listeGares.map(
+                    (g) => DropdownMenuItem<String?>(value: g, child: Text(g)),
+                  ),
+                ],
+                onChanged: (val) {
+                  setState(() => _gareSelectionnee = val);
+                  _getDonnees();
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   bool get _estVide => _departs.isEmpty;
 
   @override
@@ -100,7 +189,7 @@ class _VueParDepartState extends State<VueParDepart> {
         iconTheme: IconThemeData(color: c.jauneBlanc),
         centerTitle: true,
         title: Text(
-          'Vue par depart - ${widget.gare}',
+          'Vue par depart - $_titreGare',
           style: TextStyle(
             color: c.jauneBlanc,
             fontWeight: FontWeight.bold,
@@ -117,6 +206,7 @@ class _VueParDepartState extends State<VueParDepart> {
             ),
           ),
         ],
+        bottom: _role == 'superadmin' ? _selecteurGareBottom(c) : null,
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {

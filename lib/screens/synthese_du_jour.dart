@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
+import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/services/api_client.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
@@ -24,15 +25,57 @@ class _SyntheseDuJourState extends State<SyntheseDuJour> {
   List<Map<String, dynamic>> _departsDuJour = [];
   DateTime _dateSelectionnee = DateTime.now();
 
+  // ── Selecteur de gare (superadmin only) ─────────────────────────────────────
+  String? _role;
+  String? _gareSelectionnee;
+  List<String> _listeGares = [];
+
+  // Gare effectivement affichee : widget.gare pour un admin normal (INCHANGE),
+  // ou la gare choisie (eventuellement null = "Toutes les gares") pour un
+  // superadmin.
+  String? get _gareEffective =>
+      _role == 'superadmin' ? _gareSelectionnee : widget.gare;
+
+  // Titre affiche : la gare effective, ou "Toutes les gares" en mode
+  // agregat superadmin (le seul cas ou _gareEffective est null).
+  String get _titreGare => _gareEffective ?? 'Toutes les gares';
+
   // ── Socket.IO ──────────────────────────────────────────────────────────────
   late IO.Socket socket;
   Timer? _debounce;
+  String? _gareRoomActuelle;
 
   @override
   void initState() {
     super.initState();
+    _initRoleEtGares();
+  }
+
+  Future<void> _initRoleEtGares() async {
+    final role = await recupererRole();
+    if (!mounted) return;
+    setState(() => _role = role);
+    if (role == 'superadmin') {
+      _chargerListeGares();
+    }
     _getDonnees();
     _connecterSocket();
+  }
+
+  Future<void> _chargerListeGares() async {
+    try {
+      final response = await ApiClient.instance.get('gares.php');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && mounted) {
+          setState(() {
+            _listeGares = List<Map<String, dynamic>>.from(data['gares'])
+                .map((g) => g['gare'].toString())
+                .toList();
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   @override
@@ -56,12 +99,32 @@ class _SyntheseDuJourState extends State<SyntheseDuJour> {
 
     socket.connect();
 
-    socket.onConnect((_) {
-      socket.emit('rejoindre_room_gare', {'gare': widget.gare});
-    });
+    socket.onConnect((_) => _rejoindreRoomGare());
 
     // ── Une vente/un scan a modifie la synthese -> rafraichir (debounce) ────
-    socket.on('synthese_maj', (data) => _rechargerAvecDebounce());
+    // On ne recharge que si l'evenement concerne la gare actuellement
+    // affichee (evite un rafraichissement croise si le socket reste abonne
+    // a une ancienne room apres un changement de gare). Si le serveur
+    // n'indique pas de gare dans l'evenement, on ne filtre pas (comportement
+    // actuel inchange pour un admin normal).
+    socket.on('synthese_maj', (data) {
+      final dynamic gareEvenement = (data is Map) ? data['gare'] : null;
+      final bool concerneCetteGare =
+          gareEvenement == null || gareEvenement == _gareRoomActuelle;
+      if (_gareRoomActuelle != null && concerneCetteGare) {
+        _rechargerAvecDebounce();
+      }
+    });
+  }
+
+  // Rejoint la room socket de la gare effective. En mode "Toutes les gares"
+  // (superadmin, aucune gare choisie), ne rejoint aucune room : pas de temps
+  // reel dans ce mode (choix proprietaire).
+  void _rejoindreRoomGare() {
+    final gareEffective = _gareEffective;
+    _gareRoomActuelle = gareEffective;
+    if (gareEffective == null) return;
+    socket.emit('rejoindre_room_gare', {'gare': gareEffective});
   }
 
   void _rechargerAvecDebounce() {
@@ -80,9 +143,14 @@ class _SyntheseDuJourState extends State<SyntheseDuJour> {
     try {
       final String dateChoisie =
           DateFormat('yyyy-MM-dd').format(_dateSelectionnee);
+      final Map<String, dynamic> body = {'date': dateChoisie};
+      final gareEffective = _gareEffective;
+      if (gareEffective != null) {
+        body['gare'] = gareEffective;
+      }
       final response = await ApiClient.instance.post(
         'synthese_gare.php',
-        body: {'gare': widget.gare, 'date': dateChoisie},
+        body: body,
       );
 
       if (response.statusCode == 200) {
@@ -132,6 +200,49 @@ class _SyntheseDuJourState extends State<SyntheseDuJour> {
     }
   }
 
+  // ── Selecteur de gare (visible uniquement si _role == 'superadmin') ────────
+  PreferredSizeWidget _selecteurGareBottom(dynamic c) {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(48),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: Row(
+          children: [
+            Icon(Icons.store_outlined, color: c.jauneBlanc, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: DropdownButton<String?>(
+                value: _gareSelectionnee,
+                isExpanded: true,
+                dropdownColor: c.authCardBackground,
+                iconEnabledColor: c.jauneBlanc,
+                style: TextStyle(color: c.jauneBlanc),
+                underline: Container(
+                  height: 1,
+                  color: c.jauneBlanc.withValues(alpha: 0.4),
+                ),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('Toutes les gares'),
+                  ),
+                  ..._listeGares.map(
+                    (g) => DropdownMenuItem<String?>(value: g, child: Text(g)),
+                  ),
+                ],
+                onChanged: (val) {
+                  setState(() => _gareSelectionnee = val);
+                  _rejoindreRoomGare();
+                  _getDonnees();
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   bool get _estVide => _departsDuJour.isEmpty;
 
   @override
@@ -144,7 +255,7 @@ class _SyntheseDuJourState extends State<SyntheseDuJour> {
         iconTheme: IconThemeData(color: c.jauneBlanc),
         centerTitle: true,
         title: Text(
-          'Synthese du jour - ${widget.gare}',
+          'Synthese du jour - $_titreGare',
           style: TextStyle(
             color: c.jauneBlanc,
             fontWeight: FontWeight.bold,
@@ -161,6 +272,7 @@ class _SyntheseDuJourState extends State<SyntheseDuJour> {
             ),
           ),
         ],
+        bottom: _role == 'superadmin' ? _selecteurGareBottom(c) : null,
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
