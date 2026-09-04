@@ -32,11 +32,24 @@ class _GraphiquesABarresState extends State<GraphiquesABarres> {
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _monthYearController = TextEditingController();
   final TextEditingController _yearController = TextEditingController();
+  // Controleurs d'AFFICHAGE uniquement (espaces au lieu d'underscores).
+  // _dateController/_monthYearController/_yearController restent la valeur
+  // TECHNIQUE (underscores), inchangee, utilisee pour la navigation vers
+  // l'ecran suivant (date:/moisAnnee:/annee: ci-dessous) et donc au final
+  // pour l'appel serveur de cet ecran-la.
+  final TextEditingController _dateAffichage = TextEditingController();
+  final TextEditingController _moisAnneeAffichage = TextEditingController();
+  final TextEditingController _anneeAffichage = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   DateTime _selectedMonthYear = DateTime.now();
   DateTime _selectedYear = DateTime.now();
   final List<MesDonneesTickets> ticketsData = [];
   bool _isLoading = true;
+
+  // AFFICHAGE UNIQUEMENT : underscores -> espaces. La valeur technique
+  // (underscores) n'est jamais modifiee par cette fonction.
+  String _lisible(String valeurTechnique) =>
+      valeurTechnique.replaceAll('_', ' ');
 
   @override
   void initState() {
@@ -44,6 +57,9 @@ class _GraphiquesABarresState extends State<GraphiquesABarres> {
     _dateController.text = widget.date;
     _monthYearController.text = widget.moisAnnee;
     _yearController.text = widget.annee;
+    _dateAffichage.text = _lisible(widget.date);
+    _moisAnneeAffichage.text = _lisible(widget.moisAnnee);
+    _anneeAffichage.text = _lisible(widget.annee);
     _chargerTickets();
   }
 
@@ -53,6 +69,9 @@ class _GraphiquesABarresState extends State<GraphiquesABarres> {
     _dateController.dispose();
     _monthYearController.dispose();
     _yearController.dispose();
+    _dateAffichage.dispose();
+    _moisAnneeAffichage.dispose();
+    _anneeAffichage.dispose();
     super.dispose();
   }
 
@@ -154,14 +173,36 @@ class _GraphiquesABarresState extends State<GraphiquesABarres> {
           : SingleChildScrollView(
               child: Column(
                 children: [
-                  SizedBox(
+                  filteredTickets.isEmpty
+                      ? SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.3,
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.bar_chart_outlined,
+                                    size: 48, color: Colors.grey[400]),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Aucune donnée pour cette date',
+                                  style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : SizedBox(
                     height: MediaQuery.of(context).size.height * 0.6,
                     child: SfCartesianChart(
                       primaryXAxis: const CategoryAxis(
                           labelStyle: TextStyle(fontWeight: FontWeight.bold)),
                       primaryYAxis: const NumericAxis(
-                          majorGridLines: MajorGridLines(width: 0),
-                          labelStyle: TextStyle(fontSize: 0)),
+                          majorGridLines: MajorGridLines(
+                              width: 0.5, color: Color(0xFFE0E0E0)),
+                          labelStyle: TextStyle(fontSize: 10),
+                          title: AxisTitle(text: 'Passagers')),
                       title: ChartTitle(
                           text:
                               'Nombre de passagers par destinations\npartants de ${widget.gare}',
@@ -169,9 +210,12 @@ class _GraphiquesABarresState extends State<GraphiquesABarres> {
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
                               color: Config.colors.bleuA)),
-                      legend: const Legend(
-                          isVisible: true,
-                          textStyle: TextStyle(fontWeight: FontWeight.w900)),
+                      // Legende desactivee : une seule serie multicolore
+                      // (couleurs posees par pointColorMapper, pas par la
+                      // serie) -> une legende classique afficherait une
+                      // pastille ne correspondant a aucune barre. Le titre
+                      // porte deja le total.
+                      legend: const Legend(isVisible: false),
                       tooltipBehavior: TooltipBehavior(enable: true),
                       series: <CartesianSeries<MesDonneesTickets, String>>[
                         BarSeries<MesDonneesTickets, String>(
@@ -205,11 +249,11 @@ class _GraphiquesABarresState extends State<GraphiquesABarres> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildDateField('Choisissez une date:', _dateController,
+          _buildDateField('Choisissez une date:', _dateAffichage,
               () => _selectDate(context)),
-          _buildDateField('Choisissez mois et année:', _monthYearController,
+          _buildDateField('Choisissez mois et année:', _moisAnneeAffichage,
               () => _selectMoisEtAnnee(context)),
-          _buildDateField('Choisissez l\'année:', _yearController,
+          _buildDateField('Choisissez l\'année:', _anneeAffichage,
               () => _selectAnnee(context)),
         ],
       ),
@@ -259,6 +303,9 @@ class _GraphiquesABarresState extends State<GraphiquesABarres> {
         _monthYearController.text =
             DateFormat('MMMM_y', 'fr_FR').format(picked);
         _yearController.text = DateFormat('y', 'fr_FR').format(picked);
+        _dateAffichage.text = _lisible(_dateController.text);
+        _moisAnneeAffichage.text = _lisible(_monthYearController.text);
+        _anneeAffichage.text = _lisible(_yearController.text);
       });
       Navigator.pushReplacement(
           context,
@@ -289,6 +336,9 @@ class _GraphiquesABarresState extends State<GraphiquesABarres> {
             DateFormat('MMMM_y', 'fr_FR').format(_selectedMonthYear);
         _yearController.text =
             DateFormat('y', 'fr_FR').format(_selectedMonthYear);
+        _dateAffichage.text = _lisible(_dateController.text);
+        _moisAnneeAffichage.text = _lisible(_monthYearController.text);
+        _anneeAffichage.text = _lisible(_yearController.text);
       });
       Navigator.pushReplacement(
           context,
@@ -318,6 +368,9 @@ class _GraphiquesABarresState extends State<GraphiquesABarres> {
         _monthYearController.text =
             DateFormat('MMMM_y', 'fr_FR').format(_selectedYear);
         _yearController.text = DateFormat('y', 'fr_FR').format(_selectedYear);
+        _dateAffichage.text = _lisible(_dateController.text);
+        _moisAnneeAffichage.text = _lisible(_monthYearController.text);
+        _anneeAffichage.text = _lisible(_yearController.text);
       });
       Navigator.pushReplacement(
           context,
