@@ -69,9 +69,9 @@ class _SyntheseDuJourState extends State<SyntheseDuJour> {
         final data = jsonDecode(response.body);
         if (data['success'] == true && mounted) {
           setState(() {
-            _listeGares = List<Map<String, dynamic>>.from(data['gares'])
-                .map((g) => g['gare'].toString())
-                .toList();
+            _listeGares = List<Map<String, dynamic>>.from(
+              data['gares'],
+            ).map((g) => g['gare'].toString()).toList();
           });
         }
       }
@@ -141,8 +141,9 @@ class _SyntheseDuJourState extends State<SyntheseDuJour> {
       });
     }
     try {
-      final String dateChoisie =
-          DateFormat('yyyy-MM-dd').format(_dateSelectionnee);
+      final String dateChoisie = DateFormat(
+        'yyyy-MM-dd',
+      ).format(_dateSelectionnee);
       final Map<String, dynamic> body = {'date': dateChoisie};
       final gareEffective = _gareEffective;
       if (gareEffective != null) {
@@ -265,12 +266,7 @@ class _SyntheseDuJourState extends State<SyntheseDuJour> {
         ],
       );
     }
-    return Row(
-      children: [
-        const Spacer(),
-        _boutonDate(c),
-      ],
-    );
+    return Row(children: [const Spacer(), _boutonDate(c)]);
   }
 
   bool get _estVide => _departsDuJour.isEmpty;
@@ -286,6 +282,8 @@ class _SyntheseDuJourState extends State<SyntheseDuJour> {
         centerTitle: true,
         title: Text(
           'Synthese du jour - $_titreGare',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             color: c.jauneBlanc,
             fontWeight: FontWeight.bold,
@@ -382,10 +380,12 @@ class _SyntheseDuJourState extends State<SyntheseDuJour> {
     final scannes = _bandeau?['scannes'] ?? 0;
     final tauxRaw = _bandeau?['tauxEmbarquement'] ?? 0;
 
-    final recettesNum =
-        recettesRaw is num ? recettesRaw : num.tryParse(recettesRaw.toString()) ?? 0;
-    final tauxNum =
-        tauxRaw is num ? tauxRaw : num.tryParse(tauxRaw.toString()) ?? 0;
+    final recettesNum = recettesRaw is num
+        ? recettesRaw
+        : num.tryParse(recettesRaw.toString()) ?? 0;
+    final tauxNum = tauxRaw is num
+        ? tauxRaw
+        : num.tryParse(tauxRaw.toString()) ?? 0;
 
     final recettesStr =
         '${NumberFormat('#,##0', 'fr_FR').format(recettesNum)} FCFA';
@@ -415,11 +415,17 @@ class _SyntheseDuJourState extends State<SyntheseDuJour> {
     final mois = _acheteurs?['mois'] ?? 0;
     return Row(
       children: [
-        Expanded(child: _PetiteCarte(valeur: '$jour', libelle: 'Jour')),
+        Expanded(
+          child: _PetiteCarte(valeur: '$jour', libelle: 'Jour'),
+        ),
         const SizedBox(width: 8),
-        Expanded(child: _PetiteCarte(valeur: '$semaine', libelle: 'Semaine')),
+        Expanded(
+          child: _PetiteCarte(valeur: '$semaine', libelle: 'Semaine'),
+        ),
         const SizedBox(width: 8),
-        Expanded(child: _PetiteCarte(valeur: '$mois', libelle: 'Mois')),
+        Expanded(
+          child: _PetiteCarte(valeur: '$mois', libelle: 'Mois'),
+        ),
       ],
     );
   }

@@ -38,8 +38,9 @@ class _SyntheseToutesGaresState extends State<SyntheseToutesGares> {
       });
     }
     try {
-      final String dateChoisie =
-          DateFormat('yyyy-MM-dd').format(_dateSelectionnee);
+      final String dateChoisie = DateFormat(
+        'yyyy-MM-dd',
+      ).format(_dateSelectionnee);
 
       final resultats = await Future.wait([
         ApiClient.instance.get('gares.php'),
@@ -71,10 +72,9 @@ class _SyntheseToutesGaresState extends State<SyntheseToutesGares> {
         }
         return;
       }
-      final List<String> toutesLesGares =
-          List<Map<String, dynamic>>.from(dataGares['gares'])
-              .map((g) => g['gare'].toString())
-              .toList();
+      final List<String> toutesLesGares = List<Map<String, dynamic>>.from(
+        dataGares['gares'],
+      ).map((g) => g['gare'].toString()).toList();
 
       if (respSynthese.statusCode != 200) {
         if (mounted) {
@@ -101,13 +101,16 @@ class _SyntheseToutesGaresState extends State<SyntheseToutesGares> {
       // Croisement : la liste COMPLETE des gares (gares.php), enrichie des
       // chiffres du jour quand la gare est active, sinon ligne a 0.
       final Map<String, Map<String, dynamic>> parGare = {
-        for (final g
-            in List<Map<String, dynamic>>.from(dataSynthese['gares'] ?? []))
+        for (final g in List<Map<String, dynamic>>.from(
+          dataSynthese['gares'] ?? [],
+        ))
           g['gare'].toString(): g,
       };
 
       final lignes = toutesLesGares
-          .map((nomGare) => GareSynthese.fromJsonOuVide(nomGare, parGare[nomGare]))
+          .map(
+            (nomGare) => GareSynthese.fromJsonOuVide(nomGare, parGare[nomGare]),
+          )
           .toList();
       lignes.sort((a, b) => b.vendus.compareTo(a.vendus));
 
@@ -194,7 +197,10 @@ class _SyntheseToutesGaresState extends State<SyntheseToutesGares> {
                 const Spacer(),
                 TextButton.icon(
                   onPressed: _choisirDate,
-                  icon: Icon(Icons.calendar_month_outlined, color: c.jauneBlanc),
+                  icon: Icon(
+                    Icons.calendar_month_outlined,
+                    color: c.jauneBlanc,
+                  ),
                   label: Text(
                     DateFormat('EEE d MMM', 'fr_FR').format(_dateSelectionnee),
                     style: TextStyle(
@@ -331,10 +337,15 @@ class _SyntheseToutesGaresState extends State<SyntheseToutesGares> {
             ),
           if (_totaux != null)
             DataRow(
-              color: WidgetStateProperty.all(Config.colors.homeBandeauBackground),
+              color: WidgetStateProperty.all(
+                Config.colors.homeBandeauBackground,
+              ),
               cells: [
                 DataCell(
-                  Text('TOTAL', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(
+                    'TOTAL',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 DataCell(
                   Text(
@@ -387,7 +398,10 @@ class _SyntheseToutesGaresState extends State<SyntheseToutesGares> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('TOTAL', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  'TOTAL',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 Text(
                   '${_totaux!.vendus} vendus  •  ${_recettesStr(_totaux!.recettes)}',
                   style: const TextStyle(fontWeight: FontWeight.bold),
@@ -417,7 +431,8 @@ class GareSynthese {
   final double taux;
 
   factory GareSynthese.fromJsonOuVide(String nomGare, Map<String, dynamic>? j) {
-    int asInt(dynamic v) => v is int ? v : int.tryParse(v?.toString() ?? '') ?? 0;
+    int asInt(dynamic v) =>
+        v is int ? v : int.tryParse(v?.toString() ?? '') ?? 0;
     double asDouble(dynamic v) =>
         v is num ? v.toDouble() : double.tryParse(v?.toString() ?? '') ?? 0;
     if (j == null) {
@@ -459,13 +474,19 @@ class _CarteGare extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         onTap: onTap,
-        title: Text(gare.gare, style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          gare.gare,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         subtitle: Text(
           'Vendus ${gare.vendus} • Scannes ${gare.scannes} • Taux $tauxStr',
         ),
         trailing: Text(
           recettesStr,
-          style: TextStyle(fontWeight: FontWeight.bold, color: c.homeTabSelected),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: c.homeTabSelected,
+          ),
         ),
       ),
     );
