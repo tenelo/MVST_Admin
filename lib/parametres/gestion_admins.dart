@@ -25,6 +25,7 @@ class _GestionAdminsState extends State<GestionAdmins> {
   bool _isLoadingListe = true;
   String? _erreur;
   String? _succes;
+  int? _permissionEnCoursId;
 
   @override
   void initState() {
@@ -444,6 +445,48 @@ class _GestionAdminsState extends State<GestionAdmins> {
     }
   }
 
+  Future<void> _basculerPermissionSuggestions(
+    Map<String, dynamic> admin,
+    bool nouvelleValeur,
+  ) async {
+    final id = admin['id'];
+    setState(() => _permissionEnCoursId = id);
+    try {
+      final response = await ApiClient.instance.post(
+        'modifierPermissionSuggestions.php',
+        body: {
+          'id': id,
+          'peutGererSuggestions': nouvelleValeur,
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          if (mounted) {
+            setState(() => admin['peutGererSuggestions'] = nouvelleValeur);
+          }
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: Colors.red,
+              content: Text(data['message'] ?? 'Erreur inconnue.'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.red,
+            content: Text('Erreur réseau. Réessayez.'),
+          ),
+        );
+      }
+    }
+    if (mounted) setState(() => _permissionEnCoursId = null);
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = Config.colors;
@@ -694,6 +737,10 @@ class _GestionAdminsState extends State<GestionAdmins> {
                       final bool compteExiste =
                           admin['nom'] != null &&
                           admin['nom'].toString().isNotEmpty;
+                      final bool peutGerer =
+                          admin['peutGererSuggestions'] == true;
+                      final bool eligiblePermission =
+                          compteExiste && (admin['role'] ?? 'admin') != 'superadmin';
                       return Container(
                         margin: const EdgeInsets.only(bottom: 10),
                         decoration: BoxDecoration(
@@ -701,71 +748,101 @@ class _GestionAdminsState extends State<GestionAdmins> {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: c.authBorder, width: 1),
                         ),
-                        child: ListTile(
-                          leading: Icon(
-                            compteExiste ? Icons.person : Icons.person_outline,
-                            color: compteExiste ? Colors.green : c.authAccent,
-                          ),
-                          title: Text(
-                            admin['telephone'] ?? '',
-                            style: TextStyle(
-                              color: c.authTextPrimary,
-                              fontWeight: FontWeight.bold,
+                        child: Column(
+                          children: [
+                            ListTile(
+                              leading: Icon(
+                                compteExiste ? Icons.person : Icons.person_outline,
+                                color: compteExiste ? Colors.green : c.authAccent,
+                              ),
+                              title: Text(
+                                admin['telephone'] ?? '',
+                                style: TextStyle(
+                                  color: c.authTextPrimary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${admin['gare'] ?? ''} · ${admin['role'] ?? 'admin'}',
+                                    style: TextStyle(
+                                      color: c.authAccent,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  if (compteExiste)
+                                    Text(
+                                      '${admin['nom'] ?? ''} ${admin['prenoms'] ?? ''}',
+                                      style: TextStyle(
+                                        color: c.authTextSecondary,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  Text(
+                                    compteExiste
+                                        ? 'Compte créé'
+                                        : 'En attente de création',
+                                    style: TextStyle(
+                                      color: compteExiste
+                                          ? Colors.green
+                                          : Colors.orange,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Bouton modifier visible uniquement si compte pas encore créé
+                                  if (!compteExiste)
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.edit_outlined,
+                                        color: c.authAccent,
+                                      ),
+                                      onPressed: () => _modifierNumero(admin),
+                                    ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.red,
+                                    ),
+                                    onPressed: () =>
+                                        _supprimerNumero(admin['telephone'] ?? ''),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${admin['gare'] ?? ''} · ${admin['role'] ?? 'admin'}',
-                                style: TextStyle(
-                                  color: c.authAccent,
-                                  fontSize: 12,
+                            if (eligiblePermission)
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.notifications_active_outlined,
+                                        color: c.authAccent, size: 18),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text('Peut gérer les suggestions',
+                                          style: TextStyle(
+                                              color: c.authTextSecondary, fontSize: 12)),
+                                    ),
+                                    _permissionEnCoursId == admin['id']
+                                        ? const SizedBox(
+                                            width: 20, height: 20,
+                                            child: CircularProgressIndicator(strokeWidth: 2))
+                                        : Switch(
+                                            value: peutGerer,
+                                            activeThumbColor: c.authAccent,
+                                            onChanged: (v) =>
+                                                _basculerPermissionSuggestions(admin, v),
+                                          ),
+                                  ],
                                 ),
                               ),
-                              if (compteExiste)
-                                Text(
-                                  '${admin['nom'] ?? ''} ${admin['prenoms'] ?? ''}',
-                                  style: TextStyle(
-                                    color: c.authTextSecondary,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              Text(
-                                compteExiste
-                                    ? 'Compte créé'
-                                    : 'En attente de création',
-                                style: TextStyle(
-                                  color: compteExiste
-                                      ? Colors.green
-                                      : Colors.orange,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Bouton modifier visible uniquement si compte pas encore créé
-                              if (!compteExiste)
-                                IconButton(
-                                  icon: Icon(
-                                    Icons.edit_outlined,
-                                    color: c.authAccent,
-                                  ),
-                                  onPressed: () => _modifierNumero(admin),
-                                ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  color: Colors.red,
-                                ),
-                                onPressed: () =>
-                                    _supprimerNumero(admin['telephone'] ?? ''),
-                              ),
-                            ],
-                          ),
+                          ],
                         ),
                       );
                     },
