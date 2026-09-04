@@ -22,6 +22,7 @@ import 'package:mvst_admin/screens/tousLesTickets.dart';
 import 'package:mvst_admin/screens/suggestions_admin.dart';
 import 'package:mvst_admin/screens/synthese_du_jour.dart';
 import 'package:mvst_admin/screens/vue_par_depart.dart';
+import 'package:mvst_admin/screens/tendances.dart';
 import 'package:mvst_admin/gestionUtilisateurs/comptesBloques.dart';
 import 'package:mvst_admin/gestionUtilisateurs/listeDesUtilisateurs.dart';
 import 'package:mvst_admin/verifTickets/verifierticket.dart';
@@ -482,6 +483,7 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                     suggestions(context, setLoadingState),
                     syntheseDuJour(context, setLoadingState),
                     vueParDepart(context, setLoadingState),
+                    tendances(context, setLoadingState),
                   ],
                 ),
               ),
@@ -1052,6 +1054,36 @@ Widget vueParDepart(BuildContext ctx, Function setLoadingState) {
           ctx,
           MaterialPageRoute(
             builder: (_) => VueParDepart(gare: _gare, uid: _uid),
+          ),
+        ).then((_) => setLoadingState(false));
+      } else {
+        Navigator.pushReplacement(
+          ctx,
+          MaterialPageRoute(builder: (_) => const Login()),
+        ).then((_) => setLoadingState(false));
+      }
+    },
+  );
+}
+
+Widget tendances(BuildContext ctx, Function setLoadingState) {
+  return _carteMenu(
+    ctx: ctx,
+    setLoadingState: setLoadingState,
+    icon: Icons.trending_up,
+    label: 'TENDANCES',
+    onTap: () async {
+      if (AuthService.estConnecte()) {
+        final String _uid = AuthService.getUid() ?? '';
+        final prefs = await SharedPreferences.getInstance();
+        String _gare = prefs.getString('gare') ?? '';
+        if (_gare.isEmpty) {
+          _gare = await recupererGare(_uid) ?? '';
+        }
+        Navigator.push(
+          ctx,
+          MaterialPageRoute(
+            builder: (_) => Tendances(gare: _gare, uid: _uid),
           ),
         ).then((_) => setLoadingState(false));
       } else {
