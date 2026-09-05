@@ -33,6 +33,8 @@ import 'package:mvst_admin/authentification/login_wrapper.dart';
 import 'package:mvst_admin/services/auth_service.dart';
 import 'package:mvst_admin/services/fcm_service.dart';
 
+final GlobalKey<NavigatorState> navigatorKeyAdmin = GlobalKey<NavigatorState>();
+
 DateTime? dateActuelle = DateTime.now();
 
 DateTime aujourdhui = DateTime(
@@ -110,6 +112,7 @@ class MyApp extends StatelessWidget {
     tailleEcran = Calcule.tailleEcran(context).round();
     return MaterialApp(
       title: 'MVST Admin',
+      navigatorKey: navigatorKeyAdmin,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Config.colors.bleuFonce),

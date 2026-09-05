@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:mvst_admin/main.dart';
+import 'package:mvst_admin/screens/suggestions_admin.dart';
 import 'package:mvst_admin/services/api_client.dart';
 import 'package:mvst_admin/services/auth_service.dart';
 
@@ -21,6 +24,12 @@ class FcmService {
     description: 'Notifications de suggestions',
     importance: Importance.high,
   );
+
+  static void _ouvrirSuggestions() {
+    final nav = navigatorKeyAdmin.currentState;
+    if (nav == null) return;
+    nav.push(MaterialPageRoute(builder: (_) => const SuggestionsAdmin()));
+  }
 
   // Init technique : permission, canal Android, handlers. A appeler dans main().
   static Future<void> initialiser() async {
@@ -60,6 +69,20 @@ class FcmService {
         );
       }
     });
+
+    // Tap sur notif quand l'app est en arriere-plan (pas fermee)
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      _ouvrirSuggestions();
+    });
+
+    // Tap sur notif quand l'app etait FERMEE (message initial au demarrage)
+    final initial = await FirebaseMessaging.instance.getInitialMessage();
+    if (initial != null) {
+      // Retarder pour laisser le navigatorKey s'attacher au 1er frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _ouvrirSuggestions();
+      });
+    }
   }
 
   // Enregistre le token FCM du compte connecte. No-op si non connecte.
