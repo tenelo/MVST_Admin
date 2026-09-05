@@ -31,6 +31,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mvst_admin/parametres/gestion_admins.dart';
 import 'package:mvst_admin/authentification/login_wrapper.dart';
 import 'package:mvst_admin/services/auth_service.dart';
+import 'package:mvst_admin/services/fcm_service.dart';
 
 DateTime? dateActuelle = DateTime.now();
 
@@ -82,6 +83,7 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await FcmService.initialiser();
   await initializeDateFormatting('fr_FR', null);
   SharedPreferences prefs = await SharedPreferences.getInstance();
   final String gareAdmin = prefs.getString('gare') ?? '';
@@ -96,6 +98,7 @@ void main() async {
 /// Decide l'ecran de demarrage : token Sanctum present -> connecte.
 Future<bool> _decideDemarrage() async {
   await AuthService.chargerDepuisStorage();
+  await FcmService.enregistrerTokenSiConnecte();
   return AuthService.estConnecte();
 }
 
