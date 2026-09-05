@@ -12,6 +12,7 @@ import 'package:mvst_admin/mesfonctions/keyboard_notifier.dart';
 import 'package:mvst_admin/authentification/clavier_numerique.dart';
 import 'package:mvst_admin/services/api_client.dart';
 import 'package:mvst_admin/services/auth_service.dart';
+import 'package:mvst_admin/services/fcm_service.dart';
 import 'package:mvst_admin/services/token_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -227,6 +228,9 @@ class _LoginState extends State<Login> {
 
       // Rafraichir le cache memoire d'AuthService avant navigation.
       await AuthService.chargerDepuisStorage();
+
+      // Enregistrer le token FCM du compte fraichement connecte (best-effort).
+      await FcmService.enregistrerTokenSiConnecte();
 
       if (mounted) {
         Navigator.pushAndRemoveUntil(
