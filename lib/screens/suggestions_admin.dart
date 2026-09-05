@@ -224,6 +224,139 @@ class _SuggestionsAdminState extends State<SuggestionsAdmin>
     } catch (_) {}
   }
 
+  Future<void> _repondre(_Suggestion s) async {
+    final reponseCtrl = TextEditingController(text: s.reponse ?? '');
+    final formKey = GlobalKey<FormState>();
+    String? erreurModal;
+    bool envoi = false;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx2, setModalState) {
+          final c = Config.colors;
+          final sw = MediaQuery.of(ctx2).size.width;
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx2).viewInsets.bottom),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(sw * 0.06, 20, sw * 0.06, 20),
+              child: Form(
+                key: formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      s.statut == 'traite' ? 'Modifier la réponse' : 'Répondre à la suggestion',
+                      style: TextStyle(color: c.authCardBackground, fontSize: sw * 0.045, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(s.message, style: TextStyle(color: c.authCardBackground.withValues(alpha: 0.6), fontSize: 13)),
+                    const SizedBox(height: 16),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0F4F8),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: c.authCardBackground.withValues(alpha: 0.2), width: 1.5),
+                      ),
+                      child: TextFormField(
+                        controller: reponseCtrl,
+                        minLines: 3,
+                        maxLines: 6,
+                        cursorColor: c.authCardBackground,
+                        style: TextStyle(color: c.authCardBackground),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          hintText: 'Votre réponse au passager…',
+                          contentPadding: EdgeInsets.all(14),
+                        ),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return 'Veuillez saisir une réponse';
+                          return null;
+                        },
+                      ),
+                    ),
+                    if (erreurModal != null) ...[
+                      const SizedBox(height: 10),
+                      Text(erreurModal!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+                    ],
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: envoi
+                            ? null
+                            : () async {
+                                if (!formKey.currentState!.validate()) return;
+                                setModalState(() {
+                                  envoi = true;
+                                  erreurModal = null;
+                                });
+                                final texte = reponseCtrl.text.trim();
+                                try {
+                                  final resp = await ApiClient.instance.post(
+                                    'api_suggestions.php',
+                                    body: {'action': 'repondre', 'id': s.id, 'reponse': texte},
+                                    timeout: const Duration(seconds: 8),
+                                  );
+                                  final data = jsonDecode(resp.body);
+                                  if (data['success'] == true) {
+                                    if (mounted) {
+                                      setState(() {
+                                        s.reponse = texte;
+                                        s.statut = 'traite';
+                                      });
+                                      _socket.emit('rejoindre_suggestions_user', {'idutilisateur': s.idutilisateur});
+                                      _socket.emit('statut_suggestion_change', {
+                                        'id': s.id,
+                                        'statut': 'traite',
+                                        'idutilisateur': s.idutilisateur,
+                                      });
+                                    }
+                                    if (ctx.mounted) Navigator.pop(ctx);
+                                  } else {
+                                    setModalState(() {
+                                      envoi = false;
+                                      erreurModal = data['error'] ?? 'Erreur inconnue.';
+                                    });
+                                  }
+                                } catch (e) {
+                                  setModalState(() {
+                                    envoi = false;
+                                    erreurModal = 'Erreur réseau. Réessayez.';
+                                  });
+                                }
+                              },
+                        child: envoi
+                            ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                            : Text(s.statut == 'traite' ? 'Modifier' : 'Envoyer la réponse', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    reponseCtrl.dispose();
+  }
+
   // ── Supprimer (admin) ─────────────────────────────────────────────────────
   Future<void> _supprimer(_Suggestion s) async {
     final confirm = await showDialog<bool>(
@@ -645,6 +778,7 @@ class _SuggestionsAdminState extends State<SuggestionsAdmin>
               statut: s.statut,
               onChanged: (nouveau) => _changerStatut(s, nouveau),
               onDelete: () => _supprimer(s),
+              onRepondre: () => _repondre(s),
             ),
           ]),
         ]),
@@ -766,13 +900,13 @@ class _ActionMenu extends StatelessWidget {
   final String statut;
   final void Function(String) onChanged;
   final VoidCallback onDelete;
-  const _ActionMenu({required this.statut, required this.onChanged, required this.onDelete});
+  final VoidCallback onRepondre;
+  const _ActionMenu({required this.statut, required this.onChanged, required this.onDelete, required this.onRepondre});
 
   @override
   Widget build(BuildContext context) {
     final actions = <String, String>{
       if (statut != 'lu' && statut != 'traite') 'lu': 'Marquer lu',
-      if (statut != 'traite') 'traite': 'Marquer traité',
       if (statut == 'traite' || statut == 'lu') 'en_attente': 'Remettre en attente',
     };
     if (actions.isEmpty) return const SizedBox.shrink();
@@ -781,6 +915,8 @@ class _ActionMenu extends StatelessWidget {
       onSelected: (val) {
         if (val == '__delete__') {
           onDelete();
+        } else if (val == '__repondre__') {
+          onRepondre();
         } else {
           onChanged(val);
         }
@@ -789,6 +925,15 @@ class _ActionMenu extends StatelessWidget {
           color: Config.colors.authCardBackground.withValues(alpha: 0.5)),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       itemBuilder: (_) => [
+        PopupMenuItem<String>(
+          value: '__repondre__',
+          child: Row(children: [
+            const Icon(Icons.reply_rounded, size: 16, color: Color(0xFF10B981)),
+            const SizedBox(width: 10),
+            Text(statut == 'traite' ? 'Modifier la réponse' : 'Répondre',
+                style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.w600, fontSize: 13)),
+          ]),
+        ),
         ...actions.entries.map((e) {
           final info = _statuts[e.key]!;
           return PopupMenuItem<String>(
