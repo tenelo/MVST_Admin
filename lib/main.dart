@@ -228,54 +228,70 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                   child: ListView(
                     padding: EdgeInsets.zero,
                     children: [
-                      DrawerHeader(
-                        decoration: BoxDecoration(color: c.authCardBackground),
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 120.0,
-                                height: 120.0,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.fromLTRB(
+                          10,
+                          MediaQuery.of(context).padding.top + 24,
+                          10,
+                          16,
+                        ),
+                        color: c.authCardBackground,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 110.0,
+                              height: 110.0,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: c.jauneBlanc,
+                                  width: 2.0,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'MVST',
+                                  style: TextStyle(
                                     color: c.jauneBlanc,
-                                    width: 2.0,
+                                    fontSize: 20,
+                                    fontFamily: 'Lobster',
                                   ),
                                 ),
-                                child: Center(
-                                  child: Text(
-                                    'MVST',
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Center(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    AuthService.getUtilisateur()?.displayName ??
+                                        '',
+                                    textAlign: TextAlign.center,
                                     style: TextStyle(
                                       color: c.jauneBlanc,
-                                      fontSize: 24,
-                                      fontFamily: 'Lobster',
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    _role == 'superadmin'
+                                        ? 'Super Admin'
+                                        : 'Admin',
+                                    style: TextStyle(
+                                      color: c.jauneBlanc.withValues(
+                                        alpha: 0.8,
+                                      ),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 10),
-                              Text(
-                                AuthService.getUtilisateur()?.displayName ??
-                                    '',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: c.jauneBlanc,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                _role == 'superadmin' ? 'Super Admin' : 'Admin',
-                                style: TextStyle(
-                                  color: c.jauneBlanc.withValues(alpha: 0.8),
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                       ListTile(
@@ -1135,9 +1151,7 @@ Widget vueSuperadmin(BuildContext ctx, Function setLoadingState) {
         final String _uid = AuthService.getUid() ?? '';
         Navigator.push(
           ctx,
-          MaterialPageRoute(
-            builder: (_) => SyntheseToutesGares(uid: _uid),
-          ),
+          MaterialPageRoute(builder: (_) => SyntheseToutesGares(uid: _uid)),
         ).then((_) => setLoadingState(false));
       } else {
         Navigator.pushReplacement(
