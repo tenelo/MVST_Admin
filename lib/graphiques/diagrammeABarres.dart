@@ -222,7 +222,7 @@ class _GraphiquesABarresState extends State<GraphiquesABarres> {
                           borderRadius: BorderRadius.circular(4),
                           sortingOrder: SortingOrder.descending,
                           name:
-                              'Passagers du ${widget.date} : ${_getTotalPassagers()}',
+                              'Passagers du ${_lisible(widget.date)} : ${_getTotalPassagers()}',
                           dataSource: filteredTickets,
                           xValueMapper: (d, _) => d.destinations,
                           yValueMapper: (d, _) => d.nombrePassagers,

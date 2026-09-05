@@ -255,6 +255,25 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                                   ),
                                 ),
                               ),
+                              const SizedBox(height: 10),
+                              Text(
+                                AuthService.getUtilisateur()?.displayName ??
+                                    '',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: c.jauneBlanc,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _role == 'superadmin' ? 'Super Admin' : 'Admin',
+                                style: TextStyle(
+                                  color: c.jauneBlanc.withValues(alpha: 0.8),
+                                  fontSize: 12,
+                                ),
+                              ),
                             ],
                           ),
                         ),

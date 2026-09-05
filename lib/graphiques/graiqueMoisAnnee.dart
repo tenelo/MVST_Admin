@@ -223,7 +223,7 @@ class _GraphiquesABarresMoisAnneeState
                           borderRadius: BorderRadius.circular(4),
                           sortingOrder: SortingOrder.descending,
                           name:
-                              'Total passagers ${widget.moisAnnee} : ${_getTotalPassagers()}',
+                              'Total passagers ${_lisible(widget.moisAnnee)} : ${_getTotalPassagers()}',
                           dataSource: filteredTickets,
                           xValueMapper: (d, _) => d.destinations,
                           yValueMapper: (d, _) => d.nombrePassagers,

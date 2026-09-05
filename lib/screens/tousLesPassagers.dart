@@ -127,7 +127,7 @@ class _TousLesPassagersState extends State<TousLesPassagers> {
       appBar: AppBar(
         iconTheme: IconThemeData(color: c.authCardBackground),
         title: Text(
-          'Tous lesPassagers',
+          'Tous les Passagers',
           style: TextStyle(
             color: c.authCardBackground,
             fontWeight: FontWeight.bold,

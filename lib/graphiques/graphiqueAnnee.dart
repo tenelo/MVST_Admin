@@ -221,7 +221,7 @@ class _GraphiquesABarresAnneeState extends State<GraphiquesABarresAnnee> {
                           borderRadius: BorderRadius.circular(4),
                           sortingOrder: SortingOrder.descending,
                           name:
-                              'Total passagers ${widget.annee} : ${_getTotalPassagers()}',
+                              'Total passagers ${_lisible(widget.annee)} : ${_getTotalPassagers()}',
                           dataSource: filteredTickets,
                           xValueMapper: (d, _) => d.destinations,
                           yValueMapper: (d, _) => d.nombrePassagers,

@@ -155,8 +155,8 @@ class _TousLesTicketsState extends State<TousLesTickets> {
                     child: TextField(
                       controller: _rechercheParDate,
                       decoration: const InputDecoration(
-                        hintText: 'Recherche\npar date',
-                        hintMaxLines: 2,
+                        hintText: 'Date',
+                        hintMaxLines: 1,
                         hintStyle: TextStyle(fontSize: 11),
                         prefixIcon: Icon(Icons.search, size: 18),
                         border: OutlineInputBorder(
@@ -172,8 +172,8 @@ class _TousLesTicketsState extends State<TousLesTickets> {
                     child: TextField(
                       controller: _rechercheParDestination,
                       decoration: const InputDecoration(
-                        hintText: 'Recherche\npar destination',
-                        hintMaxLines: 2,
+                        hintText: 'Destination',
+                        hintMaxLines: 1,
                         hintStyle: TextStyle(fontSize: 11),
                         prefixIcon: Icon(Icons.search, size: 18),
                         border: OutlineInputBorder(
@@ -189,8 +189,8 @@ class _TousLesTicketsState extends State<TousLesTickets> {
                     child: TextField(
                       controller: _rechercheParNom,
                       decoration: const InputDecoration(
-                        hintText: 'Recherche\npar nom',
-                        hintMaxLines: 2,
+                        hintText: 'Nom',
+                        hintMaxLines: 1,
                         hintStyle: TextStyle(fontSize: 11),
                         prefixIcon: Icon(Icons.search, size: 18),
                         border: OutlineInputBorder(

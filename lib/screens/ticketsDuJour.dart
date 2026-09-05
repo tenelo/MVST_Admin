@@ -137,7 +137,7 @@ class _TicketsDuJourState extends State<TicketsDuJour> {
       appBar: AppBar(
         iconTheme: IconThemeData(color: c.authCardBackground),
         title: Text(
-          '${widget.gare} -> ${widget.destination} ${widget.date}',
+          '${widget.gare} -> ${widget.destination} ${widget.date.replaceAll('_', ' ')}',
           style: TextStyle(
             fontSize: 12,
             color: c.authCardBackground,
@@ -167,8 +167,8 @@ class _TicketsDuJourState extends State<TicketsDuJour> {
                   child: TextField(
                     controller: _rechercheParDate,
                     decoration: const InputDecoration(
-                      hintText: 'Par dates',
-                      hintMaxLines: 2,
+                      hintText: 'Date',
+                      hintMaxLines: 1,
                       hintStyle: TextStyle(fontSize: 11),
                       prefixIcon: Icon(Icons.search, size: 18),
                       border: OutlineInputBorder(
@@ -184,8 +184,8 @@ class _TicketsDuJourState extends State<TicketsDuJour> {
                   child: TextField(
                     controller: _rechercheParDestination,
                     decoration: const InputDecoration(
-                      hintText: 'Par destinations',
-                      hintMaxLines: 2,
+                      hintText: 'Destination',
+                      hintMaxLines: 1,
                       hintStyle: TextStyle(fontSize: 11),
                       prefixIcon: Icon(Icons.search, size: 18),
                       border: OutlineInputBorder(
@@ -201,8 +201,8 @@ class _TicketsDuJourState extends State<TicketsDuJour> {
                   child: TextField(
                     controller: _rechercheParNom,
                     decoration: const InputDecoration(
-                      hintText: 'Par noms',
-                      hintMaxLines: 2,
+                      hintText: 'Nom',
+                      hintMaxLines: 1,
                       hintStyle: TextStyle(fontSize: 11),
                       prefixIcon: Icon(Icons.search, size: 18),
                       border: OutlineInputBorder(
