@@ -26,6 +26,7 @@ class _GestionAdminsState extends State<GestionAdmins> {
   String? _erreur;
   String? _succes;
   int? _permissionEnCoursId;
+  int? _permissionPushEnCoursId;
 
   @override
   void initState() {
@@ -487,6 +488,48 @@ class _GestionAdminsState extends State<GestionAdmins> {
     if (mounted) setState(() => _permissionEnCoursId = null);
   }
 
+  Future<void> _basculerPermissionNotificationsPush(
+    Map<String, dynamic> admin,
+    bool nouvelleValeur,
+  ) async {
+    final id = admin['id'];
+    setState(() => _permissionPushEnCoursId = id);
+    try {
+      final response = await ApiClient.instance.post(
+        'modifierPermissionNotificationsPush.php',
+        body: {
+          'id': id,
+          'peutGererLesNotificationsPush': nouvelleValeur,
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          if (mounted) {
+            setState(() => admin['peutGererLesNotificationsPush'] = nouvelleValeur);
+          }
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: Colors.red,
+              content: Text(data['message'] ?? 'Erreur inconnue.'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.red,
+            content: Text('Erreur réseau. Réessayez.'),
+          ),
+        );
+      }
+    }
+    if (mounted) setState(() => _permissionPushEnCoursId = null);
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = Config.colors;
@@ -838,6 +881,32 @@ class _GestionAdminsState extends State<GestionAdmins> {
                                             activeThumbColor: c.authAccent,
                                             onChanged: (v) =>
                                                 _basculerPermissionSuggestions(admin, v),
+                                          ),
+                                  ],
+                                ),
+                              ),
+                            if (eligiblePermission)
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.campaign_outlined,
+                                        color: c.authAccent, size: 18),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text('Peut gérer les notifications push',
+                                          style: TextStyle(
+                                              color: c.authTextSecondary, fontSize: 12)),
+                                    ),
+                                    _permissionPushEnCoursId == admin['id']
+                                        ? const SizedBox(
+                                            width: 20, height: 20,
+                                            child: CircularProgressIndicator(strokeWidth: 2))
+                                        : Switch(
+                                            value: admin['peutGererLesNotificationsPush'] == true,
+                                            activeThumbColor: c.authAccent,
+                                            onChanged: (v) =>
+                                                _basculerPermissionNotificationsPush(admin, v),
                                           ),
                                   ],
                                 ),
