@@ -209,6 +209,15 @@ Future<String?> recupererRole() async {
   }
 }
 
+Future<bool> recupererPeutGererNotifs() async {
+  try {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('peutGererNotifs') ?? false;
+  } catch (e) {
+    return false;
+  }
+}
+
 Future<String?> recupererGare(String idUtilisateur) async {
   try {
     final response = await ApiClient.instance.post(

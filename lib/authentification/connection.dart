@@ -35,6 +35,7 @@ class _LoginState extends State<Login> {
   String _gare = '';
   String _uid = '';
   String _role = 'admin';
+  bool _peutGererNotifs = false;
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   @override
@@ -43,11 +44,17 @@ class _LoginState extends State<Login> {
     super.dispose();
   }
 
-  Future<void> enregistrerSession(String gare, String uid, String role) async {
+  Future<void> enregistrerSession(
+    String gare,
+    String uid,
+    String role,
+    bool peutGererNotifs,
+  ) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('gare', gare);
     await prefs.setString('uid', uid);
     await prefs.setString('role', role);
+    await prefs.setBool('peutGererNotifs', peutGererNotifs);
   }
 
   Future<void> _continuer() async {
@@ -129,6 +136,7 @@ class _LoginState extends State<Login> {
       _gare = data['gare'] as String? ?? '';
       _uid = data['uid'] as String? ?? '';
       _role = data['role'] as String? ?? 'admin';
+      _peutGererNotifs = data['peutGererLesNotificationsPush'] == true;
       final bool compteExiste = data['compteExiste'] == true;
 
       if (!compteExiste) {
@@ -224,7 +232,7 @@ class _LoginState extends State<Login> {
       // Pont transition : on continue d'ecrire gare/role/uid en
       // SharedPreferences, encore lus par main() et profil.dart tant que
       // le Lot 1c n'a pas migre ces lectures vers AuthService.
-      await enregistrerSession(_gare, _uid, _role);
+      await enregistrerSession(_gare, _uid, _role, _peutGererNotifs);
 
       // Rafraichir le cache memoire d'AuthService avant navigation.
       await AuthService.chargerDepuisStorage();

@@ -24,6 +24,7 @@ import 'package:mvst_admin/screens/synthese_du_jour.dart';
 import 'package:mvst_admin/screens/vue_par_depart.dart';
 import 'package:mvst_admin/screens/tendances.dart';
 import 'package:mvst_admin/screens/synthese_toutes_gares.dart';
+import 'package:mvst_admin/screens/notifications_push.dart';
 import 'package:mvst_admin/gestionUtilisateurs/comptesBloques.dart';
 import 'package:mvst_admin/gestionUtilisateurs/listeDesUtilisateurs.dart';
 import 'package:mvst_admin/verifTickets/verifierticket.dart';
@@ -152,6 +153,7 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
   String? _gare;
   String? _uid;
   String? _role;
+  bool _peutGererNotifs = false;
 
   @override
   void initState() {
@@ -165,11 +167,13 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
     if (idUtilisateur == null) return;
     final gare = await recupererGare(idUtilisateur);
     final role = await recupererRole();
+    final peutGererNotifs = await recupererPeutGererNotifs();
     if (mounted) {
       setState(() {
         _uid = idUtilisateur;
         _gare = gare;
         _role = role;
+        _peutGererNotifs = peutGererNotifs;
       });
     }
   }
@@ -528,6 +532,8 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                     tendances(context, setLoadingState),
                     if (_role == 'superadmin')
                       vueSuperadmin(context, setLoadingState),
+                    if (_role == 'superadmin' || _peutGererNotifs)
+                      notificationsPush(context, setLoadingState),
                   ],
                 ),
               ),
@@ -1152,6 +1158,28 @@ Widget vueSuperadmin(BuildContext ctx, Function setLoadingState) {
         Navigator.push(
           ctx,
           MaterialPageRoute(builder: (_) => SyntheseToutesGares(uid: _uid)),
+        ).then((_) => setLoadingState(false));
+      } else {
+        Navigator.pushReplacement(
+          ctx,
+          MaterialPageRoute(builder: (_) => const Login()),
+        ).then((_) => setLoadingState(false));
+      }
+    },
+  );
+}
+
+Widget notificationsPush(BuildContext ctx, Function setLoadingState) {
+  return _carteMenu(
+    ctx: ctx,
+    setLoadingState: setLoadingState,
+    icon: Icons.campaign_outlined,
+    label: 'NOTIFICATIONS',
+    onTap: () async {
+      if (AuthService.estConnecte()) {
+        Navigator.push(
+          ctx,
+          MaterialPageRoute(builder: (_) => const NotificationsPush()),
         ).then((_) => setLoadingState(false));
       } else {
         Navigator.pushReplacement(
