@@ -97,7 +97,9 @@ class _NotificationsPushState extends State<NotificationsPush>
           if (mounted) {
             setState(() {
               _listeGares = List<String>.from(
-                (data['gares'] as List).map((g) => g is Map ? g['gare'].toString() : g.toString()),
+                (data['gares'] as List).map(
+                  (g) => g is Map ? g['gare'].toString() : g.toString(),
+                ),
               );
             });
           }
@@ -122,7 +124,9 @@ class _NotificationsPushState extends State<NotificationsPush>
         if (data['success'] == true && data['utilisateurs'] is List) {
           setState(() {
             _resultatsRecherche = List<Map<String, dynamic>>.from(
-              (data['utilisateurs'] as List).map((u) => Map<String, dynamic>.from(u)),
+              (data['utilisateurs'] as List).map(
+                (u) => Map<String, dynamic>.from(u),
+              ),
             );
           });
         }
@@ -155,7 +159,8 @@ class _NotificationsPushState extends State<NotificationsPush>
       _snack('Titre et message obligatoires.', Colors.red);
       return;
     }
-    if (_cible == 'gare' && (_gareSelectionnee == null || _gareSelectionnee!.isEmpty)) {
+    if (_cible == 'gare' &&
+        (_gareSelectionnee == null || _gareSelectionnee!.isEmpty)) {
       _snack('Choisissez une gare.', Colors.red);
       return;
     }
@@ -227,17 +232,36 @@ class _NotificationsPushState extends State<NotificationsPush>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: c.authCardBackground,
-        title: Text('Confirmer l\'envoi', style: TextStyle(color: c.jauneBlanc)),
-        content: Text(texte, style: TextStyle(color: c.authTextSecondary)),
+        title: Text(
+          'Confirmer l\'envoi',
+          style: TextStyle(color: c.jauneBlanc),
+        ),
+        content: Text(texte, style: TextStyle(color: Colors.white)),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Envoyer', style: TextStyle(color: Colors.white)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text(
+                  'Annuler',
+                  style: TextStyle(
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                ),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text(
+                  'Envoyer',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -255,7 +279,9 @@ class _NotificationsPushState extends State<NotificationsPush>
       if (data['success'] == true && data['historique'] is List) {
         setState(() {
           _historique = List<Map<String, dynamic>>.from(
-            (data['historique'] as List).map((h) => Map<String, dynamic>.from(h)),
+            (data['historique'] as List).map(
+              (h) => Map<String, dynamic>.from(h),
+            ),
           );
         });
       }
@@ -267,16 +293,15 @@ class _NotificationsPushState extends State<NotificationsPush>
 
   void _snack(String msg, Color bg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(backgroundColor: bg, content: Text(msg)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(backgroundColor: bg, content: Text(msg)));
   }
 
   String _libelleCible(String valeur) {
-    return _cibles.firstWhere(
-      (c) => c.valeur == valeur,
-      orElse: () => _cibles.first,
-    ).label;
+    return _cibles
+        .firstWhere((c) => c.valeur == valeur, orElse: () => _cibles.first)
+        .label;
   }
 
   @override
@@ -287,7 +312,14 @@ class _NotificationsPushState extends State<NotificationsPush>
       appBar: AppBar(
         backgroundColor: c.authCardBackground,
         iconTheme: IconThemeData(color: c.jauneBlanc),
-        title: Text('NOTIFICATIONS PUSH', style: TextStyle(color: c.jauneBlanc, fontSize: 18, fontWeight: FontWeight.w500)),
+        title: Text(
+          'NOTIFICATIONS PUSH',
+          style: TextStyle(
+            color: c.jauneBlanc,
+            fontSize: 18,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         centerTitle: true,
         bottom: TabBar(
           controller: _tabController,
@@ -305,10 +337,7 @@ class _NotificationsPushState extends State<NotificationsPush>
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [
-          _ongletEnvoyer(c),
-          _ongletHistorique(c),
-        ],
+        children: [_ongletEnvoyer(c), _ongletHistorique(c)],
       ),
     );
   }
@@ -324,7 +353,9 @@ class _NotificationsPushState extends State<NotificationsPush>
             style: TextStyle(color: c.authCardBackground),
             decoration: InputDecoration(
               labelText: 'Titre',
-              labelStyle: TextStyle(color: c.authCardBackground.withValues(alpha: 0.6)),
+              labelStyle: TextStyle(
+                color: c.authCardBackground.withValues(alpha: 0.6),
+              ),
               border: const OutlineInputBorder(),
             ),
           ),
@@ -336,22 +367,35 @@ class _NotificationsPushState extends State<NotificationsPush>
             maxLines: 6,
             decoration: InputDecoration(
               labelText: 'Message',
-              labelStyle: TextStyle(color: c.authCardBackground.withValues(alpha: 0.6)),
+              labelStyle: TextStyle(
+                color: c.authCardBackground.withValues(alpha: 0.6),
+              ),
               border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),
-          Text('Cible', style: TextStyle(color: c.authCardBackground.withValues(alpha: 0.6), fontWeight: FontWeight.bold)),
+          Text(
+            'Cible',
+            style: TextStyle(
+              color: c.authCardBackground.withValues(alpha: 0.6),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 8),
-          ..._cibles.map((cible) => RadioListTile<String>(
-                value: cible.valeur,
-                groupValue: _cible,
-                onChanged: (v) => setState(() => _cible = v ?? 'tous'),
-                title: Text(cible.label, style: TextStyle(color: c.authCardBackground, fontSize: 14)),
-                secondary: Icon(cible.icon, color: c.authAccent, size: 20),
-                activeColor: c.authAccent,
-                dense: true,
-              )),
+          ..._cibles.map(
+            (cible) => RadioListTile<String>(
+              value: cible.valeur,
+              groupValue: _cible,
+              onChanged: (v) => setState(() => _cible = v ?? 'tous'),
+              title: Text(
+                cible.label,
+                style: TextStyle(color: c.authCardBackground, fontSize: 14),
+              ),
+              secondary: Icon(cible.icon, color: c.authAccent, size: 20),
+              activeColor: c.authAccent,
+              dense: true,
+            ),
+          ),
           if (_cible == 'gare') _selecteurGare(c),
           if (_cible == 'selection') _selecteurUtilisateurs(c),
           const SizedBox(height: 20),
@@ -359,11 +403,26 @@ class _NotificationsPushState extends State<NotificationsPush>
             width: double.infinity,
             height: 50,
             child: ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF10B981),
+              ),
               onPressed: _envoiEnCours ? null : _lancerEnvoi,
               child: _envoiEnCours
-                  ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                  : const Text('Envoyer la notification', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                  : const Text(
+                      'Envoyer la notification',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ),
         ],
@@ -375,10 +434,14 @@ class _NotificationsPushState extends State<NotificationsPush>
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: DropdownButtonFormField<String>(
-        initialValue: _listeGares.contains(_gareSelectionnee) ? _gareSelectionnee : null,
+        initialValue: _listeGares.contains(_gareSelectionnee)
+            ? _gareSelectionnee
+            : null,
         decoration: InputDecoration(
           labelText: 'Gare',
-          labelStyle: TextStyle(color: c.authCardBackground.withValues(alpha: 0.6)),
+          labelStyle: TextStyle(
+            color: c.authCardBackground.withValues(alpha: 0.6),
+          ),
           border: const OutlineInputBorder(),
         ),
         dropdownColor: c.homeCardBackground,
@@ -402,7 +465,9 @@ class _NotificationsPushState extends State<NotificationsPush>
             style: TextStyle(color: c.authCardBackground),
             decoration: InputDecoration(
               labelText: 'Rechercher (nom ou telephone)',
-              labelStyle: TextStyle(color: c.authCardBackground.withValues(alpha: 0.6)),
+              labelStyle: TextStyle(
+                color: c.authCardBackground.withValues(alpha: 0.6),
+              ),
               suffixIcon: IconButton(
                 icon: Icon(Icons.search, color: c.authAccent),
                 onPressed: () => _rechercherUtilisateurs(_rechercheCtrl.text),
@@ -414,7 +479,10 @@ class _NotificationsPushState extends State<NotificationsPush>
           if (_selection.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text('${_selection.length} selectionne(s)', style: TextStyle(color: c.authAccent, fontSize: 12)),
+              child: Text(
+                '${_selection.length} selectionne(s)',
+                style: TextStyle(color: c.authAccent, fontSize: 12),
+              ),
             ),
           if (_rechercheEnCours)
             const Padding(
@@ -434,8 +502,17 @@ class _NotificationsPushState extends State<NotificationsPush>
                 }
               }),
               activeColor: c.authAccent,
-              title: Text('${u['nom'] ?? ''} ${u['prenoms'] ?? ''}'.trim(), style: TextStyle(color: c.authCardBackground, fontSize: 14)),
-              subtitle: Text(u['telephone']?.toString() ?? '', style: TextStyle(color: c.authCardBackground.withValues(alpha: 0.6), fontSize: 12)),
+              title: Text(
+                '${u['nom'] ?? ''} ${u['prenoms'] ?? ''}'.trim(),
+                style: TextStyle(color: c.authCardBackground, fontSize: 14),
+              ),
+              subtitle: Text(
+                u['telephone']?.toString() ?? '',
+                style: TextStyle(
+                  color: c.authCardBackground.withValues(alpha: 0.6),
+                  fontSize: 12,
+                ),
+              ),
               dense: true,
             );
           }),
@@ -449,7 +526,12 @@ class _NotificationsPushState extends State<NotificationsPush>
       return const Center(child: CircularProgressIndicator());
     }
     if (_historique.isEmpty) {
-      return Center(child: Text('Aucune diffusion pour le moment.', style: TextStyle(color: c.authTextSecondary)));
+      return Center(
+        child: Text(
+          'Aucune diffusion pour le moment.',
+          style: TextStyle(color: c.authTextSecondary),
+        ),
+      );
     }
     return RefreshIndicator(
       onRefresh: _chargerHistorique,
@@ -461,7 +543,9 @@ class _NotificationsPushState extends State<NotificationsPush>
           final date = h['dateEnvoi']?.toString() ?? '';
           String dateFmt = date;
           try {
-            dateFmt = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(date));
+            dateFmt = DateFormat(
+              'dd/MM/yyyy HH:mm',
+            ).format(DateTime.parse(date));
           } catch (_) {}
           return Container(
             margin: const EdgeInsets.only(bottom: 10),
@@ -473,25 +557,55 @@ class _NotificationsPushState extends State<NotificationsPush>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(h['titre']?.toString() ?? '', style: TextStyle(color: c.jauneBlanc, fontWeight: FontWeight.bold)),
+                Text(
+                  h['titre']?.toString() ?? '',
+                  style: TextStyle(
+                    color: c.jauneBlanc,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(h['message']?.toString() ?? '', style: TextStyle(color: c.authTextSecondary, fontSize: 13)),
+                Text(
+                  h['message']?.toString() ?? '',
+                  style: TextStyle(color: c.authTextSecondary, fontSize: 13),
+                ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
                     Icon(Icons.groups_outlined, color: c.authAccent, size: 14),
                     const SizedBox(width: 4),
-                    Text(_libelleCible(h['cible']?.toString() ?? ''), style: TextStyle(color: c.authAccent, fontSize: 11)),
+                    Text(
+                      _libelleCible(h['cible']?.toString() ?? ''),
+                      style: TextStyle(color: c.authAccent, fontSize: 11),
+                    ),
                     const Spacer(),
-                    Text('${h['envoyes'] ?? 0}/${h['destinataires'] ?? 0}', style: TextStyle(color: c.authTextSecondary, fontSize: 11)),
+                    Text(
+                      '${h['envoyes'] ?? 0}/${h['destinataires'] ?? 0}',
+                      style: TextStyle(
+                        color: c.authTextSecondary,
+                        fontSize: 11,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Text(h['nomAdmin']?.toString() ?? '', style: TextStyle(color: c.authTextSecondary, fontSize: 10)),
+                    Text(
+                      h['nomAdmin']?.toString() ?? '',
+                      style: TextStyle(
+                        color: c.authTextSecondary,
+                        fontSize: 10,
+                      ),
+                    ),
                     const Spacer(),
-                    Text(dateFmt, style: TextStyle(color: c.authTextSecondary, fontSize: 10)),
+                    Text(
+                      dateFmt,
+                      style: TextStyle(
+                        color: c.authTextSecondary,
+                        fontSize: 10,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -499,8 +613,15 @@ class _NotificationsPushState extends State<NotificationsPush>
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton.icon(
-                      icon: Icon(Icons.copy_all_outlined, color: c.authAccent, size: 18),
-                      label: Text('Renvoyer / modifier', style: TextStyle(color: c.authAccent, fontSize: 12)),
+                      icon: Icon(
+                        Icons.copy_all_outlined,
+                        color: c.authAccent,
+                        size: 18,
+                      ),
+                      label: Text(
+                        'Renvoyer / modifier',
+                        style: TextStyle(color: c.authAccent, fontSize: 12),
+                      ),
                       onPressed: () {
                         _tabController.animateTo(0);
                         setState(() => _appliquerPrefill(h));
