@@ -354,7 +354,13 @@ class _SuggestionsAdminState extends State<SuggestionsAdmin>
       ),
     );
 
-    reponseCtrl.dispose();
+    // Dispose differe apres la frame courante : evite le crash
+    // "TextEditingController used after being disposed" quand une derniere
+    // frame de rebuild du TextFormField survient pendant la fermeture du
+    // bottom sheet (cas : champ vide + retour).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      reponseCtrl.dispose();
+    });
   }
 
   // ── Supprimer (admin) ─────────────────────────────────────────────────────
