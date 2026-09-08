@@ -10,6 +10,7 @@ import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/main.dart';
 import 'package:mvst_admin/mesfonctions/keyboard_notifier.dart';
 import 'package:mvst_admin/authentification/clavier_numerique.dart';
+import 'package:mvst_admin/authentification/pin_forgot.dart';
 import 'package:mvst_admin/services/api_client.dart';
 import 'package:mvst_admin/services/auth_service.dart';
 import 'package:mvst_admin/services/fcm_service.dart';
@@ -457,7 +458,26 @@ class _LoginState extends State<Login> {
             colors: c,
             sw: sw,
           ),
-        SizedBox(height: sh * 0.04),
+        SizedBox(height: sh * 0.02),
+        TextButton(
+          onPressed: _isLoading
+              ? null
+              : () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PinForgot()),
+                  );
+                },
+          child: Text(
+            'Code Secret oublié ?',
+            style: TextStyle(
+              color: c.authAccent,
+              fontSize: sw * 0.035,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        SizedBox(height: sh * 0.02),
       ],
     );
   }
