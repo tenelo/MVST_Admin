@@ -197,7 +197,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
         children: [
           // ── Zone scanner ──────────────────────────────────────────────────
           SizedBox(
-            height: size.height * .50,
+            height: size.height * .60,
             child: Stack(
               children: [
                 Padding(
@@ -225,8 +225,9 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
                           final String dateDuJour = DateFormat(
                             'yyyy-MM-dd',
                           ).format(DateTime.now());
-                          final DateTime dateDuJourFormate =
-                              DateTime.parse(dateDuJour).toUtc();
+                          final DateTime dateDuJourFormate = DateTime.parse(
+                            dateDuJour,
+                          ).toUtc();
 
                           if (ticketData.dateCalcule.isAtSameMomentAs(
                             dateDuJourFormate,
@@ -234,8 +235,9 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
                             if (ticketData.etatScann == 'nonScanné') {
                               // Notifier partage avec le dialog : true = ce ticket s'est revele
                               // deja scanne selon le serveur (bascule le dialog en bleu).
-                              final dejaScanneNotifier =
-                                  ValueNotifier<bool>(false);
+                              final dejaScanneNotifier = ValueNotifier<bool>(
+                                false,
+                              );
 
                               // Emission socket immediate (temps reel cote client, inchange).
                               _emettreTicketScanne(ticketData);
@@ -267,10 +269,8 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
                               showDialog(
                                 context: context,
                                 barrierDismissible: false,
-                                builder: (context) => _dialogDejaValide(
-                                  context,
-                                  ticketData,
-                                ),
+                                builder: (context) =>
+                                    _dialogDejaValide(context, ticketData),
                               );
                             }
                           } else if (ticketData.dateCalcule.isAfter(
@@ -279,10 +279,8 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
                             showDialog(
                               context: context,
                               barrierDismissible: false,
-                              builder: (context) => _dialogFutureDate(
-                                context,
-                                ticketData,
-                              ),
+                              builder: (context) =>
+                                  _dialogFutureDate(context, ticketData),
                             );
                           } else {
                             showDialog(
@@ -358,7 +356,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
 
           // ── Bouton Pause / Reprendre ──────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 70),
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -393,7 +391,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
         ],
       ),
     );

@@ -191,10 +191,12 @@ class _CarVIPState extends State<CarVIP> {
                                       _rangee2([13, 14]),
                                       _rangee2([9, 10]),
                                       _rangee2([5, 6]),
+                                      _rangee2([3, 4]),
+
                                       Padding(
                                         padding: const EdgeInsets.only(
                                           left: 10,
-                                          top: 10.0,
+                                          top: 15.0,
                                         ),
                                         child: porte(),
                                       ),
@@ -218,6 +220,7 @@ class _CarVIPState extends State<CarVIP> {
                                       _rangee2([15, 16]),
                                       _rangee2([11, 12]),
                                       _rangee2([7, 8]),
+                                      _rangee2([1, 2]),
                                       const SizedBox(height: 4),
                                       Row(
                                         children: [
@@ -312,9 +315,10 @@ class _PlacesVIPState extends State<PlacesVIP> {
     final bool petitEcran = w < 600;
     final double siegeSize = petitEcran ? w * 0.090 : w * 0.093;
 
-    final Color textColor = etat == "cliquable"
-        ? Colors.white
-        : const Color(0xFF006B3C);
+    // final Color textColor = etat == "cliquable"
+    //     ? Colors.white
+    //     : const Color(0xFF006B3C);
+    final Color textColor = Colors.white;
 
     if (maListeDeTicketsVIP.any((t) => t.place == widget.numero) &&
         etat == "nonCliquable") {

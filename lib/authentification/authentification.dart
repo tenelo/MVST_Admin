@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mvst_admin/authentification/pin_creation.dart';
+import 'package:mvst_admin/authentification/pin_verification.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/services/api_client.dart';
 import 'package:mvst_admin/services/auth_service.dart';
@@ -65,12 +66,45 @@ class _PageDAuthentificationState extends State<PageDAuthentification> {
       return;
     }
     FocusScope.of(context).unfocus();
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PinCreation(onPinConfirmed: _finaliserCreation),
-      ),
-    );
+
+    // Verifier si ce numero a deja un compte MVST avec un code secret.
+    bool aDejaUnCode = false;
+    try {
+      final resp = await ApiClient.instance.post(
+        'verifierTelephone.php',
+        body: {'telephone': widget.telephone},
+        timeout: const Duration(seconds: 8),
+      );
+      final data = jsonDecode(resp.body);
+      if (data['success'] == true && data['aPin'] == true) {
+        aDejaUnCode = true;
+      }
+    } catch (_) {
+      // En cas d'echec de la verif, on retombe sur la creation classique.
+    }
+
+    if (!mounted) return;
+
+    if (aDejaUnCode) {
+      // Deja client MVST : il doit saisir son code secret existant (unifie).
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PinVerification(
+            telephone: widget.telephone,
+            onPinVerifie: _finaliserCreation,
+          ),
+        ),
+      );
+    } else {
+      // Nouveau : creation d'un code secret.
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PinCreation(onPinConfirmed: _finaliserCreation),
+        ),
+      );
+    }
   }
 
   // ── Creation admin via Sanctum (serveur gere flux nouveau/existant) ─────────
