@@ -46,6 +46,8 @@ dependencies:
   mobile_scanner: ^7.2.0
   dot_curved_bottom_nav: ^0.0.2
   flutter_secure_storage: ^10.2.0
+  package_info_plus: ^10.2.1
+  url_launcher: ^6.3.2
 
 
 

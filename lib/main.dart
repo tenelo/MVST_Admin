@@ -33,6 +33,7 @@ import 'package:mvst_admin/parametres/gestion_admins.dart';
 import 'package:mvst_admin/authentification/login_wrapper.dart';
 import 'package:mvst_admin/services/auth_service.dart';
 import 'package:mvst_admin/services/fcm_service.dart';
+import 'package:mvst_admin/services/version_check.dart';
 
 final GlobalKey<NavigatorState> navigatorKeyAdmin = GlobalKey<NavigatorState>();
 
@@ -158,6 +159,9 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) VersionCheck.verifier(context);
+    });
     WidgetsBinding.instance.addObserver(this);
     _loadUserData();
   }
