@@ -92,7 +92,7 @@ void main() async {
   await initializeDateFormatting('fr_FR', null);
   SharedPreferences prefs = await SharedPreferences.getInstance();
   final String gareAdmin = prefs.getString('gare') ?? '';
-  final String profilAdmin = prefs.getString('profil') ?? 'admin';
+  final String profilAdmin = await recupererRole() ?? 'admin';
   listeDesTicketsScannes = await ListesDesTickets.ticketsAscanner(
     gareAdmin,
     profilAdmin,
