@@ -27,6 +27,7 @@ class _GestionAdminsState extends State<GestionAdmins> {
   String? _succes;
   int? _permissionEnCoursId;
   int? _permissionPushEnCoursId;
+  dynamic _permissionCarEnCoursId;
 
   @override
   void initState() {
@@ -530,6 +531,46 @@ class _GestionAdminsState extends State<GestionAdmins> {
     if (mounted) setState(() => _permissionPushEnCoursId = null);
   }
 
+  Future<void> _basculerPermissionPositionnerCar(
+    Map<String, dynamic> admin,
+    bool nouvelleValeur,
+  ) async {
+    final id = admin['id'];
+    setState(() => _permissionCarEnCoursId = id);
+    try {
+      final response = await ApiClient.instance.post(
+        'modifierPermissionPositionnerCar.php',
+        body: {
+          'id': id,
+          'peutPositionnerCar': nouvelleValeur,
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          if (mounted) {
+            setState(() => admin['peutPositionnerCar'] = nouvelleValeur);
+          }
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: Colors.red,
+              content: Text(data['message'] ?? 'Erreur inconnue.'),
+            ),
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(backgroundColor: Colors.red, content: Text('Erreur réseau.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _permissionCarEnCoursId = null);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = Config.colors;
@@ -907,6 +948,32 @@ class _GestionAdminsState extends State<GestionAdmins> {
                                             activeThumbColor: c.authAccent,
                                             onChanged: (v) =>
                                                 _basculerPermissionNotificationsPush(admin, v),
+                                          ),
+                                  ],
+                                ),
+                              ),
+                            if (eligiblePermission)
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.directions_bus_outlined,
+                                        color: c.authAccent, size: 18),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text('Peut positionner un car',
+                                          style: TextStyle(
+                                              color: c.authTextSecondary, fontSize: 12)),
+                                    ),
+                                    _permissionCarEnCoursId == admin['id']
+                                        ? const SizedBox(
+                                            width: 20, height: 20,
+                                            child: CircularProgressIndicator(strokeWidth: 2))
+                                        : Switch(
+                                            value: admin['peutPositionnerCar'] == true,
+                                            activeThumbColor: c.authAccent,
+                                            onChanged: (v) =>
+                                                _basculerPermissionPositionnerCar(admin, v),
                                           ),
                                   ],
                                 ),

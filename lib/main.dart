@@ -25,6 +25,7 @@ import 'package:mvst_admin/screens/vue_par_depart.dart';
 import 'package:mvst_admin/screens/tendances.dart';
 import 'package:mvst_admin/screens/synthese_toutes_gares.dart';
 import 'package:mvst_admin/screens/notifications_push.dart';
+import 'package:mvst_admin/screens/positionner_car.dart';
 import 'package:mvst_admin/gestionUtilisateurs/comptesBloques.dart';
 import 'package:mvst_admin/gestionUtilisateurs/listeDesUtilisateurs.dart';
 import 'package:mvst_admin/verifTickets/verifierticket.dart';
@@ -538,6 +539,8 @@ class _AccueilState extends State<Accueil> with WidgetsBindingObserver {
                       vueSuperadmin(context, setLoadingState),
                     if (_role == 'superadmin' || _peutGererNotifs)
                       notificationsPush(context, setLoadingState),
+                    if (_role == 'superadmin' || _peutGererNotifs)
+                      positionnerCar(context, setLoadingState),
                   ],
                 ),
               ),
@@ -1184,6 +1187,28 @@ Widget notificationsPush(BuildContext ctx, Function setLoadingState) {
         Navigator.push(
           ctx,
           MaterialPageRoute(builder: (_) => const NotificationsPush()),
+        ).then((_) => setLoadingState(false));
+      } else {
+        Navigator.pushReplacement(
+          ctx,
+          MaterialPageRoute(builder: (_) => const Login()),
+        ).then((_) => setLoadingState(false));
+      }
+    },
+  );
+}
+
+Widget positionnerCar(BuildContext ctx, Function setLoadingState) {
+  return _carteMenu(
+    ctx: ctx,
+    setLoadingState: setLoadingState,
+    icon: Icons.directions_bus_outlined,
+    label: 'POSITIONNER UN CAR',
+    onTap: () async {
+      if (AuthService.estConnecte()) {
+        Navigator.push(
+          ctx,
+          MaterialPageRoute(builder: (_) => const PositionnerCar()),
         ).then((_) => setLoadingState(false));
       } else {
         Navigator.pushReplacement(

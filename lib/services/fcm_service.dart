@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:mvst_admin/main.dart';
 import 'package:mvst_admin/screens/suggestions_admin.dart';
+import 'package:mvst_admin/screens/positionner_car.dart';
 import 'package:mvst_admin/services/api_client.dart';
 import 'package:mvst_admin/services/auth_service.dart';
 
@@ -25,10 +26,17 @@ class FcmService {
     importance: Importance.high,
   );
 
-  static void _ouvrirSuggestions() {
+  // Route le tap sur une notif selon son type (data['type']).
+  // Defaut : Suggestions (comportement historique, rien casse).
+  static void _ouvrirDepuisNotif(RemoteMessage message) {
+    final type = message.data['type']?.toString();
     final nav = navigatorKeyAdmin.currentState;
     if (nav == null) return;
-    nav.push(MaterialPageRoute(builder: (_) => const SuggestionsAdmin()));
+    if (type == 'alerte_affluence') {
+      nav.push(MaterialPageRoute(builder: (_) => const PositionnerCar()));
+    } else {
+      nav.push(MaterialPageRoute(builder: (_) => const SuggestionsAdmin()));
+    }
   }
 
   // Init technique : permission, canal Android, handlers. A appeler dans main().
@@ -72,7 +80,7 @@ class FcmService {
 
     // Tap sur notif quand l'app est en arriere-plan (pas fermee)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      _ouvrirSuggestions();
+      _ouvrirDepuisNotif(message);
     });
 
     // Tap sur notif quand l'app etait FERMEE (message initial au demarrage)
@@ -80,7 +88,7 @@ class FcmService {
     if (initial != null) {
       // Retarder pour laisser le navigatorKey s'attacher au 1er frame
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _ouvrirSuggestions();
+        _ouvrirDepuisNotif(initial);
       });
     }
   }
