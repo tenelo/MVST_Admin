@@ -229,6 +229,7 @@ class _LoginState extends State<Login> {
       _gare = utilisateur['gare']?.toString() ?? _gare;
       _role = utilisateur['role']?.toString() ?? _role;
       _uid = utilisateur['idUtilisateur']?.toString() ?? _uid;
+      _peutGererNotifs = utilisateur['peutGererLesNotificationsPush'] == true;
 
       // Pont transition : on continue d'ecrire gare/role/uid en
       // SharedPreferences, encore lus par main() et profil.dart tant que
