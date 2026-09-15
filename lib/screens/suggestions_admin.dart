@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/services/api_client.dart';
+import 'package:mvst_admin/services/token_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
@@ -170,14 +171,18 @@ class _SuggestionsAdminState extends State<SuggestionsAdmin>
   }
 
   // ── Socket.IO ─────────────────────────────────────────────────────────────
-  void _connecterSocket() {
-    _socket = IO.io(
-      'https://mvst.tenelo.cloud',
-      IO.OptionBuilder()
-          .setTransports(['websocket', 'polling'])
-          .disableAutoConnect()
-          .build(),
-    );
+  Future<void> _connecterSocket() async {
+    final token = await TokenStorage.getToken();
+    if (!mounted) return;
+
+    final optionsBuilder = IO.OptionBuilder()
+        .setTransports(['websocket', 'polling'])
+        .disableAutoConnect();
+    if (token != null) {
+      optionsBuilder.setAuth({'token': token});
+    }
+
+    _socket = IO.io('https://mvst.tenelo.cloud', optionsBuilder.build());
     _socket.connect();
 
     _socket.onConnect((_) {
