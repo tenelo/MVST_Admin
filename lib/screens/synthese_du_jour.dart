@@ -7,7 +7,7 @@ import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
 import 'package:mvst_admin/services/api_client.dart';
 import 'package:mvst_admin/services/token_storage.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:socket_io_client_new/socket_io_client_new.dart' as IO;
 
 class SyntheseDuJour extends StatefulWidget {
   const SyntheseDuJour({super.key, required this.gare, required this.uid});
@@ -93,14 +93,15 @@ class _SyntheseDuJourState extends State<SyntheseDuJour> {
     final token = await TokenStorage.getToken();
     if (!mounted) return;
 
-    final optionsBuilder = IO.OptionBuilder()
-        .setTransports(['websocket'])
-        .disableAutoConnect();
+    final Map<String, dynamic> opts = {
+      'transports': ['websocket'],
+      'autoConnect': false,
+    };
     if (token != null) {
-      optionsBuilder.setAuth({'token': token});
+      opts['query'] = {'token': token};
     }
 
-    socket = IO.io('https://mvst.tenelo.cloud', optionsBuilder.build());
+    socket = IO.io('https://mvst.tenelo.cloud', opts);
 
     socket.connect();
 

@@ -9,7 +9,7 @@ import 'package:mvst_admin/graphiques/graphiqueJourDepart/graphiqueJourDepart.da
 import 'package:mvst_admin/screens/carStandard.dart';
 import 'package:mvst_admin/screens/ticketsDuJour.dart';
 import 'package:mvst_admin/screens/vip/carVIP.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:socket_io_client_new/socket_io_client_new.dart' as IO;
 
 List<String> listeDesHeures = [];
 String? heuresFormattees;

@@ -6,7 +6,7 @@ import 'package:mvst_admin/config/config.dart';
 import 'package:mvst_admin/services/api_client.dart';
 import 'package:mvst_admin/services/token_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:socket_io_client_new/socket_io_client_new.dart' as IO;
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const String _prefsMasqueKey = 'suggestions_masquees';
@@ -175,14 +175,15 @@ class _SuggestionsAdminState extends State<SuggestionsAdmin>
     final token = await TokenStorage.getToken();
     if (!mounted) return;
 
-    final optionsBuilder = IO.OptionBuilder()
-        .setTransports(['websocket', 'polling'])
-        .disableAutoConnect();
+    final Map<String, dynamic> opts = {
+      'transports': ['websocket', 'polling'],
+      'autoConnect': false,
+    };
     if (token != null) {
-      optionsBuilder.setAuth({'token': token});
+      opts['query'] = {'token': token};
     }
 
-    _socket = IO.io('https://mvst.tenelo.cloud', optionsBuilder.build());
+    _socket = IO.io('https://mvst.tenelo.cloud', opts);
     _socket.connect();
 
     _socket.onConnect((_) {
