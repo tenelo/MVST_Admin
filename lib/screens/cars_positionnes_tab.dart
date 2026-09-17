@@ -670,7 +670,7 @@ class _CarsPositionnesTabState extends State<CarsPositionnesTab> {
         await _charger();
       } else {
         _snack(
-          data['message']?.toString() ?? 'Retrait impossible.',
+          data['message']?.toString() ?? 'Suppression impossible',
           Colors.red,
         );
       }
