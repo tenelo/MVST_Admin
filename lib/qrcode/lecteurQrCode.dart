@@ -197,7 +197,7 @@ class _LecteurQrCodeState extends State<LecteurQrCode> {
         children: [
           // ── Zone scanner ──────────────────────────────────────────────────
           SizedBox(
-            height: size.height * .60,
+            height: size.height * .55,
             child: Stack(
               children: [
                 Padding(

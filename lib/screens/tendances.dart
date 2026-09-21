@@ -78,9 +78,9 @@ class _TendancesState extends State<Tendances> {
         final data = jsonDecode(response.body);
         if (data['success'] == true && mounted) {
           setState(() {
-            _listeGares = List<Map<String, dynamic>>.from(data['gares'])
-                .map((g) => g['gare'].toString())
-                .toList();
+            _listeGares = List<Map<String, dynamic>>.from(
+              data['gares'],
+            ).map((g) => g['gare'].toString()).toList();
           });
         }
       }
@@ -246,12 +246,7 @@ class _TendancesState extends State<Tendances> {
         ],
       );
     }
-    return Row(
-      children: [
-        const Spacer(),
-        _boutonDate(c),
-      ],
-    );
+    return Row(children: [const Spacer(), _boutonDate(c)]);
   }
 
   bool get _estVide => _courbeParJour.isEmpty;
@@ -461,7 +456,7 @@ class _TendancesState extends State<Tendances> {
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -484,7 +479,7 @@ class _TendancesState extends State<Tendances> {
                     embarques: precedentEmbarques,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 4),
                 Expanded(
                   child: _blocPeriode(
                     titre: 'Periode courante',
@@ -500,7 +495,7 @@ class _TendancesState extends State<Tendances> {
             Row(
               children: [
                 Expanded(child: _puceVariation('Vendus', _variationVendusPct)),
-                const SizedBox(width: 12),
+                const SizedBox(width: 4),
                 Expanded(
                   child: _puceVariation('Recettes', _variationRecettesPct),
                 ),
@@ -599,12 +594,16 @@ class _TendancesState extends State<Tendances> {
         children: [
           Icon(icone, size: 16, color: couleur),
           const SizedBox(width: 6),
-          Text(
-            '$libelle $valeur',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: couleur,
+          Flexible(
+            child: Text(
+              '$libelle $valeur',
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: couleur,
+              ),
             ),
           ),
         ],
@@ -667,7 +666,7 @@ class _TendancesState extends State<Tendances> {
             xValueMapper: (d, _) => d.jourCourt,
             yValueMapper: (d, _) => d.valeurPour(_metriqueIndex),
             color: Config.colors.bleuA,
-            markerSettings: const MarkerSettings(isVisible: true),
+            markerSettings: const MarkerSettings(isVisible: false),
           ),
         ],
       ),

@@ -133,7 +133,7 @@ class _SuiviAffluenceTabState extends State<SuiviAffluenceTab> {
                         Text(
                           'Aucun départ actif à venir',
                           style: TextStyle(
-                            color: c.authTextPrimary,
+                            color: c.authCardBackground,
                             fontWeight: FontWeight.w500,
                           ),
                         ),

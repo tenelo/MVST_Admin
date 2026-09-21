@@ -44,3 +44,4 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 .crash_debug_screens/
+.debug_token_screens/
