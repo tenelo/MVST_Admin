@@ -1158,7 +1158,7 @@ class _AjouterImagesState extends State<AjouterImages> {
         border: Border.all(color: c.authBorder, width: 1.5),
       ),
       child: DropdownButtonFormField<T>(
-        value: selectedItem,
+        initialValue: selectedItem,
         dropdownColor: c.authCardBackground,
         iconEnabledColor: c.authAccent,
         // couleur du texte dans le dropdown

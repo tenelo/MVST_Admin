@@ -805,7 +805,7 @@ Future<void> showRichTextDialog(
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
+                color: Colors.black.withValues(alpha: 0.15),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -902,7 +902,7 @@ Future<void> showRichTextDialog(
                           color: const Color(0xFFE3F2FD), // bleu très clair
                           borderRadius: BorderRadius.circular(30),
                           border: Border.all(
-                            color: const Color(0xFF1565C0).withOpacity(0.5),
+                            color: const Color(0xFF1565C0).withValues(alpha: 0.5),
                             width: 2,
                           ),
                         ),
@@ -992,7 +992,7 @@ Widget _buildInfoRow({
       Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: iconColor.withOpacity(0.1),
+          color: iconColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, color: iconColor, size: 22),

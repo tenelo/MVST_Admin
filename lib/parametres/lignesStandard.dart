@@ -412,7 +412,7 @@ class _LignesStandardState extends State<LignesStandard> {
                       border: Border.all(color: c.authBorder, width: 1.5),
                     ),
                     child: DropdownButtonFormField<String>(
-                      value: departSelectionne,
+                      initialValue: departSelectionne,
                       dropdownColor: c.authCardBackground,
                       iconEnabledColor: c.authAccent,
                       style: TextStyle(color: c.authTextPrimary),
@@ -450,7 +450,7 @@ class _LignesStandardState extends State<LignesStandard> {
                       border: Border.all(color: c.authBorder, width: 1.5),
                     ),
                     child: DropdownButtonFormField<String>(
-                      value:
+                      initialValue:
                           destinationsDisponibles.contains(
                             destinationSelectionnee,
                           )
@@ -604,7 +604,7 @@ class _LignesStandardState extends State<LignesStandard> {
                       border: Border.all(color: c.authBorder, width: 1.5),
                     ),
                     child: DropdownButtonFormField<String>(
-                      value: _gares.contains(departSelectionne)
+                      initialValue: _gares.contains(departSelectionne)
                           ? departSelectionne
                           : null,
                       dropdownColor: c.authCardBackground,
@@ -644,7 +644,7 @@ class _LignesStandardState extends State<LignesStandard> {
                       border: Border.all(color: c.authBorder, width: 1.5),
                     ),
                     child: DropdownButtonFormField<String>(
-                      value:
+                      initialValue:
                           destinationsDisponibles.contains(
                             destinationSelectionnee,
                           )

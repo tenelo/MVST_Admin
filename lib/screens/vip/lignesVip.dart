@@ -418,7 +418,7 @@ class _LignesVipState extends State<LignesVip> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: departSelectionne,
+                    initialValue: departSelectionne,
                     decoration: const InputDecoration(labelText: 'Départ'),
                     items: _gares
                         .map((g) => DropdownMenuItem(value: g, child: Text(g)))
@@ -435,7 +435,7 @@ class _LignesVipState extends State<LignesVip> {
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value:
+                    initialValue:
                         destinationsDisponibles.contains(
                           destinationSelectionnee,
                         )
@@ -551,7 +551,7 @@ class _LignesVipState extends State<LignesVip> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: _gares.contains(departSelectionne)
+                    initialValue: _gares.contains(departSelectionne)
                         ? departSelectionne
                         : null,
                     decoration: const InputDecoration(labelText: 'Départ'),
@@ -570,7 +570,7 @@ class _LignesVipState extends State<LignesVip> {
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value:
+                    initialValue:
                         destinationsDisponibles.contains(
                           destinationSelectionnee,
                         )

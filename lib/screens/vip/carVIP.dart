@@ -439,7 +439,7 @@ class _PlacesVIPState extends State<PlacesVIP> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
+                  color: Colors.black.withValues(alpha: 0.15),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -521,7 +521,7 @@ class _PlacesVIPState extends State<PlacesVIP> {
                             color: const Color(0xFFE8F5E9),
                             borderRadius: BorderRadius.circular(30),
                             border: Border.all(
-                              color: _vipOr.withOpacity(0.5),
+                              color: _vipOr.withValues(alpha: 0.5),
                               width: 2,
                             ),
                           ),
@@ -607,7 +607,7 @@ class _PlacesVIPState extends State<PlacesVIP> {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.1),
+            color: iconColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: iconColor, size: 22),
