@@ -1,9 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
-import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
+import 'package:mvst_admin/services/api_client.dart';
 
 const Color _headerBg = Color(0xFF1A3A5C);
 const TextStyle _headerStyle = TextStyle(
@@ -48,17 +47,11 @@ class _ListeDesUtilisateursState extends State<ListeDesUtilisateurs> {
     });
 
     try {
-      final response = await http
-          .post(
-            apiUri('reinitialiserPoints.php'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'action': 'lister_tous',
-              'page': page,
-              'limit': _limit,
-            }),
-          )
-          .timeout(const Duration(seconds: 10));
+      final response = await ApiClient.instance.post(
+        'reinitialiserPoints.php',
+        body: {'action': 'lister_tous', 'page': page, 'limit': _limit},
+        timeout: const Duration(seconds: 10),
+      );
 
       if (response.statusCode == 200 && mounted) {
         final data = jsonDecode(response.body);
@@ -85,13 +78,11 @@ class _ListeDesUtilisateursState extends State<ListeDesUtilisateurs> {
 
     setState(() => _isLoading = true);
     try {
-      final response = await http
-          .post(
-            apiUri('reinitialiserPoints.php'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'action': 'verifier', 'telephone': numero}),
-          )
-          .timeout(const Duration(seconds: 10));
+      final response = await ApiClient.instance.post(
+        'reinitialiserPoints.php',
+        body: {'action': 'verifier', 'telephone': numero},
+        timeout: const Duration(seconds: 10),
+      );
 
       if (response.statusCode == 200 && mounted) {
         final data = jsonDecode(response.body);
@@ -206,18 +197,16 @@ class _ListeDesUtilisateursState extends State<ListeDesUtilisateurs> {
           ? motifController.text
           : 'Déblocage manuel';
       try {
-        final response = await http
-            .post(
-              apiUri('reinitialiserPoints.php'),
-              headers: {'Content-Type': 'application/json'},
-              body: jsonEncode({
-                'action': 'reinitialiser',
-                'idUtilisateur': compte['idUtilisateur'],
-                'points': points,
-                'motif': motif,
-              }),
-            )
-            .timeout(const Duration(seconds: 10));
+        final response = await ApiClient.instance.post(
+          'reinitialiserPoints.php',
+          body: {
+            'action': 'reinitialiser',
+            'idUtilisateur': compte['idUtilisateur'],
+            'points': points,
+            'motif': motif,
+          },
+          timeout: const Duration(seconds: 10),
+        );
 
         if (response.statusCode == 200 && mounted) {
           final data = jsonDecode(response.body);
