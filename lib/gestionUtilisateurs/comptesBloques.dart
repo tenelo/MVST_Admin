@@ -1,9 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:mvst_admin/config/config.dart';
-import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
+import 'package:mvst_admin/services/api_client.dart';
 
 class GestionComptesBloques extends StatefulWidget {
   const GestionComptesBloques({super.key});
@@ -60,17 +59,11 @@ class _GestionComptesBloquesState extends State<GestionComptesBloques> {
     }
 
     try {
-      final response = await http
-          .post(
-            apiUri('reinitialiserPoints.php'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'action': 'lister_bloques',
-              'page': page,
-              'limit': _limit,
-            }),
-          )
-          .timeout(const Duration(seconds: 10));
+      final response = await ApiClient.instance.post(
+        'reinitialiserPoints.php',
+        body: {'action': 'lister_bloques', 'page': page, 'limit': _limit},
+        timeout: const Duration(seconds: 10),
+      );
 
       if (response.statusCode == 200 && mounted) {
         final data = jsonDecode(response.body);
@@ -106,13 +99,11 @@ class _GestionComptesBloquesState extends State<GestionComptesBloques> {
 
     setState(() => _isLoading = true);
     try {
-      final response = await http
-          .post(
-            apiUri('reinitialiserPoints.php'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'action': 'verifier', 'telephone': numero}),
-          )
-          .timeout(const Duration(seconds: 10));
+      final response = await ApiClient.instance.post(
+        'reinitialiserPoints.php',
+        body: {'action': 'verifier', 'telephone': numero},
+        timeout: const Duration(seconds: 10),
+      );
 
       if (response.statusCode == 200 && mounted) {
         final data = jsonDecode(response.body);
@@ -228,18 +219,16 @@ class _GestionComptesBloquesState extends State<GestionComptesBloques> {
           : 'Déblocage manuel';
 
       try {
-        final response = await http
-            .post(
-              apiUri('reinitialiserPoints.php'),
-              headers: {'Content-Type': 'application/json'},
-              body: jsonEncode({
-                'action': 'reinitialiser',
-                'idUtilisateur': compte['idUtilisateur'],
-                'points': points,
-                'motif': motif,
-              }),
-            )
-            .timeout(const Duration(seconds: 10));
+        final response = await ApiClient.instance.post(
+          'reinitialiserPoints.php',
+          body: {
+            'action': 'reinitialiser',
+            'idUtilisateur': compte['idUtilisateur'],
+            'points': points,
+            'motif': motif,
+          },
+          timeout: const Duration(seconds: 10),
+        );
 
         if (response.statusCode == 200 && mounted) {
           final data = jsonDecode(response.body);

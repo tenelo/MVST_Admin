@@ -1,9 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:mvst_admin/config/config.dart';
-import 'package:mvst_admin/mesfonctions/mesfonctions.dart';
+import 'package:mvst_admin/services/api_client.dart';
 
 class DatesDisponibles extends StatefulWidget {
   const DatesDisponibles({super.key});
@@ -29,13 +28,11 @@ class _DatesDisponiblesState extends State<DatesDisponibles> {
   Future<void> _chargerConfig() async {
     if (mounted) setState(() => _isLoading = true);
     try {
-      final response = await http
-          .post(
-            apiUri('datesDisponibles.php'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'action': 'lire'}),
-          )
-          .timeout(const Duration(seconds: 10));
+      final response = await ApiClient.instance.post(
+        'datesDisponibles.php',
+        body: {'action': 'lire'},
+        timeout: const Duration(seconds: 10),
+      );
 
       if (response.statusCode == 200 && mounted) {
         final data = jsonDecode(response.body);
@@ -55,13 +52,11 @@ class _DatesDisponiblesState extends State<DatesDisponibles> {
   Future<void> _sauvegarder() async {
     setState(() => _isSaving = true);
     try {
-      final response = await http
-          .post(
-            apiUri('datesDisponibles.php'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'action': 'sauvegarder', 'nbJours': _nbJours}),
-          )
-          .timeout(const Duration(seconds: 10));
+      final response = await ApiClient.instance.post(
+        'datesDisponibles.php',
+        body: {'action': 'sauvegarder', 'nbJours': _nbJours},
+        timeout: const Duration(seconds: 10),
+      );
 
       if (response.statusCode == 200 && mounted) {
         final data = jsonDecode(response.body);

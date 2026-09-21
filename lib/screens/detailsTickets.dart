@@ -18,7 +18,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:socket_io_client_new/socket_io_client_new.dart' as io;
 import 'package:ticket_widget/ticket_widget.dart';
-import 'package:http/http.dart' as http;
+import 'package:mvst_admin/services/api_client.dart';
 
 class DetailsTickets extends StatefulWidget {
   final String idTicket;
@@ -476,16 +476,11 @@ class _DetailsTicketsState extends State<DetailsTickets> {
 
   Future<void> _rafraichirEtat() async {
     try {
-      final response = await http
-          .post(
-            Uri.parse('$baseUrl/etatTicket.php'),
-            headers: {'Content-Type': 'application/json'},
-            body: json.encode({
-              'documentId': widget.idTicket,
-              'place': widget.place,
-            }),
-          )
-          .timeout(const Duration(seconds: 10));
+      final response = await ApiClient.instance.post(
+        'etatTicket.php',
+        body: {'documentId': widget.idTicket, 'place': widget.place},
+        timeout: const Duration(seconds: 10),
+      );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success'] == true && mounted) {
