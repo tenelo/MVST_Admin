@@ -206,7 +206,7 @@ class _PositionnerCarState extends State<PositionnerCar> {
                 Text(
                   'Type de car',
                   style: TextStyle(
-                    color: c.authCardBackground.withOpacity(0.6),
+                    color: c.authCardBackground.withValues(alpha: 0.6),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -224,7 +224,7 @@ class _PositionnerCarState extends State<PositionnerCar> {
                 Text(
                   'Ligne',
                   style: TextStyle(
-                    color: c.authCardBackground.withOpacity(0.6),
+                    color: c.authCardBackground.withValues(alpha: 0.6),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -232,7 +232,7 @@ class _PositionnerCarState extends State<PositionnerCar> {
                 _cadre(
                   c,
                   DropdownButtonFormField<Map<String, dynamic>>(
-                    value: _lignesDuType.contains(_ligneSelectionnee)
+                    initialValue: _lignesDuType.contains(_ligneSelectionnee)
                         ? _ligneSelectionnee
                         : null,
                     isExpanded: true,
@@ -241,7 +241,9 @@ class _PositionnerCarState extends State<PositionnerCar> {
                     style: TextStyle(color: c.authTextPrimary),
                     hint: Text(
                       'Choisir une ligne',
-                      style: TextStyle(color: c.authTextPrimary.withOpacity(0.6)),
+                      style: TextStyle(
+                        color: c.authTextPrimary.withValues(alpha: 0.6),
+                      ),
                     ),
                     decoration: _decoInterne(c),
                     items: _lignesDuType
@@ -265,7 +267,7 @@ class _PositionnerCarState extends State<PositionnerCar> {
                 Text(
                   'Date',
                   style: TextStyle(
-                    color: c.authCardBackground.withOpacity(0.6),
+                    color: c.authCardBackground.withValues(alpha: 0.6),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -292,7 +294,7 @@ class _PositionnerCarState extends State<PositionnerCar> {
                             _dateLisible ?? 'Choisir une date',
                             style: TextStyle(
                               color: _dateLisible == null
-                                  ? c.authTextPrimary.withOpacity(0.6)
+                                  ? c.authTextPrimary.withValues(alpha: 0.6)
                                   : c.authTextPrimary,
                             ),
                           ),
@@ -307,7 +309,7 @@ class _PositionnerCarState extends State<PositionnerCar> {
                 Text(
                   'Heure',
                   style: TextStyle(
-                    color: c.authCardBackground.withOpacity(0.6),
+                    color: c.authCardBackground.withValues(alpha: 0.6),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -315,7 +317,7 @@ class _PositionnerCarState extends State<PositionnerCar> {
                 _cadre(
                   c,
                   DropdownButtonFormField<String>(
-                    value: _heures.contains(_heureSelectionnee)
+                    initialValue: _heures.contains(_heureSelectionnee)
                         ? _heureSelectionnee
                         : null,
                     isExpanded: true,
@@ -326,7 +328,7 @@ class _PositionnerCarState extends State<PositionnerCar> {
                       _heures.isEmpty
                           ? 'Aucune heure pour ce type'
                           : 'Choisir une heure',
-                      style: TextStyle(color: c.authTextPrimary.withOpacity(0.6)),
+                      style: TextStyle(color: c.authCardBackground),
                     ),
                     decoration: _decoInterne(c),
                     items: _heures
