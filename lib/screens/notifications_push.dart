@@ -382,18 +382,31 @@ class _NotificationsPushState extends State<NotificationsPush>
             ),
           ),
           const SizedBox(height: 8),
-          ..._cibles.map(
-            (cible) => RadioListTile<String>(
-              value: cible.valeur,
-              groupValue: _cible,
-              onChanged: (v) => setState(() => _cible = v ?? 'tous'),
-              title: Text(
-                cible.label,
-                style: TextStyle(color: c.authCardBackground, fontSize: 14),
-              ),
-              secondary: Icon(cible.icon, color: c.authAccent, size: 20),
-              activeColor: c.authAccent,
-              dense: true,
+          RadioGroup<String>(
+            groupValue: _cible,
+            onChanged: (v) => setState(() => _cible = v ?? 'tous'),
+            child: Column(
+              children: _cibles
+                  .map(
+                    (cible) => RadioListTile<String>(
+                      value: cible.valeur,
+                      title: Text(
+                        cible.label,
+                        style: TextStyle(
+                          color: c.authCardBackground,
+                          fontSize: 14,
+                        ),
+                      ),
+                      secondary: Icon(
+                        cible.icon,
+                        color: c.authAccent,
+                        size: 20,
+                      ),
+                      activeColor: c.authAccent,
+                      dense: true,
+                    ),
+                  )
+                  .toList(),
             ),
           ),
           if (_cible == 'gare') _selecteurGare(c),
